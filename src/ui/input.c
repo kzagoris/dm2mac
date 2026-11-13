@@ -22,6 +22,7 @@
 #include "sensor.h"
 #include "session.h"
 #include "sound_request.h"
+#include "spellbook.h"
 #include "video.h"
 #include "view.h"
 #include "zone.h"
@@ -712,7 +713,7 @@ static bool execute_party_command(const Command *c, bool idle)
     } else if (command == CMD_REMOVE_RUNE) {
         magic_remove_last_rune();
     } else if (command >= CMD_RUNE_FIRST && command <= CMD_RUNE_LAST) {
-        magic_add_rune(command - CMD_RUNE_FIRST);
+        spellbook_add_rune(command - CMD_RUNE_FIRST);
     } else if (command == CMD_MINION_MAP) {
         minion_map_click_set_destination(command, c->x, c->y);
     } else if (command >= CMD_MAP_OPTION_FIRST && command <= CMD_MAP_OPTION_LAST) {

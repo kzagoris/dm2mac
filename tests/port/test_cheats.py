@@ -16,6 +16,8 @@ CHEATS = (C.CHEAT_LIGHT, C.CHEAT_IMMORTAL, C.CHEAT_FOOD, C.CHEAT_KILL, C.CHEAT_W
 HEALTH = 1000  # far more health than the test hits take
 FLAGS, DEFENSE, PUSH_RESISTANCE = 0, 2, 0x1D  # byte offsets in a creature info record
 UNPUSHABLE = 0xFE  # push resistance 0xfe and 0xff: the party cannot push the creature
+FAVS_SIZE = 5 + C.CHAMPION_MAX * C.MAGIC_RECORD_COUNT * C.CHAMPION_RUNES_SIZE
+KNOWN_SIZE = 5 + 34  # the KNOW block: magic, version, one byte per spell of the spell table
 
 
 @pytest.fixture(scope="module", autouse=True)
@@ -218,7 +220,7 @@ def test_advanced_save_appends_the_chts_block(lib, gdat, game, tmp_path):
     tail = mine[len(turnbased):]
     assert tail[:6] == b"CHTS\x01" + bytes([C.CHEAT_FOOD | C.CHEAT_MAP])
     assert tail[6:11] == b"FAVS\x01"
-    assert len(tail) == 6 + 5 + C.CHAMPION_MAX * C.MAGIC_RECORD_COUNT * C.CHAMPION_RUNES_SIZE
+    assert len(tail) == 6 + FAVS_SIZE + KNOWN_SIZE  # CHTS, then FAVS with the KNOW block of the known spells
     assert load(lib, gdat, tmp_path / "L.DAT", ADVANCED, mine) == C.CHEAT_FOOD | C.CHEAT_MAP
     for mode in (VANILLA, C.GAME_MODE_TURNBASED):
         assert load(lib, gdat, tmp_path / "L.DAT", mode, mine) == 0, "only the advanced mode uses the cheats"
@@ -230,7 +232,7 @@ def test_advanced_save_appends_the_chts_block(lib, gdat, game, tmp_path):
 @pytest.mark.parametrize("damage", ["short", "long", "magic", "version", "bits"])
 def test_damaged_chts_block_gives_no_cheats(lib, gdat, game, tmp_path, damage):
     data = bytearray(save(lib, gdat, tmp_path / "A.DAT", ADVANCED, C.CHEAT_KILL))
-    del data[-(5 + C.CHAMPION_MAX * C.MAGIC_RECORD_COUNT * C.CHAMPION_RUNES_SIZE):]  # isolate the legacy CHTS block
+    del data[-(FAVS_SIZE + KNOWN_SIZE):]  # isolate the legacy CHTS block
     if damage == "short":
         del data[-1]
     elif damage == "long":

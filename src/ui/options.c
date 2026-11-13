@@ -14,13 +14,14 @@
 /* Option rows; the title item closes the overlay. */
 #define OPTIONS_ROW_HELP      0
 #define OPTIONS_ROW_BOOK      1
-#define OPTIONS_ROW_FILTER    2
-#define OPTIONS_ROW_ASPECT    3
-#define OPTIONS_ROW_SCANLINES 4
-#define OPTIONS_ROW_SAVE      5
-#define OPTIONS_ROW_LOAD      6
-#define OPTIONS_ROW_CHEATS    7
-#define OPTIONS_ROW_ROWS      8
+#define OPTIONS_ROW_SPELLS    2
+#define OPTIONS_ROW_FILTER    3
+#define OPTIONS_ROW_ASPECT    4
+#define OPTIONS_ROW_SCANLINES 5
+#define OPTIONS_ROW_SAVE      6
+#define OPTIONS_ROW_LOAD      7
+#define OPTIONS_ROW_CHEATS    8
+#define OPTIONS_ROW_ROWS      9
 #define OPTIONS_ROW_TEXT_SIZE 40
 
 static bool help;
@@ -32,7 +33,8 @@ static bool blocked;
 #define PANEL_VALUE_LEFT 108
 #define PANEL_TITLE_Y 20
 #define PANEL_FIRST_Y 46
-#define PANEL_ROW_HEIGHT 14
+#define PANEL_ROW_HEIGHT 13
+#define PANEL_NOTE_Y 170
 #define PANEL_BACK_LEFT 260
 #define PANEL_FOOTER_Y 186
 
@@ -58,7 +60,7 @@ static void show_options(void)
             "WASD", "Q / E", "ARROWS", "TAB / M", "1 - 4", "F5 / F9", "B", "F1", "ESC", "CTRL+S", "CTRL+R"};
         static const char *const actions[] = {
             "MOVE", "TURN LEFT / RIGHT", "ORIGINAL MOVEMENT", "EXPLORED MAP", "CHAMPION INVENTORY",
-            "QUICK SAVE / LOAD", "SPELL FAVORITES", "OPTIONS / HELP", "OPTIONS / RESUME", "DISK MENU", "REST (ZZZ)"};
+            "QUICK SAVE / LOAD", "SPELL LIST", "OPTIONS / HELP", "OPTIONS / RESUME", "DISK MENU", "REST (ZZZ)"};
         panel_text(PANEL_LEFT, 36, UI_CYAN, "MOVEMENT AND SHORTCUTS");
         for (int i = 0; i < 11; i++) {
             panel_text(PANEL_LEFT, 46 + i * 9, UI_YELLOW, keys[i]);
@@ -66,7 +68,7 @@ static void show_options(void)
         }
         panel_text(PANEL_LEFT, 152, UI_CYAN, "SPELLS");
         panel_text(PANEL_LEFT, 164, UI_WHITE, "CHAMPION ICON > POWER > RUNES > CAST");
-        panel_text(PANEL_LEFT, 174, UI_WHITE, "B RECORDS RUNES; NORMAL MANA RULES APPLY");
+        panel_text(PANEL_LEFT, 174, UI_WHITE, "B CASTS BY NAME; NORMAL MANA RULES APPLY");
     } else {
         char filter[OPTIONS_ROW_TEXT_SIZE];
         snprintf(filter, sizeof filter, "SCREEN FILTER: %s", settings_filter_name(upscale_get_filter()));
@@ -74,7 +76,8 @@ static void show_options(void)
             *ch = (char)toupper((unsigned char)*ch);
         const char *lines[OPTIONS_ROW_ROWS] = {
             "CONTROLS",
-            "SPELL FAVORITES (B)",
+            "SPELL LIST (B)",
+            upscale_has_all_spells() ? "SPELLS SHOWN: ALL SPELLS" : "SPELLS SHOWN: KNOWN SPELLS",
             filter,
             upscale_has_aspect() ? "4:3 ASPECT: ON" : "4:3 ASPECT: OFF",
             upscale_has_scanlines() ? "SCANLINES: ON" : "SCANLINES: OFF",
@@ -86,9 +89,13 @@ static void show_options(void)
                        i == selected ? UI_YELLOW : UI_WHITE, lines[i]);
         }
         if (blocked)
-            panel_text(PANEL_LEFT, 164, UI_YELLOW, "RETURN TO DUNGEON TO SAVE OR CAST");
+            panel_text(PANEL_LEFT, PANEL_NOTE_Y, UI_YELLOW, "RETURN TO DUNGEON TO SAVE OR CAST");
+        else if (selected == OPTIONS_ROW_SPELLS)
+            panel_text(PANEL_LEFT, PANEL_NOTE_Y, UI_CYAN,
+                       upscale_has_all_spells() ? "SPELL LIST AND RUNE HINTS NAME EVERY SPELL"
+                                                : "SPELL LIST AND RUNE HINTS NAME SPELLS YOU CAST");
         else
-            panel_text(PANEL_LEFT, 164, UI_CYAN, "CHEATS ARE SEPARATE AND OPTIONAL");
+            panel_text(PANEL_LEFT, PANEL_NOTE_Y, UI_CYAN, "CHEATS ARE SEPARATE AND OPTIONAL");
     }
     panel_text(PANEL_LEFT, PANEL_FOOTER_Y, UI_WHITE,
                help ? "ENTER / ESC / RIGHT CLICK: BACK" : "UP/DOWN: SELECT  ENTER: OPEN  ESC: CLOSE");
@@ -105,7 +112,9 @@ void options_open(void)
 /* Runs the selected ordinary option; cheats have a separately labeled destination. */
 static OptionsResult run_option(void)
 {
-    if (selected != OPTIONS_ROW_HELP && selected != OPTIONS_ROW_FILTER && selected != OPTIONS_ROW_ASPECT &&
+    blocked = false;
+    if (selected != OPTIONS_ROW_HELP && selected != OPTIONS_ROW_SPELLS && selected != OPTIONS_ROW_FILTER &&
+        selected != OPTIONS_ROW_ASPECT &&
         selected != OPTIONS_ROW_SCANLINES && selected != OPTIONS_ROW_ROWS && input_get_mode() != INPUT_MODE_MOVE) {
         blocked = true;
         show_options();
@@ -117,6 +126,9 @@ static OptionsResult run_option(void)
         break;
     case OPTIONS_ROW_BOOK:
         return OPTIONS_SPELLBOOK;
+    case OPTIONS_ROW_SPELLS:
+        upscale_toggle_all_spells();
+        break;
     case OPTIONS_ROW_FILTER:
         upscale_cycle_filter();
         break;
