@@ -32,7 +32,7 @@ bool upscale_has_aspect(void);
 bool upscale_has_scanlines(void);
 
 /* Commands */
-/* Changes to the next filter (NONE, SCALE2X, SCALE3X, then NONE again), shows it in the window, and writes it to
+/* Changes to the next filter (NONE, SCALE2X, SCALE3X, XBRZ2X, XBRZ3X, XBRZ4X, then NONE), shows it in the window, and writes it to
    SETTINGS.TXT. When the window cannot show the filter, the filter does not change; a failed write says
    UNABLE TO SAVE OPTIONS once per failure run and keeps the filter. */
 void upscale_cycle_filter(void);

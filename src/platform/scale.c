@@ -2,6 +2,7 @@
 #include "scale.h"
 #include <stdbool.h>
 #include <string.h>
+#include <xbrz/xbrz_c.h>
 
 /* Output pixels per input pixel on each axis of the two filters. */
 #define SCALE2X_BLOCK 2
@@ -71,4 +72,9 @@ void scale3x(const uint8_t *src, int w, int h, uint8_t *dst)
             o2[COLUMN_MIDDLE] = (D == H && E != I) || (H == F && E != G) ? H : E;
             o2[COLUMN_RIGHT] = H == F ? F : E;
         }
+}
+
+bool scale_xbrz(const uint32_t *src, int w, int h, int factor, uint32_t *dst)
+{
+    return xbrz_scale(src, w, h, factor, dst);
 }

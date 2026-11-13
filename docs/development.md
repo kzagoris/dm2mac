@@ -11,7 +11,8 @@ The port is built in three steps:
 
 ## Build
 
-The port uses C11, `clang`, SDL3, and `uv`. Install the tools first.
+The port uses C11, `clang`/`clang++`, SDL3, and `uv`. Vendored xBRZ and its C adapter require C++20;
+the game code remains C11. Install the tools first.
 
 ```sh
 brew install sdl3

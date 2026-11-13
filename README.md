@@ -46,7 +46,7 @@ On startup you choose how to play:
   - an automap (Tab) of the squares you have seen;
   - quick save (F5) and quick load (F9);
   - a cheat screen (C);
-  - a screen filter (Scale2x, Scale3x).
+  - screen filters (Scale2x, Scale3x, xBRZ 2x/3x/4x), 4:3 aspect correction and scanlines.
 
 In both modes the mouse and the arrow keys work as in the original game. The keys, the cheats, and the screen filter
 are in the [advanced mode section of the Player manual](docs/manual.md#advanced-mode).
@@ -79,6 +79,7 @@ against the original in an emulator. Build instructions and tests are in [Develo
 - [SDL3](https://github.com/libsdl-org/SDL): windowing, input, and audio output.
 - [Nuked-OPL3](https://github.com/nukeykt/Nuked-OPL3) by Nuke.YKT: OPL3 emulation for the music.
 - [tinf](https://github.com/jibsen/tinf) by Jørgen Ibsen: ZIP decompression.
+- [xBRZ](https://sourceforge.net/projects/xbrz/) by Zenju: colour-blending pixel-art upscaling.
 - [Unicorn](https://www.unicorn-engine.org): CPU emulation for the differential tests.
 - [reDM2](https://codeberg.org/CyCl0ne/reDM2): an analysis of the same `SKULL.EXE`, read for names, formats, and
   logic.
@@ -87,5 +88,6 @@ against the original in an emulator. Build instructions and tests are in [Develo
 
 GPL-3.0-or-later ([LICENSE](LICENSE)). Nuked-OPL3 in `src/third_party/opl3/` is under the LGPL-2.1-or-later license
 ([opl3-LICENSE](src/third_party/opl3/opl3-LICENSE)); tinf in `src/third_party/tinf/` is under the zlib license
-([tinf-LICENSE](src/third_party/tinf/tinf-LICENSE)). Dungeon Master II is the property of its rights holders. This
+([tinf-LICENSE](src/third_party/tinf/tinf-LICENSE)); xBRZ in `src/third_party/xbrz/` is under GPL-3.0 with a linking
+exception (notices in its source files and [License.txt](src/third_party/xbrz/License.txt)). Dungeon Master II is the property of its rights holders. This
 project is not affiliated with or endorsed by them. The game data is not included and is not covered by this license.

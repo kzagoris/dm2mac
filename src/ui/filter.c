@@ -6,7 +6,7 @@
 #include "text.h"
 
 /* The filters, from SETTINGS_FILTER_NONE. */
-#define FILTER_COUNT (SETTINGS_FILTER_SCALE3X - SETTINGS_FILTER_NONE + 1)
+#define FILTER_COUNT (SETTINGS_FILTER_XBRZ4X - SETTINGS_FILTER_NONE + 1)
 
 bool (*g_upscale_filter_hook)(enum SettingsFilter filter);
 bool (*g_upscale_picture_hook)(bool aspect, bool scanlines);

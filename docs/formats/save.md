@@ -143,7 +143,7 @@ aspect=on
 scanlines=off
 ```
 
-- The values of `filter` are `none`, `scale2x`, and `scale3x`.
+- The values of `filter` are `none`, `scale2x`, `scale3x`, `xbrz2x`, `xbrz3x`, and `xbrz4x`.
 - The values of `aspect` (the 4:3 picture) and `scanlines` are `on` and `off`. A missing line gives `off`, so a file with only the `filter` line stays valid.
 - The game ignores a CR at the end of a line, an unknown key, a bad value, and a line of 64 characters or more.
 - A file over 1024 bytes gives the defaults (no filter, `aspect` and `scanlines` off).

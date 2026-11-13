@@ -27,7 +27,7 @@ You need these only when you start the game from Terminal or a shortcut:
 |---|---|
 | `--mode vanilla`, `--mode advanced` | Starts in that mode and skips the mode screen. `--mode turnbased` lets a program play ([Turn-based mode](llm/turn-based.md), macOS only). |
 | `--save PATH` | Loads a save and starts it immediately, in advanced mode unless `--mode` says otherwise. |
-| `--filter NAME` | The window's pixel-art filter: `none`, `scale2x`, or `scale3x`. The `DM2_FILTER` environment variable does the same. |
+| `--filter NAME` | The window's pixel-art filter: `none`, `scale2x`, `scale3x`, `xbrz2x`, `xbrz3x`, or `xbrz4x`. The `DM2_FILTER` environment variable does the same. |
 | `--data DIR` | Uses the game files in `DIR` instead of `game/`, and skips the check and the install. Saves go to `DIR/DATA`. |
 | `--saves DIR` | Keeps the quick save and `SETTINGS.TXT` in `DIR` instead of `game/DATA`. The folder must exist. |
 | `--control PATH` | Opens a control socket for a program (macOS only). |
@@ -172,7 +172,7 @@ Click a row, or choose it with the arrow keys (or `W`, `S`) and Return. CLOSE, `
 the screen.
 
 - The six cheat rows show `ON` or `OFF`.
-- Options/Help (`F1`) holds SCREEN FILTER (`NONE`, `SCALE2X`, `SCALE3X`), 4:3 ASPECT, SCANLINES, and the ordinary
+- Options/Help (`F1`) holds SCREEN FILTER (`NONE`, `SCALE2X`, `SCALE3X`, `XBRZ2X`, `XBRZ3X`, `XBRZ4X`), 4:3 ASPECT, SCANLINES, and the ordinary
   quick-save/load actions.
 - SPELLS lists all the game's spells with their runes, for example `FUL IR (X,4,4) FIREBALL`. A number is the
   rune's position in its row; `X` is any power. The spell names come from this port because the game has no names
@@ -187,7 +187,9 @@ Sound and music volume stay in the original game's volume dialog (the speaker bu
 
 Options/Help (`F1`) has three rows for the picture of the window:
 
-- SCREEN FILTER smooths the pixels: `NONE`, `SCALE2X`, or `SCALE3X`.
+- SCREEN FILTER cycles through `NONE`, `SCALE2X`, `SCALE3X`, `XBRZ2X`, `XBRZ3X`, and `XBRZ4X`.
+  xBRZ blends colours to smooth diagonal edges at 2x, 3x or 4x resolution. It can make dithered shading look painted;
+  choose `NONE` for the original pixels. The filter does not change the window size.
 - 4:3 ASPECT shows the picture as a VGA monitor did: 4:3, with pixels a little taller than wide. `OFF` shows square
   pixels. A window that fits the picture exactly changes its height with the row.
 - SCANLINES draws a soft dark line below every line of the game screen, as on a monitor tube. It works with every
@@ -196,3 +198,5 @@ Options/Help (`F1`) has three rows for the picture of the window:
 The game remembers the three rows in `game/DATA/SETTINGS.TXT` and uses them on the next startup.
 `--filter` overrides the filter. If the file cannot be written, the message area shows `UNABLE TO SAVE OPTIONS`. The file is
 described in [Save files](formats/save.md#settingstxt).
+
+For example, start with `dm2.exe --filter xbrz4x` on Windows or `build/dm2 --filter xbrz4x` on macOS.

@@ -61,7 +61,7 @@ paragraph. A module with several `.c` files has one `<module>_internal.h` for it
 | `data/num.h` | `abs_` `clamp_` `max_` `min_` | Integer helpers: absolute value, clamping, maximum, and minimum. |
 | `data/os.h` | `os_` | The operating system services that `data/`, `engine/`, `ui/`, and `control/` need: the log, fatal errors, and full paths. |
 | `data/pcx.h` | `pcx_` | PCX pictures: 8-bit, RLE (run-length encoded), palette at the end (the INTRPLAY.PCX splash); decodes from memory only. |
-| `data/settings.h` | `settings_` | The advanced-mode settings file (SETTINGS.TXT in the saves folder) and the upscale filters: their names, and their values, which are the upscale factors; also the switches of the 4:3 picture and the scanlines. It reads and writes the values; it does not apply them. |
+| `data/settings.h` | `settings_` | The advanced-mode settings file (SETTINGS.TXT in the saves folder) and the upscale filters: their names and output factors (separate from their enum values); also the switches of the 4:3 picture and the scanlines. It reads and writes the values; it does not apply them. |
 | `data/zip.h` | `zip_` | ZIP archives: the central directory, and stored and deflated entries. |
 
 ### engine/
@@ -140,12 +140,17 @@ paragraph. A module with several `.c` files has one `<module>_internal.h` for it
 |---|---|---|
 | `platform/install.h` | `install_` | Installing the game files on the first start: checking the game folder and copying from a source. |
 | `platform/platform.h` | `plat_` | The window, the sound output, and the input events: the SDL3 side of the game screen. |
-| `platform/scale.h` | `scale` | The window's pixel upscale filters: none, Scale2x, and Scale3x. |
+| `platform/scale.h` | `scale` | The window's pixel upscale filters: Scale2x and Scale3x on palette indices, and xBRZ 2x/3x/4x on opaque RGB colours. |
 | `platform/source.h` | `source_` | Game file sources: a folder, a ZIP archive, or a CD image; read-only. |
 | `platform/transport.h` | `transport_` | The control socket: a Unix domain socket with one request line in and one reply line out (POSIX). |
 
 `platform/main.c` has no header, because it is the entry point. `platform/transport_none.c` implements
 `transport.h` without a socket (Windows).
+
+The game code remains C11. Vendored xBRZ and its C adapter in `third_party/xbrz/` compile as C++20.
+Before xBRZ, the platform converts the current indexed frame through the current VGA palette, so fades and palette
+animation affect every filtered frame. xBRZ produces a packed RGB image for the SDL texture; aspect correction and
+scanlines still run afterwards. Movies keep their own rendering path. Windows links the C++ runtime statically.
 
 ## The program
 

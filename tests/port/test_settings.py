@@ -7,6 +7,7 @@ import pytest
 from dm2test import constants as C
 
 NONE, SCALE2X, SCALE3X = C.SETTINGS_FILTER_NONE, C.SETTINGS_FILTER_SCALE2X, C.SETTINGS_FILTER_SCALE3X
+XBRZ2X, XBRZ3X, XBRZ4X = C.SETTINGS_FILTER_XBRZ2X, C.SETTINGS_FILTER_XBRZ3X, C.SETTINGS_FILTER_XBRZ4X
 
 
 class Settings(ctypes.Structure):
@@ -28,6 +29,9 @@ def parse(lib, text):
 @pytest.mark.parametrize("text, filter", [
     (b"filter=scale2x\n", SCALE2X),
     (b"filter=scale3x", SCALE3X),  # no final newline
+    (b"filter=xbrz2x\n", XBRZ2X),
+    (b"filter=xbrz3x\n", XBRZ3X),
+    (b"filter=xbrz4x\n", XBRZ4X),
     (b"filter=scale2x\r\nfilter=scale3x\r\n", SCALE3X),  # CR stripped, the last line wins
     (b"", NONE),
     (b"music=fm-towns\nfilter=scale2x\nvolume=3\n", SCALE2X),  # unknown keys
@@ -63,7 +67,8 @@ def test_a_file_over_the_limit_gives_the_defaults(lib):
 def test_save_and_load(lib, tmp_path):
     folder = str(tmp_path).encode()
     assert lib.settings_load(folder).filter == NONE, "a missing file"
-    for filter, name in ((SCALE3X, "scale3x"), (SCALE2X, "scale2x"), (NONE, "none")):
+    for filter, name in ((SCALE3X, "scale3x"), (SCALE2X, "scale2x"), (NONE, "none"),
+                         (XBRZ2X, "xbrz2x"), (XBRZ3X, "xbrz3x"), (XBRZ4X, "xbrz4x")):
         assert lib.settings_save(folder, ctypes.byref(Settings(filter)))
         assert (tmp_path / "SETTINGS.TXT").read_text() == f"filter={name}\naspect=off\nscanlines=off\n"
         assert lib.settings_load(folder).filter == filter
@@ -82,3 +87,9 @@ def test_failed_save_keeps_the_old_file(lib, tmp_path):
     assert (tmp_path / "SETTINGS.TXT").read_text() == "filter=scale2x\naspect=off\nscanlines=off\n"
     assert not lib.settings_save(str(tmp_path / "missing").encode(), ctypes.byref(Settings(SCALE3X)))
     assert not lib.settings_save(folder, ctypes.byref(Settings(0)))
+
+
+@pytest.mark.parametrize("filter,factor", [(NONE, 1), (SCALE2X, 2), (SCALE3X, 3),
+                                          (XBRZ2X, 2), (XBRZ3X, 3), (XBRZ4X, 4), (0, 0), (99, 0)])
+def test_filter_texture_scale_is_independent_of_the_filter_id(lib, filter, factor):
+    assert lib.settings_filter_factor(filter) == factor

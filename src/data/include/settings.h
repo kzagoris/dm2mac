@@ -4,7 +4,7 @@
 /* Prefixes: settings_ */
 
 /* The settings file of the advanced mode (SETTINGS.TXT in the saves folder): the upscale filter as the text line
-   filter=none|scale2x|scale3x, the 4:3 picture as aspect=on|off, and the scanlines as scanlines=on|off. A player
+   filter=none|scale2x|scale3x|xbrz2x|xbrz3x|xbrz4x, the 4:3 picture as aspect=on|off, and the scanlines as scanlines=on|off. A player
    preference, not game state: the save file does not hold it. It reads and writes the file; it does not apply the
    values. */
 
@@ -15,13 +15,16 @@
 #define SETTINGS_FILE     "SETTINGS.TXT"
 #define SETTINGS_MAX_SIZE 1024 /* a larger file gives the defaults */
 
-/* The upscale filters; the value of each filter is its upscale factor of the window. SETTINGS_FILTER_UNSET is not a
+/* The upscale filters; settings_filter_factor gives their output scale. SETTINGS_FILTER_UNSET is not a
    filter: no filter given, or an unknown name. */
 enum SettingsFilter {
     SETTINGS_FILTER_UNSET = 0,
     SETTINGS_FILTER_NONE = 1,
     SETTINGS_FILTER_SCALE2X = 2,
-    SETTINGS_FILTER_SCALE3X = 3
+    SETTINGS_FILTER_SCALE3X = 3,
+    SETTINGS_FILTER_XBRZ2X = 4,
+    SETTINGS_FILTER_XBRZ3X = 5,
+    SETTINGS_FILTER_XBRZ4X = 6
 };
 
 /* The values of the settings file. */
@@ -34,6 +37,8 @@ typedef struct {
 /* Queries */
 /* The lower-case name of filter in SETTINGS.TXT, NULL for a value that is not a filter. */
 const char *settings_filter_name(enum SettingsFilter filter);
+/* The output pixels per input pixel on each axis, or 0 for an unknown filter. */
+int settings_filter_factor(enum SettingsFilter filter);
 /* The filter of a lower-case name, or SETTINGS_FILTER_UNSET for an unknown name. */
 enum SettingsFilter settings_filter_parse(const char *name);
 /* The values of the settings text: a missing line or a bad value gives the default (no filter, off), an unknown key and a

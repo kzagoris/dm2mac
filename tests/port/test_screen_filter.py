@@ -10,6 +10,7 @@ from dm2test.input import run_ticks
 from dm2test.modes import (ADVANCED, INPUT_MODE_MOVE, VANILLA, key_command, press, set_mode)
 
 NONE, SCALE2X, SCALE3X = C.SETTINGS_FILTER_NONE, C.SETTINGS_FILTER_SCALE2X, C.SETTINGS_FILTER_SCALE3X
+XBRZ2X, XBRZ3X, XBRZ4X = C.SETTINGS_FILTER_XBRZ2X, C.SETTINGS_FILTER_XBRZ3X, C.SETTINGS_FILTER_XBRZ4X
 ROW_OPTIONS, ROW_FILTER, ROW_QUICK_SAVE = 6, 7, 8
 SCAN_ESCAPE, SCAN_RETURN, SCAN_S = 0x01, 0x1C, 0x1F
 HOOK = ctypes.CFUNCTYPE(ctypes.c_bool, ctypes.c_int)
@@ -48,7 +49,7 @@ def cycle(lib):
 
 def test_the_row_cycles_the_filter(lib, screen):
     assert state(lib) == (ROW_FILTER, NONE)
-    for filter in (SCALE2X, SCALE3X, NONE, SCALE2X):
+    for filter in (SCALE2X, SCALE3X, XBRZ2X, XBRZ3X, XBRZ4X, NONE, SCALE2X):
         cycle(lib)
         assert state(lib) == (ROW_FILTER, filter)
     lib.cheats_move_selection(-1)

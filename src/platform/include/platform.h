@@ -25,9 +25,9 @@ typedef void PlatMixer(int16_t *stereo, int frames);
 
 /* Setup */
 
-/* Opens the window at scale times the game screen; the filter value is the upscale factor. */
+/* Opens the window at scale times the game screen and applies the selected filter. */
 bool plat_init(int scale, enum SettingsFilter filter);
-/* Changes the upscale factor of the window at once. False, and no change, when the texture cannot be made. */
+/* Changes the screen filter at once. False, and no change, when the texture cannot be made. */
 bool plat_set_filter(enum SettingsFilter filter);
 /* Shows the 4:3 picture and the scanlines of the window at once: aspect makes the game screen 4:3 instead of
    square pixels, scanlines draws a dark line below every line of the game screen. A window that fits the picture

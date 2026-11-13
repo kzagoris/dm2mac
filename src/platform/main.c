@@ -753,15 +753,13 @@ static int select_runnable_mode(Options *options)
     return 0;
 }
 
-/* The filter names in the order of the enum: "none, scale2x, or scale3x". */
+/* The filter names in the order of the enum. */
 static const char *list_filter_names(char *list, size_t size)
 {
     size_t used = 0;
     list[0] = '\0';
-    for (enum SettingsFilter filter = SETTINGS_FILTER_NONE; filter <= SETTINGS_FILTER_SCALE3X; filter++) {
-        const char *separator = filter == SETTINGS_FILTER_NONE      ? ""
-                                : filter == SETTINGS_FILTER_SCALE3X ? ", or "
-                                                                    : ", ";
+    for (enum SettingsFilter filter = SETTINGS_FILTER_NONE; filter <= SETTINGS_FILTER_XBRZ4X; filter++) {
+        const char *separator = filter == SETTINGS_FILTER_NONE ? "" : filter == SETTINGS_FILTER_XBRZ4X ? ", or " : ", ";
         int written = snprintf(list + used, size - used, "%s%s", separator, settings_filter_name(filter));
         if (written < 0 || (size_t)written >= size - used)
             break;
