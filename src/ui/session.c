@@ -17,9 +17,11 @@
 #include "input.h"
 #include "interface_state.h"
 #include "le.h"
+#include "magic.h"
 #include "money.h"
 #include "move.h"
 #include "play.h"
+#include "recovery.h"
 #include "save.h"
 #include "seen.h"
 #include "sensor.h"
@@ -394,6 +396,7 @@ static bool load_new_game(void)
     if (!dungeon_load(path))
         return false;
     seen_reset();
+    magic_reset_favorites();
     game_set_cheats(0);
     uint16_t start = dungeon_party_start();
     /* the party start keeps the direction in the map bits */
@@ -459,7 +462,7 @@ bool session_load(void)
     if (!ok) {
         /* fix: the original asks for the disk of the game when the load of the last slot fails */
         dialog_run(dialog_draw(DIALOG_ERROR, MESSAGE_GAME_DAMAGED));
-        if (!g_session.loaded)
+        if (!g_session.loaded && g_game_mode != GAME_MODE_ADVANCED)
             session_quit();
         return false;
     }
@@ -603,6 +606,27 @@ bool session_start_save(const char *path)
     return true;
 }
 
+bool session_recover_slot(void)
+{
+    game_set_session_loaded(false);
+    game_set_new_game(0);
+    int16_t slot = choose_load_slot();
+    if (slot < 0)
+        return false;
+    char path[OS_PATH_SIZE], bak[OS_PATH_SIZE];
+    slot_path(path, slot, false);
+    slot_path(bak, slot, true);
+    if (!file_exists(path) && file_exists(bak))
+        snprintf(path, sizeof path, "%s", bak);
+    if (!load_slot(path))
+        return false;
+    game_set_save_slot(slot);
+    game_clear_end();
+    arrive_on_party_map();
+    start_loaded_game(false);
+    return true;
+}
+
 /* ---- End of the game ---- */
 
 void session_quit(void)
@@ -631,6 +655,13 @@ void session_end(bool party_dead)
             (SoundCue){CAT_CHAMPION, portrait, SOUND_ENTRY_SCREAM, END_SOUND_PRIORITY, SOUND_VOLUME_FULL},
             SOUND_FALLBACK, g_game.party_x, g_game.party_y, SOUND_NOW);
         play_wait_frames(END_SOUND_VBLANKS);
+    }
+    if (party_dead && g_game_mode == GAME_MODE_ADVANCED && g_session.offer_restore) {
+        if (recovery_run(true))
+            return;
+        game_set_quit_code(1);
+        session_quit();
+        return;
     }
     g_dialog.screen_mode = 1;
     if (party_dead) {

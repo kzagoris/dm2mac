@@ -285,8 +285,12 @@ static void pump_events(void)
     while (plat_poll(&e)) {
         if (e.type == PLAT_QUIT) {
             end_by_platform();
+        } else if (e.type == PLAT_FOCUS_LOST || e.type == PLAT_FOCUS_GAINED) {
+            advanced_focus_changed(e.type == PLAT_FOCUS_GAINED);
         } else if (e.type == PLAT_KEY) {
             uint16_t key = pc_key_code(e.scancode, e.mod);
+            if (advanced_focus_key(key, e.repeat))
+                continue;
             if (key && e.repeat && g_game_mode == GAME_MODE_ADVANCED)
                 input_key_repeat(key);
             else if (key)
@@ -465,7 +469,7 @@ static const char *read_options(int argc, char **argv, Options *options, const c
 }
 
 /* False with a message for an option without a value or an unknown option. */
-static bool options_are_valid(const char *missing, const char *unknown)
+static bool valid_options(const char *missing, const char *unknown)
 {
     if (missing)
         os_log("%s needs a value", missing);
@@ -748,15 +752,13 @@ static int select_runnable_mode(Options *options)
     return 0;
 }
 
-/* The filter names in the order of the enum: "none, scale2x, or scale3x". */
+/* The filter names in the order of the enum. */
 static const char *list_filter_names(char *list, size_t size)
 {
     size_t used = 0;
     list[0] = '\0';
-    for (enum SettingsFilter filter = SETTINGS_FILTER_NONE; filter <= SETTINGS_FILTER_SCALE3X; filter++) {
-        const char *separator = filter == SETTINGS_FILTER_NONE      ? ""
-                                : filter == SETTINGS_FILTER_SCALE3X ? ", or "
-                                                                    : ", ";
+    for (enum SettingsFilter filter = SETTINGS_FILTER_NONE; filter <= SETTINGS_FILTER_XBRZ4X; filter++) {
+        const char *separator = filter == SETTINGS_FILTER_NONE ? "" : filter == SETTINGS_FILTER_XBRZ4X ? ", or " : ", ";
         int written = snprintf(list + used, size - used, "%s%s", separator, settings_filter_name(filter));
         if (written < 0 || (size_t)written >= size - used)
             break;
@@ -780,7 +782,7 @@ int main(int argc, char **argv)
         install_make_folder(INSTALL_GAME_FOLDER);
     }
     open_log(options.data); /* before the first message: the Windows build and a macOS bundle have no console */
-    if (!options_are_valid(missing, unknown))
+    if (!valid_options(missing, unknown))
         return EXIT_USAGE;
     int mode_status = select_runnable_mode(&options);
     if (mode_status)
@@ -796,6 +798,7 @@ int main(int argc, char **argv)
     if (!open_game(&options, filter))
         return EXIT_FAILURE;
     g_upscale_filter_hook = plat_set_filter;
+    g_upscale_picture_hook = plat_set_picture;
     g_play_frame_hook = g_game_mode == GAME_MODE_TURNBASED ? turnbased_modal_frame : modal_frame;
     if (!mode_given && !options.save && !getenv(RESTART_ENV))
         choose_mode();

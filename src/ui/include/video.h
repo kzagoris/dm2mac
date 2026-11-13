@@ -5,11 +5,13 @@
 
 /* The frame buffer and the palette of the 320x200 screen. */
 
+#include <stdbool.h>
 #include <stdint.h>
 
 /* Size of the screen in pixels. */
-#define SCREEN_W 320
-#define SCREEN_H 200
+#define SCREEN_W      320
+#define SCREEN_H      200
+#define SCREEN_TUBE_H 240 /* the height in square pixels on a 4:3 monitor, which shows the 200 lines taller */
 
 /* Size of the palette. */
 #define PALETTE_COLORS 256
@@ -32,9 +34,10 @@ typedef struct {
     int x, y;
 } VideoPoint;
 
-/* The game screen in the output: its scale and the output position of its top left corner. */
+/* The game screen in the output: the output pixels per screen pixel across and down, and the output position of
+   its top left corner. */
 typedef struct {
-    float scale, x, y;
+    float scale_x, scale_y, x, y;
 } VideoLayout;
 
 /* The game screen: one palette index per pixel. */
@@ -51,10 +54,11 @@ uint32_t video_argb(uint8_t palette_color);
 
 /* ---- Output layout ---- */
 
-/* Largest scale (fractional) that fits the output, centered (letterbox). */
-VideoLayout video_layout(int output_w, int output_h);
-/* Maps output pixel coordinates to game coordinates, clamped to the screen. */
-VideoPoint video_map_mouse(int output_w, int output_h, int output_x, int output_y);
+/* Largest scale (fractional) that fits the output, centered (letterbox). aspect: the picture is 4:3, so a screen
+   pixel is taller than wide; otherwise it is square. */
+VideoLayout video_layout(int output_w, int output_h, bool aspect);
+/* Maps output pixel coordinates to game coordinates, clamped to the screen; aspect as video_layout. */
+VideoPoint video_map_mouse(int output_w, int output_h, int output_x, int output_y, bool aspect);
 
 /* ---- ARGB pixels ---- */
 

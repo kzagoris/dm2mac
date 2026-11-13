@@ -35,8 +35,9 @@ void (*g_play_frame_hook)(void);
 
 void play_wait_frames(int count)
 {
-    while (count-- > 0) {
+    while (count > 0 && !g_main_loop.quit) {
         game_count_timer_tick();
+        count--;
         if (g_play_frame_hook)
             g_play_frame_hook();
     }

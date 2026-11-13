@@ -55,6 +55,8 @@ bool session_start_new_game(void);
 /* Loads the save file at path and starts its game at once, with the party view and light of a menu load. Returns
    false when the file does not load. */
 bool session_start_save(const char *path);
+/* Chooses and starts a slot at Advanced startup/death; errors return to the recovery chooser. */
+bool session_recover_slot(void);
 
 /* ---- End of the game ---- */
 /* Ends the program with the exit code of the session. */

@@ -17,10 +17,12 @@
 #include "move.h"
 #include "music.h"
 #include "play.h"
+#include "recovery.h"
 #include "recruit.h"
 #include "sensor.h"
 #include "session.h"
 #include "sound_request.h"
+#include "spellbook.h"
 #include "video.h"
 #include "view.h"
 #include "zone.h"
@@ -211,6 +213,10 @@ void input_mouse_click(int16_t x, int16_t y, int type)
 
 void input_mouse_down(int16_t x, int16_t y, int button)
 {
+    if (recovery_is_open()) {
+        recovery_event(button, x, y);
+        return;
+    }
     game_set_mouse_buttons(g_input_mouse_buttons | button);
     input_mouse_click(x, y, button);
 }
@@ -244,12 +250,20 @@ void input_enqueue_key(uint16_t key)
 
 void input_key_down(uint16_t key)
 {
+    if (advanced_focus_key(key, false))
+        return;
+    if (recovery_is_open()) {
+        recovery_event(INPUT_KEY, (int16_t)key, 0);
+        return;
+    }
     if (g_input.key_count < KEY_BUFFER)
         g_input.keys[g_input.key_count++] = key;
 }
 
 void input_key_repeat(uint16_t key)
 {
+    if (advanced_focus_key(key, true))
+        return;
     if (input_is_idle())
         input_key_down(key);
 }
@@ -286,6 +300,19 @@ void input_flush(void)
     g_input_match.choice = 0;
     g_input.events_locked = false;
     input_flush_deferred_click();
+}
+
+void input_cancel_pending(void)
+{
+    g_input.deferred = false;
+    input_reset_states();
+    input_flush();
+    g_input.event_count = 0;
+    g_input.event_head = 0;
+    g_input.event_tail = EVENT_RING - 1;
+    g_input.dropped_left = false;
+    g_input.arrow_pressed = false;
+    game_set_mouse_buttons(0);
 }
 
 /* ---- Clicks in the dungeon view ---- */
@@ -684,7 +711,7 @@ static bool execute_party_command(const Command *c, bool idle)
     } else if (command == CMD_REMOVE_RUNE) {
         magic_remove_last_rune();
     } else if (command >= CMD_RUNE_FIRST && command <= CMD_RUNE_LAST) {
-        magic_add_rune(command - CMD_RUNE_FIRST);
+        spellbook_add_rune(command - CMD_RUNE_FIRST);
     } else if (command == CMD_MINION_MAP) {
         minion_map_click_set_destination(command, c->x, c->y);
     } else if (command >= CMD_MAP_OPTION_FIRST && command <= CMD_MAP_OPTION_LAST) {
@@ -744,6 +771,12 @@ static bool execute_champion_command(int command, bool idle)
             champ_drag_click(command - CMD_DRAG_FIRST);
         input_refresh_mode();
         area_update(false);
+    } else if (command == CMD_OPTIONS) {
+        if (g_game_mode == GAME_MODE_ADVANCED && !g_ui.candidate && idle)
+            advanced_open_options();
+    } else if (command == CMD_SPELLBOOK) {
+        if (g_game_mode == GAME_MODE_ADVANCED && g_game.champion_count && !g_ui.candidate && idle)
+            advanced_open_spellbook();
     } else if (command >= CMD_QUICK_SAVE && command <= CMD_CHEATS) {
         if (g_game.champion_count && !g_ui.candidate && idle) {
             if (command == CMD_QUICK_SAVE)

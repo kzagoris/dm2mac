@@ -17,7 +17,11 @@
 /* PC scan codes of the keys that open the automap and the cheat screen. */
 #define KEY_AUTOMAP   KEY_TAB
 #define KEY_AUTOMAP_M 0x32 /* M */
+#define KEY_OPTIONS   0x3b /* F1 */
+#define KEY_SPELLBOOK 0x30 /* B */
 #define KEY_CHEATS    0x2e /* C */
+#define KEY_DISK_MENU (KEY_CONTROL | SCAN_S)
+#define KEY_REST      (KEY_CONTROL | SCAN_R)
 
 /* PC scan codes of the numeric keypad keys that move and turn the party. */
 #define KEYPAD_TURN_LEFT  0x4b
@@ -31,6 +35,7 @@
 #define SCAN_Q      0x10
 #define SCAN_W      0x11
 #define SCAN_E      0x12
+#define SCAN_R      0x13
 #define SCAN_A      0x1e
 #define SCAN_S      0x1f
 #define SCAN_D      0x20
@@ -40,7 +45,13 @@
 enum QuickLoadResult { QUICK_LOADED, QUICK_MISSING, QUICK_DAMAGED, QUICK_BLOCKED, QUICK_LOST };
 
 /* The screens that cover the viewport, one at a time; the game time stops while one is open. */
-enum AdvancedScreen { ADVANCED_SCREEN_NONE, ADVANCED_SCREEN_AUTOMAP, ADVANCED_SCREEN_CHEATS };
+enum AdvancedScreen {
+    ADVANCED_SCREEN_NONE,
+    ADVANCED_SCREEN_AUTOMAP,
+    ADVANCED_SCREEN_CHEATS,
+    ADVANCED_SCREEN_SPELLBOOK,
+    ADVANCED_SCREEN_OPTIONS
+};
 
 extern enum AdvancedScreen g_advanced_screen; /* the open viewport screen */
 
@@ -63,7 +74,7 @@ enum QuickLoadResult advanced_quick_load(void);
 /* The automap */
 /* Opens the automap in the viewport. */
 void advanced_open_automap(void);
-/* Draws the automap and its readout (level, position, direction) in the viewport. */
+/* Draws the automap and its readout (level, position, direction), or the selected square's item list. */
 void advanced_draw_automap(void); /* exported for the tests */
 /* The mouse is at (x, y): during a drag the map follows it in whole squares. */
 void advanced_automap_drag(int16_t x, int16_t y);
@@ -71,13 +82,24 @@ void advanced_automap_drag(int16_t x, int16_t y);
 /* Viewport screens */
 /* Opens the cheat screen in the viewport. */
 void advanced_open_cheats(void);
+/* Opens normal-rule spell favorites. */
+void advanced_open_spellbook(void);
+/* Opens ordinary options and Help. */
+void advanced_open_options(void);
 /* An input event while a viewport screen is open (type INPUT_KEY with the key in x, a mouse button,
-   INPUT_LEFT_RELEASED). On the automap Tab, M, and Esc close it, a left drag on the viewport scrolls the map. On the
+   INPUT_LEFT_RELEASED). On the automap Tab and M close it, a short left click lists the square's items, and a left
+   drag scrolls the map. Escape/right click return from the item list to the map, then close the map. Left/right
+   or A/D and the PREVIOUS/NEXT rows page the items; the MAP title item returns to the map. On the
    cheat screen C and Esc close it, Up, Down, W, and S select a row, Return and a left click run a row, F5 and F9
    quick save and quick load (a quick load closes the screen, then runs as the F9 key of the game); a right click
    on a spell page goes back to the cheat page. Elsewhere a right click closes the screen. Other keys do nothing. */
 void advanced_screen_event(int type, int16_t x, int16_t y);
 /* The key that a closed screen leaves for the game (F9 of QUICK LOAD), 0 for none; clears it. */
 uint16_t advanced_take_pending_key(void);
+
+/* Clears pending and held input on focus loss without changing pause or overlay state. */
+void advanced_focus_changed(bool focused);
+/* Rejects stale key repeats until a fresh key press after switching windows. */
+bool advanced_focus_key(uint16_t key, bool repeat);
 
 #endif /* DM2_UI_ADVANCED_H */

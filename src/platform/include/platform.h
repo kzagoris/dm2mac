@@ -11,7 +11,7 @@
 #include "settings.h"
 
 /* Types of a platform event. */
-typedef enum { PLAT_QUIT, PLAT_KEY, PLAT_MOUSE, PLAT_MOUSE_UP } PlatEventType;
+typedef enum { PLAT_QUIT, PLAT_KEY, PLAT_MOUSE, PLAT_MOUSE_UP, PLAT_FOCUS_LOST, PLAT_FOCUS_GAINED } PlatEventType;
 
 typedef struct {
     PlatEventType type;
@@ -25,10 +25,14 @@ typedef void PlatMixer(int16_t *stereo, int frames);
 
 /* Setup */
 
-/* Opens the window at scale times the game screen; the filter value is the upscale factor. */
+/* Opens the window at scale times the game screen and applies the selected filter. */
 bool plat_init(int scale, enum SettingsFilter filter);
-/* Changes the upscale factor of the window at once. False, and no change, when the texture cannot be made. */
+/* Changes the screen filter at once. False, and no change, when the texture cannot be made. */
 bool plat_set_filter(enum SettingsFilter filter);
+/* Shows the 4:3 picture and the scanlines of the window at once: aspect makes the game screen 4:3 instead of
+   square pixels, scanlines draws a dark line below every line of the game screen. A window that fits the picture
+   exactly keeps fitting it. False, and no change, when the scanline texture cannot be made. */
+bool plat_set_picture(bool aspect, bool scanlines);
 /* Closes the window, the sound output and SDL. */
 void plat_quit(void);
 /* Sets the window and Dock icon from w by h ARGB pixels. */

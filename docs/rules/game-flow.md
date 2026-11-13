@@ -61,6 +61,8 @@ The code is in `src/ui/session.c`, `src/ui/dialog.c`, `src/engine/dungeon.c`, an
 
 ## Deviations from the original
 
+- Advanced startup and party-death recovery use a chooser with an explicit QUICK.DAT source, separate slot loading, and safe retry after a missing or corrupt quick save. Startup also offers a new game; Vanilla retains the original menus and last-slot restart. See [Advanced mode](advanced-mode.md#quick-save-and-quick-load).
+
 - The DOS layer is not ported: disks, drives, volume labels, the disk dialogs, the memory errors, the mouse pointer counter, the video state, and the busy waits. A modal loop (menu, dialog, name editor) runs one platform timer tick per pass (`play_wait_frames` in `src/ui/play.c` calls `g_play_frame_hook`, which `src/platform/main.c` sets); the original loops spin. A dialog waits until the player chooses a button or the program ends; the tests choose through the frame hook.
 - `session_quit` sets `g_main_loop.quit` and returns; the main loop then ends (the original exits the process immediately). After the end sensor the rest of that timeline step still runs. A RESTART (exit code 3) starts the program again with `execvp` and sets the environment variable `DM2_RESTARTED`, which turns off the start movies; a failed start prints an error. The restart drops `--save PATH`, so the program shows the start menu, as in the original.
 - The drive path codes of the dialog texts (3, 4, 15) give the last folder name of the `--data` path in capitals (the font has no lowercase letters); the error, memory, and file name codes give an empty text.

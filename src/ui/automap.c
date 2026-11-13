@@ -1,16 +1,23 @@
 /* SPDX-License-Identifier: GPL-3.0-or-later */
 /* The automap of the advanced mode: the map picture. */
 #include "automap.h"
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include "advanced.h"
 #include "aspect.h"
 #include "dungeon.h"
 #include "game.h"
 #include "game_text.h"
+#include "item.h"
 #include "minion.h"
 #include "minion_map.h"
 #include "num.h"
+#include "rows.h"
 #include "save.h"
 #include "seen.h"
 #include "sensor.h"
+#include "zone.h"
 
 /* The gap left of and above each square icon. */
 #define ICON_GAP 1
@@ -22,12 +29,55 @@
 /* The squares around a map that the view draws as its edge walls (dungeon_square_edge). */
 #define MAP_MARGIN 1
 
+/* A small item symbol or pile count in the upper right of a square; ten or more items show a plus. */
+#define ITEM_MARK_W     3
+#define ITEM_MARK_H     5
+#define ITEM_MARK_LIMIT 10
+#define ITEM_MARK_LEFT  (MAP_ICON_W - ITEM_MARK_W)
+
+/* The item list: a count/page subtitle, eight names, then mouse paging controls. */
+#define ITEM_ROW_SUMMARY  0
+#define ITEM_ROW_FIRST    1
+#define ITEMS_PER_PAGE    8
+#define ITEM_ROW_PREVIOUS (ITEM_ROW_FIRST + ITEMS_PER_PAGE)
+#define ITEM_ROW_NEXT     (ITEM_ROW_PREVIOUS + 1)
+#define ITEM_ROW_COUNT    (ITEM_ROW_NEXT + 1)
+#define ITEM_LINE_SIZE    (ROWS_COLUMNS + 1)
+_Static_assert(ITEM_ROW_COUNT <= ROWS_MAX_COUNT, "the automap item page fits in the viewport");
+
 /* The first and the last level column (or row) that the automap draws. */
 typedef struct {
     int first, last;
 } Span;
 
+/* A group of loose items with the same displayed name. Containers are listed without their contents. */
+typedef struct {
+    char name[TEXT_SIZE];
+    int quantity;
+} ItemSummary;
+
+/* The text storage and mouse layout of one item page. */
+typedef struct {
+    char title[TEXT_SIZE];
+    char texts[ITEM_ROW_COUNT][ITEM_LINE_SIZE];
+    const char *lines[ITEM_ROW_COUNT];
+    RowsScreen screen;
+    int page_count;
+} ItemPage;
+
 static int scroll_x, scroll_y; /* squares between the party and the middle of the drawn map */
+
+/* Selection is a level position, so it follows the same owner and visibility rules as the map picture. */
+static struct {
+    bool open;
+    Location square;
+    int page;
+} inspection;
+
+/* Three pixels per row: a diamond for one item, digits for piles, then a plus for larger piles. */
+static const char *const item_marks[] = {"000000000000000", "010111010000000", "110001010100111", "110001010001110",
+                                         "101101111001001", "111100110001110", "011100111101111", "111001010010010",
+                                         "111101111101111", "111101111001110", "000010111010000"};
 
 /* The maps of the party level, ended by LEVEL_LIST_END. */
 static const uint8_t *party_level_maps(void)
@@ -196,6 +246,29 @@ bool automap_level_seen(Location level_at)
     return false;
 }
 
+int automap_items(Location level_at, uint16_t *items, int capacity)
+{
+    Position at;
+    if (g_game.party_map >= dungeon_map_count() || !(game_has_cheat(CHEAT_MAP) || automap_level_seen(level_at)) ||
+        !automap_level_square(level_at, &at) || !covers(at.map, level_at, &at) ||
+        square_type(dungeon_square(at.map, at.x, at.y)) == SQUARE_UNKNOWN)
+        return 0;
+    int count = 0;
+    for (uint16_t t = dungeon_square_first_thing(at.map, at.x, at.y); t != THING_ENDOFLIST; t = dungeon_next_thing(t)) {
+        if (!thing_is_item(t))
+            continue;
+        if (items && count < capacity)
+            items[count] = t;
+        count++;
+    }
+    return count;
+}
+
+bool automap_items_open(void)
+{
+    return inspection.open;
+}
+
 /* Drawing */
 
 /* Fills rect cut to clip. */
@@ -219,6 +292,20 @@ static void checker_overlay(Offscreen *o, const int16_t *clip, int16_t icon_x, i
         for (int px = icon_x; px < icon_x + MAP_ICON_W; px++)
             if (!((px + py) & 1))
                 fill_clipped(o, clip, (int16_t[RECT_SIZE]){(int16_t)px, (int16_t)py, 1, 1}, g_ui_colors[UI_LIGHT_GRAY]);
+}
+
+/* Draws every loose item, even one without map graphics, as a clipped yellow symbol or pile count. */
+static void show_item_mark(Offscreen *o, const int16_t *clip, Location level_at, int16_t icon_x, int16_t icon_y)
+{
+    int count = automap_items(level_at, NULL, 0);
+    if (!count)
+        return;
+    const char *mark = item_marks[min_int(count, ITEM_MARK_LIMIT)];
+    for (int y = 0; y < ITEM_MARK_H; y++)
+        for (int x = 0; x < ITEM_MARK_W; x++)
+            fill_clipped(o, clip,
+                         (int16_t[RECT_SIZE]){(int16_t)(icon_x + ITEM_MARK_LEFT + x), (int16_t)(icon_y + y), 1, 1},
+                         g_ui_colors[mark[y * ITEM_MARK_W + x] == '1' ? UI_YELLOW : UI_BLACK]);
 }
 
 /* The white frame just outside the level rect, whose level position (0, 0) icon is at (left, top). */
@@ -278,6 +365,7 @@ static void show_level_square(Offscreen *o, const int16_t *clip, Location level_
                      (int16_t[RECT_SIZE]){(int16_t)(icon_x + PAD_MARK_OFFSET), (int16_t)(icon_y + PAD_MARK_OFFSET),
                                           PAD_MARK_SIZE, PAD_MARK_SIZE},
                      g_ui_colors[UI_GRAY]);
+    show_item_mark(o, clip, level_at, icon_x, icon_y);
 }
 
 void automap_draw(Offscreen *o, const int16_t *clip)
@@ -301,6 +389,132 @@ void automap_draw(Offscreen *o, const int16_t *clip)
     dungeon_set_current_map(saved);
 }
 
+/* Groups the selected square's current items by their full displayed names; the caller frees the result. */
+static ItemSummary *summarize_items(int *group_count, int *total)
+{
+    *group_count = 0;
+    *total = automap_items(inspection.square, NULL, 0);
+    if (!*total)
+        return NULL;
+    uint16_t *things = malloc((size_t)*total * sizeof *things);
+    ItemSummary *groups = calloc((size_t)*total, sizeof *groups);
+    if (!things || !groups) {
+        free(things);
+        free(groups);
+        return NULL;
+    }
+    automap_items(inspection.square, things, *total);
+    for (int i = 0; i < *total; i++) {
+        const char *name = item_name(things[i]);
+        if (!*name)
+            name = "UNKNOWN ITEM";
+        int group = 0;
+        while (group < *group_count && strcmp(groups[group].name, name))
+            group++;
+        if (group == *group_count) {
+            snprintf(groups[group].name, sizeof groups[group].name, "%s", name);
+            (*group_count)++;
+        }
+        groups[group].quantity++;
+    }
+    free(things);
+    return groups;
+}
+
+/* Builds a page without drawing it, so the renderer and mouse hit testing share the same layout. */
+static void build_item_page(ItemPage *page)
+{
+    memset(page, 0, sizeof *page);
+    for (int i = 0; i < ITEM_ROW_COUNT; i++)
+        page->lines[i] = page->texts[i];
+    Position at = {0};
+    automap_level_square(inspection.square, &at);
+    snprintf(page->title, sizeof page->title, "ITEMS M%d X%d Y%d", at.map, at.x, at.y);
+    int count, total;
+    ItemSummary *groups = summarize_items(&count, &total);
+    page->page_count = max_int(1, (count + ITEMS_PER_PAGE - 1) / ITEMS_PER_PAGE);
+    inspection.page = clamp_int(0, inspection.page, page->page_count - 1);
+    snprintf(page->texts[ITEM_ROW_SUMMARY], ITEM_LINE_SIZE, "%d ITEMS  PAGE %d/%d", total, inspection.page + 1,
+             page->page_count);
+    if (!groups)
+        snprintf(page->texts[ITEM_ROW_FIRST], ITEM_LINE_SIZE, "%s", total ? "UNABLE TO LIST ITEMS" : "NO ITEMS");
+    for (int i = 0; i < ITEMS_PER_PAGE && inspection.page * ITEMS_PER_PAGE + i < count; i++) {
+        const ItemSummary *group = &groups[inspection.page * ITEMS_PER_PAGE + i];
+        char *line = page->texts[ITEM_ROW_FIRST + i];
+        int length = snprintf(line, ITEM_LINE_SIZE, "%d X %s", group->quantity, group->name);
+        if (length >= ITEM_LINE_SIZE)
+            memcpy(line + ITEM_LINE_SIZE - sizeof "..", "..", sizeof "..");
+    }
+    free(groups);
+    if (inspection.page > 0)
+        snprintf(page->texts[ITEM_ROW_PREVIOUS], ITEM_LINE_SIZE, "< PREVIOUS");
+    if (inspection.page + 1 < page->page_count)
+        snprintf(page->texts[ITEM_ROW_NEXT], ITEM_LINE_SIZE, "NEXT >");
+    page->screen = (RowsScreen){.title = page->title,
+                                .title_item = "MAP",
+                                .rows = page->lines,
+                                .row_count = ITEM_ROW_COUNT,
+                                .subtitles = 1u << ITEM_ROW_SUMMARY};
+}
+
+void automap_draw_items(void)
+{
+    ItemPage page;
+    build_item_page(&page);
+    rows_draw(&page.screen, -1);
+}
+
+/* Inspection */
+
+/* Divides a screen offset into whole map cells, rounding toward negative infinity on the left/top. */
+static int cell_offset(int offset)
+{
+    return offset / MAP_CELL_SIZE - (offset % MAP_CELL_SIZE < 0);
+}
+
+bool automap_select(int16_t x, int16_t y)
+{
+    int16_t rect[RECT_SIZE];
+    if (!zone_get_viewport_rect(rect) || x < rect[RECT_X] || x >= rect[RECT_X] + rect[RECT_W] || y < rect[RECT_Y] ||
+        y >= rect[RECT_Y] + rect[RECT_H])
+        return false;
+    Location middle = middle_square();
+    Location square = {middle.x + cell_offset(x - rect[RECT_X] - (rect[RECT_W] - MAP_CELL_SIZE) / 2),
+                       middle.y + cell_offset(y - rect[RECT_Y] - (rect[RECT_H] - MAP_CELL_SIZE) / 2)};
+    if (!automap_items(square, NULL, 0))
+        return false;
+    inspection.square = square;
+    inspection.page = 0;
+    inspection.open = true;
+    return true;
+}
+
+bool automap_items_event(int type, int16_t x, int16_t y)
+{
+    if (!inspection.open)
+        return false;
+    if (type == INPUT_BUTTON_RIGHT || (type == INPUT_KEY && x == SCAN_ESCAPE)) {
+        inspection.open = false;
+        return true;
+    }
+    ItemPage page;
+    build_item_page(&page);
+    int step = 0;
+    if (type == INPUT_KEY)
+        step = x == KEYPAD_TURN_LEFT || x == SCAN_A ? -1 : x == KEYPAD_TURN_RIGHT || x == SCAN_D ? 1 : 0;
+    else if (type == INPUT_BUTTON_LEFT) {
+        int16_t row = rows_find_row(&page.screen, x, y);
+        if (row == ITEM_ROW_COUNT)
+            inspection.open = false;
+        else if (row == ITEM_ROW_PREVIOUS)
+            step = -1;
+        else if (row == ITEM_ROW_NEXT)
+            step = 1;
+    }
+    inspection.page = clamp_int(0, inspection.page + step, page.page_count - 1);
+    return true;
+}
+
 /* Scrolling */
 
 void automap_scroll(int dx, int dy)
@@ -318,4 +532,6 @@ void automap_scroll_reset(void)
 {
     scroll_x = 0;
     scroll_y = 0;
+    inspection.open = false;
+    inspection.page = 0;
 }

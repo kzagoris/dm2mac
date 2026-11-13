@@ -7,6 +7,7 @@
 
 #include <stdbool.h>
 #include <stdint.h>
+#include <stdio.h>
 #include "champion.h"
 #include "timeline.h"
 
@@ -29,6 +30,25 @@ typedef enum { CAST_OK, CAST_FAILED, CAST_UNKNOWN_SPELL, CAST_NEEDS_FLASK } Cast
 /* The power of the MON rune, the strongest power rune. */
 #define POWER_MON 6
 
+/* Player-recorded combinations per champion; the last attempted cast follows the four favorites. */
+#define MAGIC_FAVORITE_COUNT 4
+#define MAGIC_FAVORITE_LAST  MAGIC_FAVORITE_COUNT
+#define MAGIC_RECORD_COUNT   (MAGIC_FAVORITE_COUNT + 1)
+
+/* Clears recorded combinations and the known spells for a new adventure or an old save. */
+void magic_reset_favorites(void);
+/* Records the currently entered runes in a favorite slot; false for invalid/incomplete input. */
+bool magic_record_favorite(int16_t caster, int16_t slot);
+/* Recorded glyph at step, or 0 for an absent/invalid entry. */
+uint8_t magic_favorite_rune(int16_t caster, int16_t slot, int step);
+/* Total rune-entry mana at the chosen power; -1 for no combination or invalid power. */
+int magic_favorite_mana(int16_t caster, int16_t slot, int power);
+/* Writes the versioned optional FAVS save extension and the KNOW block of the known spells after it. */
+bool magic_write_favorites(FILE *f);
+/* Reads an optional FAVS extension, alone or with the KNOW block after it, at EOF; rejects malformed/unknown data and
+   clears old entries. */
+bool magic_read_favorites(FILE *f);
+
 /* Spell lookup */
 /* The spell of the entered runes (a power rune and 1 to 3 runes), NULL when no spell has them. */
 const Spell *magic_find_spell(const uint8_t *runes); /* exported for the tests */
@@ -41,6 +61,14 @@ const char *magic_get_spell_name(const Spell *spell);
 /* The lower-case name of a rune (its glyph - SPELL_RUNE_GLYPH_FIRST: the power runes, then the three rune sets), for
    example "ful"; NULL for a value outside the runes. */
 const char *magic_get_rune_name(int rune);
+
+/* Known spells */
+/* Whether a cast of entered runes found spell in the advanced mode of this adventure, also when the cast then failed. */
+bool magic_is_spell_known(const Spell *spell);
+/* Makes spell known in the advanced mode; exported for the tests. */
+void magic_learn_spell(const Spell *spell);
+/* The mana that the power rune of power 1 to 6 and the runes of spell cost; -1 for another power. */
+int magic_spell_mana(const Spell *spell, int power);
 
 /* Light and auras */
 /* Adds magic light (or darkness) of a kind and power; it fades through timeline events. */
@@ -71,5 +99,16 @@ uint16_t magic_rune_mana_cost(int16_t champion_index, int rune);
 void magic_add_rune(int rune);
 /* The champion who casts takes back the last rune. */
 void magic_remove_last_rune(void);
+
+/* Whether the caster has an empty flask in either hand. */
+bool magic_has_empty_flask(int16_t caster);
+/* Whether the recorded spell needs a flask at its recorded power. */
+bool magic_favorite_needs_flask(int16_t caster, int16_t slot);
+/* Enters recorded runes through magic_add_rune; rejects dead/busy casters, existing runes, and insufficient mana. */
+bool magic_prepare_favorite(int16_t caster, int16_t slot, int power);
+/* Whether spell makes a potion and so needs an empty flask in a hand of its caster. */
+bool magic_spell_needs_flask(const Spell *spell);
+/* Enters the power rune of power and the runes of spell through magic_add_rune, as magic_prepare_favorite. */
+bool magic_prepare_spell(int16_t caster, const Spell *spell, int power);
 
 #endif /* DM2_ENGINE_MAGIC_H */

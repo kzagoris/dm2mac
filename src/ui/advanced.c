@@ -3,6 +3,7 @@
 #include "advanced.h"
 #include <stdbool.h>
 #include <stdio.h>
+#include <string.h>
 #include "automap.h"
 #include "cheats.h"
 #include "draw.h"
@@ -11,15 +12,20 @@
 #include "game_text.h"
 #include "ids.h"
 #include "interface_state.h"
+#include "magic.h"
 #include "minion.h"
 #include "music.h"
+#include "options.h"
 #include "os.h"
+#include "recovery.h"
 #include "save.h"
 #include "session.h"
 #include "sound.h"
+#include "spellbook.h"
 #include "text.h"
 #include "timeline.h"
 #include "ui.h"
+#include "video.h"
 #include "zone.h"
 
 /* The name in the header of QUICK.DAT. */
@@ -30,13 +36,21 @@
 #define READOUT_POSITION  0
 #define READOUT_DIRECTION 1
 
+/* A click tolerates small mouse jitter; a larger movement is a drag even below one whole map square. */
+#define MAP_CLICK_SLOP 3
+
 enum AdvancedScreen g_advanced_screen;
+
+/* Options may cover an inventory, sleep or pause picture that will not redraw on its own. */
+static uint8_t options_picture[SCREEN_H][SCREEN_W];
 
 /* The state of the viewport screens and of the quick load. */
 static struct {
     struct {
         bool active;
-        int x, y; /* the mouse position that matches the current scroll */
+        bool moved;
+        int x, y;             /* the mouse position that matches the current scroll */
+        int start_x, start_y; /* the press position, before any scrolling */
     } drag;
     bool lost;            /* a quick load lost the game: there is no running game to keep */
     uint16_t pending_key; /* the key that the closed screen leaves for the game (F9 of QUICK LOAD), 0 for none */
@@ -47,6 +61,8 @@ static const char *const direction_names[DIR_COUNT] = {"NORTH", "EAST", "SOUTH",
 /* Closes the open viewport screen and ends a drag of the map. */
 static void close_screen(void)
 {
+    if (g_advanced_screen == ADVANCED_SCREEN_OPTIONS)
+        memcpy(g_video_fb, options_picture, sizeof options_picture);
     g_advanced_screen = ADVANCED_SCREEN_NONE;
     advanced.drag.active = false;
     automap_scroll_reset();
@@ -186,6 +202,11 @@ static void render_readout_line(Offscreen *o, int row, const char *text)
 
 void advanced_draw_automap(void)
 {
+    if (automap_items_open()) {
+        automap_draw_items();
+        draw_free_temp();
+        return;
+    }
     Offscreen o;
     char line[TEXT_SIZE];
     if (!zone_get_viewport_rect(o.rect))
@@ -206,6 +227,9 @@ void advanced_automap_drag(int16_t x, int16_t y)
 {
     if (!advanced.drag.active)
         return;
+    if (x - advanced.drag.start_x > MAP_CLICK_SLOP || advanced.drag.start_x - x > MAP_CLICK_SLOP ||
+        y - advanced.drag.start_y > MAP_CLICK_SLOP || advanced.drag.start_y - y > MAP_CLICK_SLOP)
+        advanced.drag.moved = true;
     int dx = (x - advanced.drag.x) / MAP_CELL_SIZE;
     int dy = (y - advanced.drag.y) / MAP_CELL_SIZE;
     if (!dx && !dy)
@@ -222,17 +246,33 @@ void advanced_automap_drag(int16_t x, int16_t y)
 static void map_event(int type, int16_t x, int16_t y)
 {
     int16_t r[RECT_SIZE];
+    if (type == INPUT_KEY && (x == KEY_AUTOMAP || x == KEY_AUTOMAP_M)) {
+        close_screen();
+        return;
+    }
+    if (automap_items_event(type, x, y)) {
+        advanced_draw_automap();
+        return;
+    }
     if (type == INPUT_KEY) {
-        if (x == KEY_AUTOMAP || x == KEY_AUTOMAP_M || x == SCAN_ESCAPE)
+        if (x == SCAN_ESCAPE)
             close_screen();
+    } else if (type == INPUT_BUTTON_RIGHT) {
+        close_screen();
     } else if (type == INPUT_LEFT_RELEASED) {
         advanced_automap_drag(x, y);
+        bool select = advanced.drag.active && !advanced.drag.moved;
         advanced.drag.active = false;
+        if (select && automap_select(x, y))
+            advanced_draw_automap();
     } else if (type & INPUT_BUTTON_LEFT && zone_get_viewport_rect(r) && x >= r[RECT_X] && x < r[RECT_X] + r[RECT_W] &&
                y >= r[RECT_Y] && y < r[RECT_Y] + r[RECT_H]) {
         advanced.drag.active = true;
+        advanced.drag.moved = false;
         advanced.drag.x = x;
         advanced.drag.y = y;
+        advanced.drag.start_x = x;
+        advanced.drag.start_y = y;
     }
 }
 
@@ -287,14 +327,51 @@ static void cheat_event(int type, int16_t x, int16_t y)
     }
 }
 
+void advanced_open_spellbook(void)
+{
+    g_advanced_screen = ADVANCED_SCREEN_SPELLBOOK;
+    spellbook_open();
+}
+
+void advanced_open_options(void)
+{
+    memcpy(options_picture, g_video_fb, sizeof options_picture);
+    g_advanced_screen = ADVANCED_SCREEN_OPTIONS;
+    options_open();
+}
+
 void advanced_screen_event(int type, int16_t x, int16_t y)
 {
+    if (g_advanced_screen == ADVANCED_SCREEN_OPTIONS) {
+        OptionsResult result = options_event(type, x, y);
+        if (result == OPTIONS_CLOSE)
+            close_screen();
+        else if (result == OPTIONS_CHEATS) {
+            close_screen();
+            advanced_open_cheats();
+        } else if (result == OPTIONS_SPELLBOOK) {
+            close_screen();
+            advanced_open_spellbook();
+        } else if ((result == OPTIONS_QUICK_SAVE || result == OPTIONS_QUICK_LOAD) && g_game.champion_count) {
+            close_screen();
+            advanced.pending_key = result == OPTIONS_QUICK_SAVE ? KEY_QUICK_SAVE : KEY_QUICK_LOAD;
+        }
+        return;
+    }
+    if (g_advanced_screen == ADVANCED_SCREEN_SPELLBOOK) {
+        SpellbookResult result = spellbook_event(type, x, y);
+        if (result != SPELLBOOK_STAY)
+            close_screen();
+        if (result == SPELLBOOK_CAST)
+            game_set_command_stop(magic_cast_entered_runes_failed());
+        return;
+    }
     if (g_advanced_screen == ADVANCED_SCREEN_CHEATS)
         cheat_event(type, x, y);
-    else if (type == INPUT_BUTTON_RIGHT)
-        close_screen();
     else if (g_advanced_screen == ADVANCED_SCREEN_AUTOMAP)
         map_event(type, x, y);
+    else if (type == INPUT_BUTTON_RIGHT)
+        close_screen();
 }
 
 uint16_t advanced_take_pending_key(void)
@@ -302,4 +379,31 @@ uint16_t advanced_take_pending_key(void)
     uint16_t key = advanced.pending_key;
     advanced.pending_key = 0;
     return key;
+}
+
+/* Clear held input across focus changes without pausing the game. */
+/* Repeat keys held across a focus change must be pressed again after resuming. */
+#define FOCUS_KEY_COUNT 256
+static bool repeats_blocked;
+static bool repeat_armed[FOCUS_KEY_COUNT];
+
+void advanced_focus_changed(bool focused)
+{
+    if (g_game_mode != GAME_MODE_ADVANCED || focused || !g_game.champion_count || g_main_loop.end || recovery_is_open())
+        return;
+    repeats_blocked = true;
+    memset(repeat_armed, 0, sizeof repeat_armed);
+    advanced.drag.active = false;
+    input_cancel_pending();
+}
+
+bool advanced_focus_key(uint16_t key, bool repeat)
+{
+    if (g_game_mode == GAME_MODE_ADVANCED && repeats_blocked) {
+        if (repeat && !repeat_armed[key & 0xff])
+            return true;
+        if (!repeat)
+            repeat_armed[key & 0xff] = true;
+    }
+    return false;
 }

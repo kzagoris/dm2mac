@@ -5,10 +5,32 @@
 #include "os.h"
 
 /* The text of the settings file. */
-#define LINE_SIZE      64 /* longer lines are unreadable */
+#define LINE_SIZE      64  /* longer lines are unreadable */
+#define FILE_TEXT_SIZE 128 /* the lines that settings_save writes */
 #define TEMPORARY_FILE "SETTINGS.TMP"
+#define SWITCH_ON      "on"
+#define SWITCH_OFF     "off"
+#define SPELLS_ALL     "all"
+#define SPELLS_KNOWN   "known"
 
-static const char *const filter_names[] = {"none", "scale2x", "scale3x"}; /* from SETTINGS_FILTER_NONE */
+/* Output factors above double resolution. */
+#define UPSCALE_3X 3
+#define UPSCALE_4X 4
+
+static const char *const filter_names[] = {"none",   "scale2x", "scale3x",
+                                           "xbrz2x", "xbrz3x",  "xbrz4x"}; /* from SETTINGS_FILTER_NONE */
+
+/* Output pixels per source pixel, in the same order as filter_names. */
+static const int filter_factors[] = {1, 2, UPSCALE_3X, 2, UPSCALE_3X, UPSCALE_4X};
+
+/* Sets a switch from its value on or off; another value changes nothing. */
+static void parse_switch(const char *value, bool *out_on)
+{
+    if (!strcmp(value, SWITCH_ON))
+        *out_on = true;
+    else if (!strcmp(value, SWITCH_OFF))
+        *out_on = false;
+}
 
 /* Sets the value of one line key=value; an unknown key or a bad value changes nothing. */
 static void parse_line(char *line, Settings *settings)
@@ -17,6 +39,14 @@ static void parse_line(char *line, Settings *settings)
     if (!value)
         return;
     *value++ = '\0';
+    if (!strcmp(line, "aspect"))
+        parse_switch(value, &settings->aspect);
+    if (!strcmp(line, "scanlines"))
+        parse_switch(value, &settings->scanlines);
+    if (!strcmp(line, "classic_steps"))
+        parse_switch(value, &settings->classic_steps);
+    if (!strcmp(line, "spells") && (!strcmp(value, SPELLS_ALL) || !strcmp(value, SPELLS_KNOWN)))
+        settings->all_spells = !strcmp(value, SPELLS_ALL);
     if (strcmp(line, "filter"))
         return;
     enum SettingsFilter filter = settings_filter_parse(value);
@@ -28,14 +58,21 @@ static void parse_line(char *line, Settings *settings)
 
 const char *settings_filter_name(enum SettingsFilter filter)
 {
-    if (filter < SETTINGS_FILTER_NONE || filter > SETTINGS_FILTER_SCALE3X)
+    if (filter < SETTINGS_FILTER_NONE || filter > SETTINGS_FILTER_XBRZ4X)
         return NULL;
     return filter_names[filter - SETTINGS_FILTER_NONE];
 }
 
+int settings_filter_factor(enum SettingsFilter filter)
+{
+    if (!settings_filter_name(filter))
+        return 0;
+    return filter_factors[filter - SETTINGS_FILTER_NONE];
+}
+
 enum SettingsFilter settings_filter_parse(const char *name)
 {
-    for (enum SettingsFilter filter = SETTINGS_FILTER_NONE; filter <= SETTINGS_FILTER_SCALE3X; filter++)
+    for (enum SettingsFilter filter = SETTINGS_FILTER_NONE; filter <= SETTINGS_FILTER_XBRZ4X; filter++)
         if (!strcmp(name, filter_names[filter - SETTINGS_FILTER_NONE]))
             return filter;
     return SETTINGS_FILTER_UNSET;
@@ -43,7 +80,7 @@ enum SettingsFilter settings_filter_parse(const char *name)
 
 Settings settings_parse(const char *file_text, size_t length)
 {
-    Settings settings = {SETTINGS_FILTER_NONE};
+    Settings settings = {.filter = SETTINGS_FILTER_NONE};
     if (length > SETTINGS_MAX_SIZE)
         return settings;
     char line[LINE_SIZE];
@@ -84,12 +121,16 @@ Settings settings_load(const char *folder)
 
 bool settings_save(const char *folder, const Settings *settings)
 {
-    char path[OS_PATH_SIZE], temporary[OS_PATH_SIZE], text[LINE_SIZE];
+    char path[OS_PATH_SIZE], temporary[OS_PATH_SIZE], text[FILE_TEXT_SIZE];
     if (snprintf(path, sizeof path, "%s/%s", folder, SETTINGS_FILE) >= (int)sizeof path ||
         snprintf(temporary, sizeof temporary, "%s/%s", folder, TEMPORARY_FILE) >= (int)sizeof temporary ||
         !settings_filter_name(settings->filter))
         return false;
-    int length = snprintf(text, sizeof text, "filter=%s\n", settings_filter_name(settings->filter));
+    int length =
+        snprintf(text, sizeof text, "filter=%s\naspect=%s\nscanlines=%s\nclassic_steps=%s\nspells=%s\n",
+                 settings_filter_name(settings->filter), settings->aspect ? SWITCH_ON : SWITCH_OFF,
+                 settings->scanlines ? SWITCH_ON : SWITCH_OFF, settings->classic_steps ? SWITCH_ON : SWITCH_OFF,
+                 settings->all_spells ? SPELLS_ALL : SPELLS_KNOWN);
     FILE *file = fopen(temporary, "wb");
     if (!file)
         return false;
