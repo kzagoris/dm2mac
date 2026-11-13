@@ -77,3 +77,19 @@ def test_escape_opens_options_in_advanced_gameplay(lib):
     assert not lib.input_key_command(C.INPUT_MODE_NAME, C.SCAN_ESCAPE, rect) == C.CMD_OPTIONS
     set_mode(lib, VANILLA)
     assert not lib.input_key_command(C.INPUT_MODE_MOVE, C.SCAN_ESCAPE, rect) == C.CMD_OPTIONS
+
+
+def test_disk_and_rest_shortcuts_follow_icon_availability(lib):
+    lib.input_init()
+    rect = (ctypes.c_int16 * 4)()
+    UiState.in_dll(lib, 'g_ui').candidate = 0
+    for key, command in ((0x041f, 0x8c), (0x0413, 0x8e)):
+        set_mode(lib, ADVANCED)
+        assert lib.input_key_command(C.INPUT_MODE_MOVE, key, rect) == command
+        for mode in (C.INPUT_MODE_NAME, C.INPUT_MODE_DIALOG, C.INPUT_MODE_SLEEP, C.INPUT_MODE_PAUSE):
+            assert not lib.input_key_command(mode, key, rect)
+        UiState.in_dll(lib, 'g_ui').candidate = 1
+        assert not lib.input_key_command(C.INPUT_MODE_MOVE, key, rect)
+        UiState.in_dll(lib, 'g_ui').candidate = 0
+        set_mode(lib, VANILLA)
+        assert not lib.input_key_command(C.INPUT_MODE_MOVE, key, rect)

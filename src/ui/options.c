@@ -55,14 +55,14 @@ static void show_options(void)
     panel_text(PANEL_BACK_LEFT, PANEL_TITLE_Y, UI_YELLOW, help ? "BACK" : "CLOSE");
     if (help) {
         static const char *const keys[] = {
-            "WASD", "Q / E", "ARROWS", "TAB / M", "1 - 4", "F5 / F9", "B", "F1", "ESC"};
+            "WASD", "Q / E", "ARROWS", "TAB / M", "1 - 4", "F5 / F9", "B", "F1", "ESC", "CTRL+S", "CTRL+R"};
         static const char *const actions[] = {
             "MOVE", "TURN LEFT / RIGHT", "ORIGINAL MOVEMENT", "EXPLORED MAP", "CHAMPION INVENTORY",
-            "QUICK SAVE / LOAD", "SPELL FAVORITES", "OPTIONS / HELP", "OPTIONS / RESUME"};
+            "QUICK SAVE / LOAD", "SPELL FAVORITES", "OPTIONS / HELP", "OPTIONS / RESUME", "DISK MENU", "REST (ZZZ)"};
         panel_text(PANEL_LEFT, 36, UI_CYAN, "MOVEMENT AND SHORTCUTS");
-        for (int i = 0; i < 9; i++) {
-            panel_text(PANEL_LEFT, 50 + i * 10, UI_YELLOW, keys[i]);
-            panel_text(PANEL_VALUE_LEFT, 50 + i * 10, UI_WHITE, actions[i]);
+        for (int i = 0; i < 11; i++) {
+            panel_text(PANEL_LEFT, 46 + i * 9, UI_YELLOW, keys[i]);
+            panel_text(PANEL_VALUE_LEFT, 46 + i * 9, UI_WHITE, actions[i]);
         }
         panel_text(PANEL_LEFT, 152, UI_CYAN, "SPELLS");
         panel_text(PANEL_LEFT, 164, UI_WHITE, "CHAMPION ICON > POWER > RUNES > CAST");

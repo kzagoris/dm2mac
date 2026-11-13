@@ -96,6 +96,8 @@ The automap, Options/Help, spell favorites, and cheat screen stop game time whil
 | `W` `A` `S` `D` | Move forward, left, back, right |
 | `Q`, `E` | Turn left, turn right |
 | `F5`, `F9` | Quick save, quick load |
+| `Ctrl+S` | Open the disk menu (same as the disk icon) |
+| `Ctrl+R` | Rest (same as the Zzz icon) |
 | `Tab` or `M` | Automap |
 | `C` | Cheat screen |
 | `Esc` / `F1` | Pause with Options/Help; close to resume (also in inventory, sleep, and pause) |

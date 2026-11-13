@@ -20,6 +20,8 @@
 #define KEY_OPTIONS   0x3b /* F1 */
 #define KEY_SPELLBOOK 0x30 /* B */
 #define KEY_CHEATS    0x2e /* C */
+#define KEY_DISK_MENU (KEY_CONTROL | SCAN_S)
+#define KEY_REST      (KEY_CONTROL | SCAN_R)
 
 /* PC scan codes of the numeric keypad keys that move and turn the party. */
 #define KEYPAD_TURN_LEFT  0x4b
@@ -33,6 +35,7 @@
 #define SCAN_Q      0x10
 #define SCAN_W      0x11
 #define SCAN_E      0x12
+#define SCAN_R      0x13
 #define SCAN_A      0x1e
 #define SCAN_S      0x1f
 #define SCAN_D      0x20

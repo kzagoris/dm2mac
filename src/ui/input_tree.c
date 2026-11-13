@@ -935,6 +935,17 @@ uint16_t input_key_command(enum InputMode mode, uint16_t key, int16_t *rect)
         (mode == INPUT_MODE_MOVE || mode == INPUT_MODE_INVENTORY || mode == INPUT_MODE_PAUSE ||
          mode == INPUT_MODE_SLEEP))
         return CMD_OPTIONS;
+    if (g_game_mode == GAME_MODE_ADVANCED && (key == KEY_DISK_MENU || key == KEY_REST)) {
+        if (g_ui.candidate || (mode != INPUT_MODE_MOVE && mode != INPUT_MODE_INVENTORY))
+            return 0;
+        uint16_t command = key == KEY_DISK_MENU ? CMD_SAVE : CMD_SLEEP;
+        const InputCommand *entry = input_find_command_entry(&g_input_mode_roots[mode], command);
+        if (!entry || (entry->flags & COMMAND_OFF))
+            return 0;
+        select_command_in_list(command, entry, rect);
+        g_input_match.key = key;
+        return command;
+    }
     uint16_t command = find_key_command(&g_input_mode_roots[mode], key, rect);
     if (command || g_game_mode != GAME_MODE_ADVANCED)
         return command;
