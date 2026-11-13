@@ -5,7 +5,8 @@
 
 /* The screen filter of the window (not in the original game): the filter at the start, the filter in use, and the
    change from the SCREEN FILTER row of the cheat screen. The 4:3 picture and the scanlines of the window are here
-   too. A change shows at once and goes to SETTINGS.TXT in the save folder. The prefix upscale_ is the module
+   too, and the choice of the spells in the spell list, because this module holds the values of SETTINGS.TXT. A
+   change shows at once and goes to SETTINGS.TXT in the save folder. The prefix upscale_ is the module
    prefix: the first word filter_ is in use in engine/. */
 
 #include <stdbool.h>
@@ -30,6 +31,8 @@ enum SettingsFilter upscale_get_filter(void);
 bool upscale_has_aspect(void);
 /* True when the window shows scanlines. */
 bool upscale_has_scanlines(void);
+/* True when the spell list and the rune hints show every spell, false for only the known spells. */
+bool upscale_has_all_spells(void);
 
 /* Commands */
 /* Changes to the next filter (NONE, SCALE2X, SCALE3X, XBRZ2X, XBRZ3X, XBRZ4X, then NONE), shows it in the window, and writes it to
@@ -43,5 +46,8 @@ void upscale_toggle_aspect(void);
 void upscale_toggle_scanlines(void);
 /* Toggles smooth walking and saves the preference. */
 void upscale_toggle_stepping(void);
+/* Changes the spell list and the rune hints between the known spells and every spell, and writes the choice to
+   SETTINGS.TXT, as upscale_cycle_filter. */
+void upscale_toggle_all_spells(void);
 
 #endif /* DM2_UI_FILTER_H */

@@ -10,6 +10,8 @@
 #define TEMPORARY_FILE "SETTINGS.TMP"
 #define SWITCH_ON      "on"
 #define SWITCH_OFF     "off"
+#define SPELLS_ALL     "all"
+#define SPELLS_KNOWN   "known"
 
 /* Output factors above double resolution. */
 #define UPSCALE_3X 3
@@ -43,6 +45,8 @@ static void parse_line(char *line, Settings *settings)
         parse_switch(value, &settings->scanlines);
     if (!strcmp(line, "classic_steps"))
         parse_switch(value, &settings->classic_steps);
+    if (!strcmp(line, "spells") && (!strcmp(value, SPELLS_ALL) || !strcmp(value, SPELLS_KNOWN)))
+        settings->all_spells = !strcmp(value, SPELLS_ALL);
     if (strcmp(line, "filter"))
         return;
     enum SettingsFilter filter = settings_filter_parse(value);
@@ -123,9 +127,10 @@ bool settings_save(const char *folder, const Settings *settings)
         !settings_filter_name(settings->filter))
         return false;
     int length =
-        snprintf(text, sizeof text, "filter=%s\naspect=%s\nscanlines=%s\nclassic_steps=%s\n", settings_filter_name(settings->filter),
-                 settings->aspect ? SWITCH_ON : SWITCH_OFF, settings->scanlines ? SWITCH_ON : SWITCH_OFF,
-                 settings->classic_steps ? SWITCH_ON : SWITCH_OFF);
+        snprintf(text, sizeof text, "filter=%s\naspect=%s\nscanlines=%s\nclassic_steps=%s\nspells=%s\n",
+                 settings_filter_name(settings->filter), settings->aspect ? SWITCH_ON : SWITCH_OFF,
+                 settings->scanlines ? SWITCH_ON : SWITCH_OFF, settings->classic_steps ? SWITCH_ON : SWITCH_OFF,
+                 settings->all_spells ? SPELLS_ALL : SPELLS_KNOWN);
     FILE *file = fopen(temporary, "wb");
     if (!file)
         return false;

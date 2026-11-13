@@ -71,13 +71,13 @@ def test_click_cycles_the_filter_and_the_subtitle_does_nothing(lib, screen):
 def test_a_change_goes_to_the_file_once(lib, screen):
     _, data = screen
     cycle(lib)
-    assert (data / "SETTINGS.TXT").read_text() == "filter=scale2x\naspect=off\nscanlines=off\nclassic_steps=off\n"
+    assert (data / "SETTINGS.TXT").read_text() == "filter=scale2x\naspect=off\nscanlines=off\nclassic_steps=off\nspells=known\n"
     (data / "SETTINGS.TXT").unlink()
     lib.cheats_move_selection(1)
     lib.cheats_move_selection(-1)
     assert not (data / "SETTINGS.TXT").exists(), "no change, no write"
     cycle(lib)
-    assert (data / "SETTINGS.TXT").read_text() == "filter=scale3x\naspect=off\nscanlines=off\nclassic_steps=off\n"
+    assert (data / "SETTINGS.TXT").read_text() == "filter=scale3x\naspect=off\nscanlines=off\nclassic_steps=off\nspells=known\n"
 
 
 def test_the_window_refuses_a_filter(lib, screen):
@@ -87,7 +87,7 @@ def test_the_window_refuses_a_filter(lib, screen):
     cycle(lib)
     cycle(lib)
     assert seen == [SCALE2X, SCALE3X] and state(lib) == (ROW_FILTER, SCALE2X)
-    assert (screen[1] / "SETTINGS.TXT").read_text() == "filter=scale2x\naspect=off\nscanlines=off\nclassic_steps=off\n"
+    assert (screen[1] / "SETTINGS.TXT").read_text() == "filter=scale2x\naspect=off\nscanlines=off\nclassic_steps=off\nspells=known\n"
 
 
 def test_failed_write_keeps_the_filter(lib, screen):

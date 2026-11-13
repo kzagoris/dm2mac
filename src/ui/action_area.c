@@ -17,6 +17,7 @@
 #include "money.h"
 #include "num.h"
 #include "random.h"
+#include "spellbook.h"
 #include "text.h"
 #include "ui.h"
 #include "zone.h"
@@ -37,6 +38,9 @@
 
 /* Game steps that the advanced mode keeps the damage of a hit after the original delay (not in the original game). */
 #define DAMAGE_HOLD_EXTRA_TICKS 1
+
+/* The color of a rune that leads to a listed spell in the spell panel of the advanced mode (not in the original game). */
+#define HINT_COLOR UI_YELLOW
 
 /* The index of a coin in the pile offsets wraps at 32. */
 #define COIN_PILE_MASK 0x1f
@@ -407,9 +411,11 @@ static void show_spell_panel(void)
     if (set < SPELL_RUNE_SETS) {
         for (int i = 0; i < SPELL_RUNES_PER_SET; i++) {
             char s[RUNE_TEXT_SIZE] = {(char)(set * SPELL_RUNES_PER_SET + SPELL_RUNE_GLYPH_FIRST + i), '\0'};
+            /* advanced mode: a rune that continues the entered runes to a listed spell stands out */
+            int color = spellbook_is_next_rune(i) ? HINT_COLOR : UI_BLACK;
             offscreen_draw_text_in_zone(
                 &area, ZONE_RUNE_CHOICE_FIRST + i,
-                (TextColors){g_ui_colors[UI_BLACK], g_ui_colors[UI_LIGHT_GRAY] | TEXT_TRANSPARENT}, s);
+                (TextColors){g_ui_colors[color], g_ui_colors[UI_LIGHT_GRAY] | TEXT_TRANSPARENT}, s);
         }
     }
     area_draw_entered_runes(false);

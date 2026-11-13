@@ -68,6 +68,11 @@ bool upscale_has_scanlines(void)
     return upscale.shown.scanlines;
 }
 
+bool upscale_has_all_spells(void)
+{
+    return upscale.shown.all_spells;
+}
+
 /* Commands */
 
 /* Writes SETTINGS.TXT when a value differs from the file; a failed write says so once per failure run. */
@@ -76,7 +81,8 @@ static void write_change(void)
     char dir[OS_DIR_SIZE + sizeof "/DATA"];
     if (upscale.shown.filter == upscale.saved.filter && upscale.shown.aspect == upscale.saved.aspect &&
         upscale.shown.scanlines == upscale.saved.scanlines &&
-        upscale.shown.classic_steps == upscale.saved.classic_steps)
+        upscale.shown.classic_steps == upscale.saved.classic_steps &&
+        upscale.shown.all_spells == upscale.saved.all_spells)
         return;
     if (settings_save(find_folder(dir, sizeof dir), &upscale.shown)) {
         upscale.saved = upscale.shown;
@@ -121,5 +127,11 @@ void upscale_toggle_stepping(void)
 {
     upscale.shown.classic_steps = !upscale.shown.classic_steps;
     move_set_classic_steps(upscale.shown.classic_steps);
+    write_change();
+}
+
+void upscale_toggle_all_spells(void)
+{
+    upscale.shown.all_spells = !upscale.shown.all_spells;
     write_change();
 }
