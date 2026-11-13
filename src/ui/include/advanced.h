@@ -92,15 +92,10 @@ void advanced_screen_event(int type, int16_t x, int16_t y);
 /* The key that a closed screen leaves for the game (F9 of QUICK LOAD), 0 for none; clears it. */
 uint16_t advanced_take_pending_key(void);
 
-/* Focus loss */
-/* True until a fresh Return after focus returns; underlying pause/sleep/screens stay intact. */
-bool advanced_focus_paused(void);
-/* Latches a separate Advanced gameplay pause on focus loss; focus gain alone never resumes. */
+/* Clears pending and held input on focus loss without changing pause or overlay state. */
 void advanced_focus_changed(bool focused);
-/* Consumes input while focus-paused. Only a non-repeat Return when focused clears the latch. */
+/* Rejects stale key repeats until a fresh key press after switching windows. */
 bool advanced_focus_key(uint16_t key, bool repeat);
-/* Draws a temporary pause banner before presenting, without changing the underlying UI state. */
-void advanced_draw_focus_pause(void);
 
 /* Draws the visible F1 Options/Help shortcut during stable gameplay, before presenting. */
 void advanced_draw_shortcut(void);

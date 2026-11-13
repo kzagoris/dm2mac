@@ -353,25 +353,16 @@ uint16_t advanced_take_pending_key(void)
     return key;
 }
 
-/* Focus loss is independent of the original pause, sleep, and modal input modes. */
-static bool window_focused = true;
-static bool focus_paused;
+/* Clear held input across focus changes without pausing the game. */
 /* Repeat keys held across a focus change must be pressed again after resuming. */
 #define FOCUS_KEY_COUNT 256
 static bool repeats_blocked;
 static bool repeat_armed[FOCUS_KEY_COUNT];
 
-bool advanced_focus_paused(void)
-{
-    return g_game_mode == GAME_MODE_ADVANCED && focus_paused;
-}
-
 void advanced_focus_changed(bool focused)
 {
-    window_focused = focused;
     if (g_game_mode != GAME_MODE_ADVANCED || focused || !g_game.champion_count || g_main_loop.end || recovery_is_open())
         return;
-    focus_paused = true;
     repeats_blocked = true;
     memset(repeat_armed, 0, sizeof repeat_armed);
     advanced.drag.active = false;
@@ -380,31 +371,17 @@ void advanced_focus_changed(bool focused)
 
 bool advanced_focus_key(uint16_t key, bool repeat)
 {
-    if (!advanced_focus_paused()) {
-        if (g_game_mode == GAME_MODE_ADVANCED && repeats_blocked) {
-            if (repeat && !repeat_armed[key & 0xff])
-                return true;
-            if (!repeat)
-                repeat_armed[key & 0xff] = true;
-        }
-        return false;
+    if (g_game_mode == GAME_MODE_ADVANCED && repeats_blocked) {
+        if (repeat && !repeat_armed[key & 0xff])
+            return true;
+        if (!repeat)
+            repeat_armed[key & 0xff] = true;
     }
-    if (window_focused && key == KEY_ENTER && !repeat) {
-        input_cancel_pending();
-        focus_paused = false;
-    }
-    return true;
-}
-
-void advanced_draw_focus_pause(void)
-{
-    if (!advanced_focus_paused())
-        return;
-    text_draw_on_screen(0, TEXT_LINE_HEIGHT, g_ui_colors[UI_WHITE], g_ui_colors[UI_BLACK], "PAUSED - RETURN TO RESUME");
+    return false;
 }
 
 /* The small, always visible shortcut occupies the bottom right message line during stable gameplay. */
-#define SHORTCUT_TEXT  "F1 OPTIONS/HELP"
+#define SHORTCUT_TEXT  "ESC OPTIONS/HELP"
 #define SHORTCUT_WIDTH ((int)(sizeof SHORTCUT_TEXT - 1) * FONT_ADVANCE)
 #define SHORTCUT_LEFT  (SCREEN_W - SHORTCUT_WIDTH)
 #define SHORTCUT_TOP   (SCREEN_H - TEXT_LINE_HEIGHT)

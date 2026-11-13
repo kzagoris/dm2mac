@@ -573,8 +573,6 @@ static void start_loaded_game(bool quick)
 
 bool session_init(void)
 {
-    if (g_game_mode == GAME_MODE_ADVANCED)
-        return recovery_run(false);
     do {
         run_menu();
         if (g_main_loop.quit)

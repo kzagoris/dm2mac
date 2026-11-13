@@ -135,15 +135,18 @@ adventure to preserve. A missing/corrupt quick file leaves the chooser open and 
 
 ## SETTINGS.TXT
 
-The settings file of advanced mode keeps the upscale filter of the SCREEN FILTER row of Options/Help ([manual.md](../manual.md#screen-filter)). The SCREEN FILTER row writes it. It is in the same folder as `QUICK.DAT`. The file is a text file of `key=value` lines (`src/data/settings.c`). It has one line:
+The settings file of advanced mode keeps the rows SCREEN FILTER, 4:3 ASPECT and SCANLINES of Options/Help ([manual.md](../manual.md#screen-filter)). The three rows write it. It is in the same folder as `QUICK.DAT`. The file is a text file of `key=value` lines (`src/data/settings.c`). It has three lines:
 
 ```
 filter=scale2x
+aspect=on
+scanlines=off
 ```
 
-- The values are `none`, `scale2x`, and `scale3x`.
+- The values of `filter` are `none`, `scale2x`, and `scale3x`.
+- The values of `aspect` (the 4:3 picture) and `scanlines` are `on` and `off`. A missing line gives `off`, so a file with only the `filter` line stays valid.
 - The game ignores a CR at the end of a line, an unknown key, a bad value, and a line of 64 characters or more.
-- A file over 1024 bytes gives the defaults (no filter).
+- A file over 1024 bytes gives the defaults (no filter, `aspect` and `scanlines` off).
 - The game writes `SETTINGS.TMP` first and replaces the file with it.
 
 ## Deviations from the original

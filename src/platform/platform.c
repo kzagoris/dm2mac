@@ -20,6 +20,11 @@ _Static_assert(MUSIC_SAMPLE_RATE == SOUND_OUTPUT_RATE, "the audio stream plays t
 #define ARGB_BYTES      4
 #define SCREEN_ASPECT_W 4 /* a VGA monitor shows every mode on a 4:3 tube */
 #define SCREEN_ASPECT_H 3
+#define SCANLINE_ROWS   (SCREEN_H * 2) /* the scanline texture: a clear and a dark row for each screen line */
+
+/* The rows of the scanline texture, ARGB8888: black at 40 percent, and nothing. */
+#define SCANLINE_DARK  0x66000000u
+#define SCANLINE_CLEAR 0x00000000u
 
 /* The audio stream. */
 #define AUDIO_CHANNELS     2
@@ -38,6 +43,9 @@ static struct {
     Uint64 next_tick;
     int mouse_x, mouse_y;
     enum SettingsFilter filter; /* the upscale factor */
+    bool aspect;                /* the game screen is 4:3 instead of square pixels */
+    bool scanlines;
+    SDL_Texture *scanline_tex; /* made at the first use of the scanlines */
     uint8_t big[SCREEN_H * SETTINGS_FILTER_SCALE3X][SCREEN_W * SETTINGS_FILTER_SCALE3X];
     SDL_AudioStream *audio;
     int16_t audio_frames[AUDIO_QUEUE_FRAMES * AUDIO_CHANNELS]; /* the mixed frames that top up the audio queue */
@@ -78,8 +86,8 @@ static void render_frame(void)
 {
     int w, h;
     SDL_GetCurrentRenderOutputSize(platform.ren, &w, &h);
-    VideoLayout layout = video_layout(w, h);
-    SDL_FRect dst = {layout.x, layout.y, SCREEN_W * layout.scale, SCREEN_H * layout.scale};
+    VideoLayout layout = video_layout(w, h, platform.aspect);
+    SDL_FRect dst = {layout.x, layout.y, SCREEN_W * layout.scale_x, SCREEN_H * layout.scale_y};
     SDL_Texture *tex = platform.tex;
     if (platform.movie_last) {
         dst = last_picture_rect(w, h);
@@ -88,6 +96,9 @@ static void render_frame(void)
     SDL_SetRenderDrawColor(platform.ren, 0, 0, 0, SDL_ALPHA_OPAQUE);
     SDL_RenderClear(platform.ren);
     SDL_RenderTexture(platform.ren, tex, NULL, &dst);
+    /* fewer than two output rows for a screen line cannot show its dark row */
+    if (platform.scanlines && !platform.movie_last && dst.h >= SCANLINE_ROWS)
+        SDL_RenderTexture(platform.ren, platform.scanline_tex, NULL, &dst);
     SDL_RenderPresent(platform.ren);
 }
 
@@ -139,6 +150,45 @@ bool plat_set_filter(enum SettingsFilter filter)
     platform.tex = tex;
     platform.filter = filter;
     plat_present();
+    return true;
+}
+
+/* Makes the scanline texture: one column, a clear row and a dark row for each screen line; false when it cannot. */
+static bool make_scanline_texture(void)
+{
+    uint32_t rows[SCANLINE_ROWS];
+    for (int y = 0; y < SCANLINE_ROWS; y++)
+        rows[y] = y % 2 ? SCANLINE_DARK : SCANLINE_CLEAR;
+    SDL_Texture *tex =
+        SDL_CreateTexture(platform.ren, SDL_PIXELFORMAT_ARGB8888, SDL_TEXTUREACCESS_STATIC, 1, SCANLINE_ROWS);
+    if (!tex || !SDL_UpdateTexture(tex, NULL, rows, ARGB_BYTES)) {
+        os_log("SDL: %s", SDL_GetError());
+        SDL_DestroyTexture(tex);
+        return false;
+    }
+    SDL_SetTextureBlendMode(tex, SDL_BLENDMODE_BLEND);
+    SDL_SetTextureScaleMode(tex, SDL_SCALEMODE_LINEAR); /* soft lines at a fractional scale, no uneven bands */
+    platform.scanline_tex = tex;
+    return true;
+}
+
+/* The height of the picture for a window that is SCREEN_W wide. */
+static int picture_height(bool aspect)
+{
+    return aspect ? SCREEN_TUBE_H : SCREEN_H;
+}
+
+bool plat_set_picture(bool aspect, bool scanlines)
+{
+    int w, h;
+    if (scanlines && !platform.scanline_tex && !make_scanline_texture())
+        return false;
+    SDL_GetWindowSize(platform.win, &w, &h);
+    if (aspect != platform.aspect && h * SCREEN_W == w * picture_height(platform.aspect))
+        SDL_SetWindowSize(platform.win, w, w * picture_height(aspect) / SCREEN_W);
+    platform.aspect = aspect;
+    platform.scanlines = scanlines;
+    render_frame();
     return true;
 }
 
@@ -243,7 +293,7 @@ bool plat_poll(PlatEvent *e)
         case SDL_EVENT_MOUSE_MOTION:
             SDL_ConvertEventToRenderCoordinates(platform.ren, &ev); /* window points -> output pixels */
             SDL_GetCurrentRenderOutputSize(platform.ren, &w, &h);
-            at = video_map_mouse(w, h, (int)ev.motion.x, (int)ev.motion.y);
+            at = video_map_mouse(w, h, (int)ev.motion.x, (int)ev.motion.y, platform.aspect);
             platform.mouse_x = at.x;
             platform.mouse_y = at.y;
             break;
@@ -253,7 +303,7 @@ bool plat_poll(PlatEvent *e)
             SDL_GetCurrentRenderOutputSize(platform.ren, &w, &h);
             e->type = ev.type == SDL_EVENT_MOUSE_BUTTON_DOWN ? PLAT_MOUSE : PLAT_MOUSE_UP;
             e->button = ev.button.button;
-            at = video_map_mouse(w, h, (int)ev.button.x, (int)ev.button.y);
+            at = video_map_mouse(w, h, (int)ev.button.x, (int)ev.button.y, platform.aspect);
             e->x = at.x;
             e->y = at.y;
             platform.mouse_x = e->x;

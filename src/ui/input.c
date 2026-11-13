@@ -212,8 +212,6 @@ void input_mouse_click(int16_t x, int16_t y, int type)
 
 void input_mouse_down(int16_t x, int16_t y, int button)
 {
-    if (advanced_focus_paused())
-        return;
     if (recovery_is_open()) {
         recovery_event(button, x, y);
         return;
@@ -226,8 +224,6 @@ void input_mouse_down(int16_t x, int16_t y, int button)
 
 void input_mouse_up(int16_t x, int16_t y, int button)
 {
-    if (advanced_focus_paused())
-        return;
     game_set_mouse_buttons(g_input_mouse_buttons & ~button);
     if (button == INPUT_BUTTON_LEFT && (g_ui.eye || g_ui.mouth || g_advanced_screen))
         input_mouse_click(x, y, INPUT_LEFT_RELEASED);
@@ -834,8 +830,6 @@ void input_set_wait(int steps)
 
 void command_process_queue(void)
 {
-    if (advanced_focus_paused())
-        return;
     if (g_input.wait)
         g_input.wait--;
     g_input.feedback_waiting = false;

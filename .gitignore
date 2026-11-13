@@ -12,3 +12,10 @@ __pycache__/
 /research/
 .ruff_cache/
 .superpowers/
+
+# Local Windows setup and game archives
+*.zip
+Build-Windows.ps1
+Play-Advanced.cmd
+Play-Vanilla.cmd
+WINDOWS-LOCAL.md

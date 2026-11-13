@@ -5,10 +5,22 @@
 #include "os.h"
 
 /* The text of the settings file. */
-#define LINE_SIZE      64 /* longer lines are unreadable */
+#define LINE_SIZE      64  /* longer lines are unreadable */
+#define FILE_TEXT_SIZE 128 /* the lines that settings_save writes */
 #define TEMPORARY_FILE "SETTINGS.TMP"
+#define SWITCH_ON      "on"
+#define SWITCH_OFF     "off"
 
 static const char *const filter_names[] = {"none", "scale2x", "scale3x"}; /* from SETTINGS_FILTER_NONE */
+
+/* Sets a switch from its value on or off; another value changes nothing. */
+static void parse_switch(const char *value, bool *out_on)
+{
+    if (!strcmp(value, SWITCH_ON))
+        *out_on = true;
+    else if (!strcmp(value, SWITCH_OFF))
+        *out_on = false;
+}
 
 /* Sets the value of one line key=value; an unknown key or a bad value changes nothing. */
 static void parse_line(char *line, Settings *settings)
@@ -17,6 +29,10 @@ static void parse_line(char *line, Settings *settings)
     if (!value)
         return;
     *value++ = '\0';
+    if (!strcmp(line, "aspect"))
+        parse_switch(value, &settings->aspect);
+    if (!strcmp(line, "scanlines"))
+        parse_switch(value, &settings->scanlines);
     if (strcmp(line, "filter"))
         return;
     enum SettingsFilter filter = settings_filter_parse(value);
@@ -43,7 +59,7 @@ enum SettingsFilter settings_filter_parse(const char *name)
 
 Settings settings_parse(const char *file_text, size_t length)
 {
-    Settings settings = {SETTINGS_FILTER_NONE};
+    Settings settings = {.filter = SETTINGS_FILTER_NONE};
     if (length > SETTINGS_MAX_SIZE)
         return settings;
     char line[LINE_SIZE];
@@ -84,12 +100,14 @@ Settings settings_load(const char *folder)
 
 bool settings_save(const char *folder, const Settings *settings)
 {
-    char path[OS_PATH_SIZE], temporary[OS_PATH_SIZE], text[LINE_SIZE];
+    char path[OS_PATH_SIZE], temporary[OS_PATH_SIZE], text[FILE_TEXT_SIZE];
     if (snprintf(path, sizeof path, "%s/%s", folder, SETTINGS_FILE) >= (int)sizeof path ||
         snprintf(temporary, sizeof temporary, "%s/%s", folder, TEMPORARY_FILE) >= (int)sizeof temporary ||
         !settings_filter_name(settings->filter))
         return false;
-    int length = snprintf(text, sizeof text, "filter=%s\n", settings_filter_name(settings->filter));
+    int length = snprintf(text, sizeof text, "filter=%s\naspect=%s\nscanlines=%s\n",
+                          settings_filter_name(settings->filter), settings->aspect ? SWITCH_ON : SWITCH_OFF,
+                          settings->scanlines ? SWITCH_ON : SWITCH_OFF);
     FILE *file = fopen(temporary, "wb");
     if (!file)
         return false;

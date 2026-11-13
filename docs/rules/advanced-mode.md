@@ -144,11 +144,11 @@ A projectile moves one cell (half a square) per game step, as in the original ga
 
 ## SETTINGS.TXT
 
-The SCREEN FILTER row of Options/Help keeps the filter in `SETTINGS.TXT` in the folder of `QUICK.DAT` (`--saves DIR`, otherwise `<data>/DATA`). The file format is in [save.md](../formats/save.md#settingstxt).
+The rows SCREEN FILTER, 4:3 ASPECT and SCANLINES of Options/Help keep their values in `SETTINGS.TXT` in the folder of `QUICK.DAT` (`--saves DIR`, otherwise `<data>/DATA`). The file format is in [save.md](../formats/save.md#settingstxt).
 
-The advanced mode reads the file once on startup and applies the filter. `--filter` and `DM2_FILTER` have priority on startup. The SCREEN FILTER row can still change the filter, and the change writes the file. The vanilla and turn-based modes do not read the file.
+The advanced mode reads the file once on startup and applies the filter, the 4:3 picture and the scanlines. `--filter` and `DM2_FILTER` have priority over the filter of the file on startup. The SCREEN FILTER row can still change the filter, and the change writes the file. The vanilla and turn-based modes do not read the file.
 
-The game writes the file only when the filter changes. If the write fails, the filter stays changed and the message area shows `UNABLE TO SAVE OPTIONS` once. It shows again only after a write works and a later write fails.
+The game writes the file only when one of the three values changes. If the write fails, the value stays changed and the message area shows `UNABLE TO SAVE OPTIONS` once. It shows again only after a write works and a later write fails.
 
 ## Deviations from the original
 

@@ -29,6 +29,10 @@ typedef void PlatMixer(int16_t *stereo, int frames);
 bool plat_init(int scale, enum SettingsFilter filter);
 /* Changes the upscale factor of the window at once. False, and no change, when the texture cannot be made. */
 bool plat_set_filter(enum SettingsFilter filter);
+/* Shows the 4:3 picture and the scanlines of the window at once: aspect makes the game screen 4:3 instead of
+   square pixels, scanlines draws a dark line below every line of the game screen. A window that fits the picture
+   exactly keeps fitting it. False, and no change, when the scanline texture cannot be made. */
+bool plat_set_picture(bool aspect, bool scanlines);
 /* Closes the window, the sound output and SDL. */
 void plat_quit(void);
 /* Sets the window and Dock icon from w by h ARGB pixels. */

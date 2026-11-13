@@ -199,7 +199,6 @@ static void present_with_cursor(void)
 {
     memcpy(program.saved_screen, g_video_fb, sizeof program.saved_screen);
     advanced_draw_shortcut();
-    advanced_draw_focus_pause();
     input_draw_cursor(&g_video_fb[0][0], g_input_mouse_x, g_input_mouse_y);
     plat_present();
     memcpy(g_video_fb, program.saved_screen, sizeof program.saved_screen);
@@ -802,6 +801,7 @@ int main(int argc, char **argv)
     if (!open_game(&options, filter))
         return EXIT_FAILURE;
     g_upscale_filter_hook = plat_set_filter;
+    g_upscale_picture_hook = plat_set_picture;
     g_play_frame_hook = g_game_mode == GAME_MODE_TURNBASED ? turnbased_modal_frame : modal_frame;
     if (!mode_given && !options.save && !getenv(RESTART_ENV))
         choose_mode();

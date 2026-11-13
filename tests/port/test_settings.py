@@ -10,7 +10,7 @@ NONE, SCALE2X, SCALE3X = C.SETTINGS_FILTER_NONE, C.SETTINGS_FILTER_SCALE2X, C.SE
 
 
 class Settings(ctypes.Structure):
-    _fields_ = [("filter", ctypes.c_int)]
+    _fields_ = [("filter", ctypes.c_int), ("aspect", ctypes.c_bool), ("scanlines", ctypes.c_bool)]
 
 
 @pytest.fixture(scope="module", autouse=True)
@@ -41,6 +41,19 @@ def test_parse(lib, text, filter):
     assert parse(lib, text) == filter
 
 
+@pytest.mark.parametrize("text, aspect, scanlines", [
+    (b"", False, False),
+    (b"aspect=on\n", True, False),
+    (b"scanlines=on\naspect=off\n", False, True),
+    (b"aspect=on\r\nscanlines=on\r\nfilter=scale2x\r\n", True, True),
+    (b"aspect=on\naspect=yes\nscanlines=1\n", True, False),  # a bad value keeps the earlier value
+    (b"aspect=on\naspect=off\n", False, False),  # the last line wins
+])
+def test_parse_the_switches(lib, text, aspect, scanlines):
+    settings = lib.settings_parse(text, len(text))
+    assert (settings.aspect, settings.scanlines) == (aspect, scanlines)
+
+
 def test_a_file_over_the_limit_gives_the_defaults(lib):
     line = b"filter=scale2x\n"
     assert parse(lib, line + b"#" * (C.SETTINGS_MAX_SIZE - len(line))) == SCALE2X
@@ -52,8 +65,12 @@ def test_save_and_load(lib, tmp_path):
     assert lib.settings_load(folder).filter == NONE, "a missing file"
     for filter, name in ((SCALE3X, "scale3x"), (SCALE2X, "scale2x"), (NONE, "none")):
         assert lib.settings_save(folder, ctypes.byref(Settings(filter)))
-        assert (tmp_path / "SETTINGS.TXT").read_text() == f"filter={name}\n"
+        assert (tmp_path / "SETTINGS.TXT").read_text() == f"filter={name}\naspect=off\nscanlines=off\n"
         assert lib.settings_load(folder).filter == filter
+    assert lib.settings_save(folder, ctypes.byref(Settings(SCALE2X, True, True)))
+    assert (tmp_path / "SETTINGS.TXT").read_text() == "filter=scale2x\naspect=on\nscanlines=on\n"
+    loaded = lib.settings_load(folder)
+    assert (loaded.filter, loaded.aspect, loaded.scanlines) == (SCALE2X, True, True)
     assert [p.name for p in tmp_path.iterdir()] == ["SETTINGS.TXT"], "no temporary file stays"
 
 
@@ -62,6 +79,6 @@ def test_failed_save_keeps_the_old_file(lib, tmp_path):
     lib.settings_save(folder, ctypes.byref(Settings(SCALE2X)))
     (tmp_path / "SETTINGS.TMP").mkdir()  # the temporary file cannot be created
     assert not lib.settings_save(folder, ctypes.byref(Settings(SCALE3X)))
-    assert (tmp_path / "SETTINGS.TXT").read_text() == "filter=scale2x\n"
+    assert (tmp_path / "SETTINGS.TXT").read_text() == "filter=scale2x\naspect=off\nscanlines=off\n"
     assert not lib.settings_save(str(tmp_path / "missing").encode(), ctypes.byref(Settings(SCALE3X)))
     assert not lib.settings_save(folder, ctypes.byref(Settings(0)))

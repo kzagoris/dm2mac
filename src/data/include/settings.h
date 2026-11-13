@@ -4,8 +4,9 @@
 /* Prefixes: settings_ */
 
 /* The settings file of the advanced mode (SETTINGS.TXT in the saves folder): the upscale filter as the text line
-   filter=none|scale2x|scale3x. A player preference, not game state: the save file does not hold it. It reads and
-   writes the file; it does not apply the value. */
+   filter=none|scale2x|scale3x, the 4:3 picture as aspect=on|off, and the scanlines as scanlines=on|off. A player
+   preference, not game state: the save file does not hold it. It reads and writes the file; it does not apply the
+   values. */
 
 #include <stdbool.h>
 #include <stddef.h>
@@ -26,6 +27,8 @@ enum SettingsFilter {
 /* The values of the settings file. */
 typedef struct {
     enum SettingsFilter filter;
+    bool aspect;    /* the picture is 4:3, as on a VGA monitor, instead of square pixels */
+    bool scanlines; /* a dark line below every line of the game screen */
 } Settings;
 
 /* Queries */
@@ -33,7 +36,7 @@ typedef struct {
 const char *settings_filter_name(enum SettingsFilter filter);
 /* The filter of a lower-case name, or SETTINGS_FILTER_UNSET for an unknown name. */
 enum SettingsFilter settings_filter_parse(const char *name);
-/* The values of the settings text: a missing line or a bad value gives the default (no filter), an unknown key and a
+/* The values of the settings text: a missing line or a bad value gives the default (no filter, off), an unknown key and a
    line of 64 characters or more are skipped, a text above SETTINGS_MAX_SIZE gives all defaults;
    exported for the tests. */
 Settings settings_parse(const char *file_text, size_t length);

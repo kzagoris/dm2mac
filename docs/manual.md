@@ -75,7 +75,7 @@ Save in a slot with Alt+S and load a slot from the start menu, as in the origina
 
 ## Advanced mode
 
-Advanced means convenience additions. Cheats are separate, optional, and off in a new game. Press `F1` or click the visible **F1 OPTIONS/HELP** shortcut for controls, display preferences, saves, and spell favorites. Advanced mode also
+Advanced means convenience additions. Cheats are separate, optional, and off in a new game. Press `Esc` or `F1`, or click the visible **ESC OPTIONS/HELP** shortcut for controls, display preferences, saves, and spell favorites. Advanced mode also
 changes a few things:
 
 - When you release a held key, the party stops. In vanilla mode the party keeps walking, as in the original.
@@ -98,7 +98,7 @@ The automap, Options/Help, spell favorites, and cheat screen stop game time whil
 | `F5`, `F9` | Quick save, quick load |
 | `Tab` or `M` | Automap |
 | `C` | Cheat screen |
-| `F1` | Options/Help (also in inventory, sleep, and pause) |
+| `Esc` / `F1` | Pause with Options/Help; close to resume (also in inventory, sleep, and pause) |
 | `B` | Recorded spell favorites |
 | `Tab` | Close the inventory |
 
@@ -119,7 +119,7 @@ Select one of four favorites and **RECORD ENTERED RUNES IN FAVORITE**. Recording
 charges no extra mana. Cast those runes normally, or remove them before replaying a favorite; removing runes
 retains the original no-refund rule.
 
-In Favorites, choose the caster, power (1–6), and recorded favorite or **LAST**. The screen shows the required
+In Favorites, choose the caster, power (1â€“6), and recorded favorite or **LAST**. The screen shows the required
 mana and whether an empty flask is required and present. **CAST** enters the runes at the chosen power and casts
 once through the normal game rules: mana, skill checks, failures, experience, and action delays all apply.
 A dead or busy caster, insufficient mana, or existing entered runes prevents replay. A missing flask uses the
@@ -127,12 +127,11 @@ normal failure behavior and retains the paid runes. The last attempted combinati
 failed cast. Favorites are private to each champion and persist with Advanced saves; old saves start empty.
 The Favorites screen does not reveal the spell catalog. Use Up/Down and Return or click a row; Esc/right click closes.
 
-### Focus-loss pause
+### Switching windows
 
-Switching windows or minimizing in Advanced gameplay pauses the game and discards held/captured and queued
-input. Returning focus does not resume: press a fresh **Return**. Keys held across the interruption must be
-pressed again. The existing pause, sleep, inventory, dialog, or overlay remains as it was; Return clears only
-the focus pause. Vanilla and turn-based mode retain their existing behavior.
+Switching windows or minimizing does not pause the game. Press **Esc** to open Options/Help and pause
+before switching away; close it to resume. Held and queued input is cleared when focus is lost, so
+movement does not remain stuck when you return.
 
 ### Automap
 
@@ -173,7 +172,8 @@ Click a row, or choose it with the arrow keys (or `W`, `S`) and Return. CLOSE, `
 the screen.
 
 - The six cheat rows show `ON` or `OFF`.
-- Options/Help (`F1`) holds SCREEN FILTER (`NONE`, `SCALE2X`, `SCALE3X`) and the ordinary quick-save/load actions.
+- Options/Help (`F1`) holds SCREEN FILTER (`NONE`, `SCALE2X`, `SCALE3X`), 4:3 ASPECT, SCANLINES, and the ordinary
+  quick-save/load actions.
 - SPELLS lists all the game's spells with their runes, for example `FUL IR (X,4,4) FIREBALL`. A number is the
   rune's position in its row; `X` is any power. The spell names come from this port because the game has no names
   for them. A right click on a spell page goes back to the cheat page.
@@ -185,6 +185,14 @@ Sound and music volume stay in the original game's volume dialog (the speaker bu
 
 ### Screen filter
 
-The game remembers the filter of SCREEN FILTER in `game/DATA/SETTINGS.TXT` and uses it on the next startup.
-`--filter` overrides it. If the file cannot be written, the message area shows `UNABLE TO SAVE OPTIONS`. The file is
+Options/Help (`F1`) has three rows for the picture of the window:
+
+- SCREEN FILTER smooths the pixels: `NONE`, `SCALE2X`, or `SCALE3X`.
+- 4:3 ASPECT shows the picture as a VGA monitor did: 4:3, with pixels a little taller than wide. `OFF` shows square
+  pixels. A window that fits the picture exactly changes its height with the row.
+- SCANLINES draws a soft dark line below every line of the game screen, as on a monitor tube. It works with every
+  filter. The lines show when the picture is at least 400 pixels high; the movies have none.
+
+The game remembers the three rows in `game/DATA/SETTINGS.TXT` and uses them on the next startup.
+`--filter` overrides the filter. If the file cannot be written, the message area shows `UNABLE TO SAVE OPTIONS`. The file is
 described in [Save files](formats/save.md#settingstxt).
