@@ -118,4 +118,10 @@ void mode_screen_draw(void)
     print_centered((const int16_t[RECT_SIZE]){0, HEADING_TOP, SCREEN_W, LINE_HEIGHT}, COLOR_LIGHT_GRAY, heading);
     for (int16_t i = 0; mode_screen_item_box(i, r); i++)
         print_centered(r, (enum GameMode)i == cursor ? COLOR_GOLD : COLOR_LIGHT_GRAY, items[i]);
+    print_centered((const int16_t[RECT_SIZE]){0, ITEM_TOP + ITEM_COUNT * ITEM_STEP, SCREEN_W, LINE_HEIGHT},
+                   COLOR_LIGHT_GRAY, "ADVANCED ADDS CONVENIENCE");
+    print_centered((const int16_t[RECT_SIZE]){0, ITEM_TOP + (ITEM_COUNT + 1) * ITEM_STEP, SCREEN_W, LINE_HEIGHT},
+                   COLOR_LIGHT_GRAY, "CHEATS OPTIONAL AND OFF BY DEFAULT");
+    print_centered((const int16_t[RECT_SIZE]){0, ITEM_TOP + (ITEM_COUNT + 2) * ITEM_STEP, SCREEN_W, LINE_HEIGHT},
+                   COLOR_LIGHT_GRAY, "IN GAME: F1 OPTIONS/HELP");
 }

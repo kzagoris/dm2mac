@@ -21,7 +21,13 @@ endif
 CFLAGS += $(CFLAGS_EXTRA)
 
 # SDL3 from Homebrew. Recursively expanded: only the targets that compile or link SDL code run brew.
-SDL_PREFIX ?= $(shell brew --prefix sdl3)
+SDL_PREFIX ?= $(shell pkg-config --variable=prefix sdl3 2>/dev/null || brew --prefix sdl3)
+SHARED_FLAGS = -dynamiclib
+ifeq ($(shell uname -s),Linux)
+CFLAGS += -fPIC -D_XOPEN_SOURCE=700
+SHARED_FLAGS = -shared
+LDLIBS += -lm
+endif
 
 B   = build
 OBJ = $(B)/obj
@@ -60,10 +66,10 @@ $(OBJ)/%.o: src/%.c Makefile $(OBJ)/flags.txt
 $(call objects,$(OBJ),$(SDL_SOURCES)): CPPFLAGS += -I$(SDL_PREFIX)/include
 
 $(B)/dm2: $(call objects,$(OBJ),$(GAME_SOURCES))
-	$(CC) $(CFLAGS) $(LDFLAGS) -o $@ $^ -L$(SDL_PREFIX)/lib -lSDL3
+	$(CC) $(CFLAGS) $(LDFLAGS) -o $@ $^ -L$(SDL_PREFIX)/lib -lSDL3 $(LDLIBS)
 
 $(B)/libdm2.dylib: $(call objects,$(OBJ),$(LIB_SOURCES))
-	$(CC) $(CFLAGS) $(LDFLAGS) -dynamiclib -o $@ $^
+	$(CC) $(CFLAGS) $(LDFLAGS) $(SHARED_FLAGS) -o $@ $^ $(LDLIBS)
 
 # Windows: cross-build with MinGW-w64 (brew install mingw-w64) and the SDL3 MinGW package, copied into build/ from
 # the dm port. Windows has no control socket: transport_none.c replaces transport.c. -mwindows: no console window; the
@@ -88,7 +94,7 @@ $(WIN_OBJ)/%.o: src/%.c Makefile $(WIN_OBJ)/flags.txt | $(SDL_MINGW)
 	$(WIN_CC) $(CPPFLAGS) $(call layer_inc,$<) -I$(SDL_MINGW)/include $(BASE_CFLAGS) -c -o $@ $<
 
 $(B)/dm2.exe: $(call objects,$(WIN_OBJ),$(WIN_SOURCES))
-	$(WIN_CC) $(BASE_CFLAGS) -mwindows -o $@ $^ -L$(SDL_MINGW)/lib -lSDL3
+	$(WIN_CC) $(BASE_CFLAGS) -mwindows -o $@ $^ -L$(SDL_MINGW)/lib -lSDL3 $(LDLIBS)
 
 $(SDL_MINGW):
 	@test -d $(DM_DIR)/build/sdl-mingw || { echo "copy the SDL3 MinGW package to build/sdl-mingw"; exit 1; }

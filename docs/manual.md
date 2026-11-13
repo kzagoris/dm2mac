@@ -75,7 +75,7 @@ Save in a slot with Alt+S and load a slot from the start menu, as in the origina
 
 ## Advanced mode
 
-Advanced mode adds the advanced keys, the quick save, the automap, the cheats, and the screen filter. It also
+Advanced means convenience additions. Cheats are separate, optional, and off in a new game. Press `F1` or click the visible **F1 OPTIONS/HELP** shortcut for controls, display preferences, saves, and spell favorites. Advanced mode also
 changes a few things:
 
 - When you release a held key, the party stops. In vanilla mode the party keeps walking, as in the original.
@@ -86,7 +86,7 @@ changes a few things:
 - Projectiles fly smoothly from square to square in the dungeon view.
 - A save keeps the automap and the cheats.
 
-The automap and the cheat screen stop game time while they are open. The exact rules are in
+The automap, Options/Help, spell favorites, and cheat screen stop game time while open. The exact rules are in
 [Advanced mode rules](rules/advanced-mode.md).
 
 ### Advanced keys
@@ -98,18 +98,41 @@ The automap and the cheat screen stop game time while they are open. The exact r
 | `F5`, `F9` | Quick save, quick load |
 | `Tab` or `M` | Automap |
 | `C` | Cheat screen |
+| `F1` | Options/Help (also in inventory, sleep, and pause) |
+| `B` | Recorded spell favorites |
 | `Tab` | Close the inventory |
 
 The keys work only in the dungeon view. In the inventory, a dialog, or a menu they do nothing, except `Tab`, which
-closes the inventory. `Esc` and a right click close the automap and the cheat screen.
+closes the inventory, and `F1`, which opens Options/Help in inventory, sleep, and pause. Save/cast options require the dungeon view. `Esc` and a right click close the automap and the cheat screen.
 
 ### Quick save and quick load
 
 In advanced mode, `F5` saves to one quick slot (`game/DATA/QUICK.DAT`) and `F9` loads it, without a dialog. The
 message area says what happened: `GAME SAVED`, `GAME LOADED`, `NO QUICK SAVE`, or `QUICK SAVE DAMAGED`.
 `UNABLE TO SAVE` means that the game could not write a file: after `F5` the earlier quick save stays, and after `F9`
-the game does not load. The quick slot does not appear in the save menu, and RESTART GAME after the party's death
-loads only the normal slots.
+the game does not load. Advanced startup and death recovery offer **LOAD QUICK.DAT** (`F9`) separately from **LOAD SLOT SAVE** (`L`), even if no slot save exists. Startup also offers `N` for a new game; `Esc` exits. Missing or damaged quick saves keep the chooser open and preserve save files. `--save PATH` still starts that save directly.
+
+### Spell favorites
+
+Open a champion's spell panel, enter a power rune and the combination you want to remember, then press `B`.
+Select one of four favorites and **RECORD ENTERED RUNES IN FAVORITE**. Recording keeps the entered runes and
+charges no extra mana. Cast those runes normally, or remove them before replaying a favorite; removing runes
+retains the original no-refund rule.
+
+In Favorites, choose the caster, power (1–6), and recorded favorite or **LAST**. The screen shows the required
+mana and whether an empty flask is required and present. **CAST** enters the runes at the chosen power and casts
+once through the normal game rules: mana, skill checks, failures, experience, and action delays all apply.
+A dead or busy caster, insufficient mana, or existing entered runes prevents replay. A missing flask uses the
+normal failure behavior and retains the paid runes. The last attempted combination is remembered even after a
+failed cast. Favorites are private to each champion and persist with Advanced saves; old saves start empty.
+The Favorites screen does not reveal the spell catalog. Use Up/Down and Return or click a row; Esc/right click closes.
+
+### Focus-loss pause
+
+Switching windows or minimizing in Advanced gameplay pauses the game and discards held/captured and queued
+input. Returning focus does not resume: press a fresh **Return**. Keys held across the interruption must be
+pressed again. The existing pause, sleep, inventory, dialog, or overlay remains as it was; Return clears only
+the focus pause. Vanilla and turn-based mode retain their existing behavior.
 
 ### Automap
 
@@ -143,19 +166,14 @@ CHEATS                         CLOSE
  ONE-HIT KILL            OFF
  WALK THROUGH WALLS      OFF
  REVEAL MAP              OFF
-OPTIONS
- SCREEN FILTER           NONE
- QUICK SAVE F5
- QUICK LOAD F9
- SPELLS
+ SPELLS - FREE CAST CHEAT
 ```
 
 Click a row, or choose it with the arrow keys (or `W`, `S`) and Return. CLOSE, `C`, `Esc`, or a right click closes
 the screen.
 
 - The six cheat rows show `ON` or `OFF`.
-- SCREEN FILTER switches the pixel-art filter (`NONE`, `SCALE2X`, `SCALE3X`), and the change shows immediately.
-- QUICK SAVE F5 and QUICK LOAD F9 do the same as the keys.
+- Options/Help (`F1`) holds SCREEN FILTER (`NONE`, `SCALE2X`, `SCALE3X`) and the ordinary quick-save/load actions.
 - SPELLS lists all the game's spells with their runes, for example `FUL IR (X,4,4) FIREBALL`. A number is the
   rune's position in its row; `X` is any power. The spell names come from this port because the game has no names
   for them. A right click on a spell page goes back to the cheat page.

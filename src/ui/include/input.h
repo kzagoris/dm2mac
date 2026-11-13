@@ -79,6 +79,8 @@
 #define CMD_MUSIC_VOLUME_FIRST   0x9d
 #define CMD_MUSIC_VOLUME_LAST    0xa4 /* settings 0 to 7 */
 #define CMD_PICTURE_CLICK        0xef /* a click on a picture of INPUT_MODE_PICTURE */
+#define CMD_OPTIONS              0xf8
+#define CMD_SPELLBOOK            0xf7
 #define CMD_QUICK_SAVE           0xf3
 #define CMD_QUICK_LOAD           0xf4
 #define CMD_AUTOMAP              0xf5
@@ -140,6 +142,7 @@ bool input_is_idle(void);
 uint16_t input_click_command(enum InputMode mode, int16_t x, int16_t y, int buttons, int16_t *rect);
 /* The command of key in mode, and the rectangle of its zone; 0 for none. In the advanced mode, F5 and F9 in the
    movement mode give the quick save and the quick load, Tab and M there open the automap, C the cheat screen,
+   B the recorded spell favorites, and F1 opens Options/Help in movement, inventory, pause, and sleep;
    Tab in the inventory closes it, and a letter key W S A D Q E without a
    command gives the command of its keypad key. */
 uint16_t input_key_command(enum InputMode mode, uint16_t key, int16_t *rect); /* exported for the tests */
@@ -183,6 +186,8 @@ void input_key_down(uint16_t key);
 void input_key_repeat(uint16_t key);
 /* Clears the pending keys, clicks, and commands. */
 void input_flush(void);
+/* Cancels held/captured input and all events, including deferred and release events. */
+void input_cancel_pending(void);
 
 /* ---- Click feedback ---- */
 

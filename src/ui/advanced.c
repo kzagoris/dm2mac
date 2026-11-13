@@ -3,23 +3,30 @@
 #include "advanced.h"
 #include <stdbool.h>
 #include <stdio.h>
+#include <string.h>
 #include "automap.h"
 #include "cheats.h"
+#include "dialog.h"
 #include "draw.h"
 #include "dungeon.h"
 #include "game.h"
 #include "game_text.h"
 #include "ids.h"
 #include "interface_state.h"
+#include "magic.h"
 #include "minion.h"
 #include "music.h"
+#include "options.h"
 #include "os.h"
+#include "recovery.h"
 #include "save.h"
 #include "session.h"
 #include "sound.h"
+#include "spellbook.h"
 #include "text.h"
 #include "timeline.h"
 #include "ui.h"
+#include "video.h"
 #include "zone.h"
 
 /* The name in the header of QUICK.DAT. */
@@ -31,6 +38,9 @@
 #define READOUT_DIRECTION 1
 
 enum AdvancedScreen g_advanced_screen;
+
+/* Options may cover an inventory, sleep or pause picture that will not redraw on its own. */
+static uint8_t options_picture[SCREEN_H][SCREEN_W];
 
 /* The state of the viewport screens and of the quick load. */
 static struct {
@@ -47,6 +57,8 @@ static const char *const direction_names[DIR_COUNT] = {"NORTH", "EAST", "SOUTH",
 /* Closes the open viewport screen and ends a drag of the map. */
 static void close_screen(void)
 {
+    if (g_advanced_screen == ADVANCED_SCREEN_OPTIONS)
+        memcpy(g_video_fb, options_picture, sizeof options_picture);
     g_advanced_screen = ADVANCED_SCREEN_NONE;
     advanced.drag.active = false;
     automap_scroll_reset();
@@ -287,8 +299,45 @@ static void cheat_event(int type, int16_t x, int16_t y)
     }
 }
 
+void advanced_open_spellbook(void)
+{
+    g_advanced_screen = ADVANCED_SCREEN_SPELLBOOK;
+    spellbook_open();
+}
+
+void advanced_open_options(void)
+{
+    memcpy(options_picture, g_video_fb, sizeof options_picture);
+    g_advanced_screen = ADVANCED_SCREEN_OPTIONS;
+    options_open();
+}
+
 void advanced_screen_event(int type, int16_t x, int16_t y)
 {
+    if (g_advanced_screen == ADVANCED_SCREEN_OPTIONS) {
+        OptionsResult result = options_event(type, x, y);
+        if (result == OPTIONS_CLOSE)
+            close_screen();
+        else if (result == OPTIONS_CHEATS) {
+            close_screen();
+            advanced_open_cheats();
+        } else if (result == OPTIONS_SPELLBOOK) {
+            close_screen();
+            advanced_open_spellbook();
+        } else if ((result == OPTIONS_QUICK_SAVE || result == OPTIONS_QUICK_LOAD) && g_game.champion_count) {
+            close_screen();
+            advanced.pending_key = result == OPTIONS_QUICK_SAVE ? KEY_QUICK_SAVE : KEY_QUICK_LOAD;
+        }
+        return;
+    }
+    if (g_advanced_screen == ADVANCED_SCREEN_SPELLBOOK) {
+        SpellbookResult result = spellbook_event(type, x, y);
+        if (result != SPELLBOOK_STAY)
+            close_screen();
+        if (result == SPELLBOOK_CAST)
+            game_set_command_stop(magic_cast_entered_runes_failed());
+        return;
+    }
     if (g_advanced_screen == ADVANCED_SCREEN_CHEATS)
         cheat_event(type, x, y);
     else if (type == INPUT_BUTTON_RIGHT)
@@ -302,4 +351,85 @@ uint16_t advanced_take_pending_key(void)
     uint16_t key = advanced.pending_key;
     advanced.pending_key = 0;
     return key;
+}
+
+/* Focus loss is independent of the original pause, sleep, and modal input modes. */
+static bool window_focused = true;
+static bool focus_paused;
+/* Repeat keys held across a focus change must be pressed again after resuming. */
+#define FOCUS_KEY_COUNT 256
+static bool repeats_blocked;
+static bool repeat_armed[FOCUS_KEY_COUNT];
+
+bool advanced_focus_paused(void)
+{
+    return g_game_mode == GAME_MODE_ADVANCED && focus_paused;
+}
+
+void advanced_focus_changed(bool focused)
+{
+    window_focused = focused;
+    if (g_game_mode != GAME_MODE_ADVANCED || focused || !g_game.champion_count || g_main_loop.end || recovery_is_open())
+        return;
+    focus_paused = true;
+    repeats_blocked = true;
+    memset(repeat_armed, 0, sizeof repeat_armed);
+    advanced.drag.active = false;
+    input_cancel_pending();
+}
+
+bool advanced_focus_key(uint16_t key, bool repeat)
+{
+    if (!advanced_focus_paused()) {
+        if (g_game_mode == GAME_MODE_ADVANCED && repeats_blocked) {
+            if (repeat && !repeat_armed[key & 0xff])
+                return true;
+            if (!repeat)
+                repeat_armed[key & 0xff] = true;
+        }
+        return false;
+    }
+    if (window_focused && key == KEY_ENTER && !repeat) {
+        input_cancel_pending();
+        focus_paused = false;
+    }
+    return true;
+}
+
+void advanced_draw_focus_pause(void)
+{
+    if (!advanced_focus_paused())
+        return;
+    text_draw_on_screen(0, TEXT_LINE_HEIGHT, g_ui_colors[UI_WHITE], g_ui_colors[UI_BLACK], "PAUSED - RETURN TO RESUME");
+}
+
+/* The small, always visible shortcut occupies the bottom right message line during stable gameplay. */
+#define SHORTCUT_TEXT  "F1 OPTIONS/HELP"
+#define SHORTCUT_WIDTH ((int)(sizeof SHORTCUT_TEXT - 1) * FONT_ADVANCE)
+#define SHORTCUT_LEFT  (SCREEN_W - SHORTCUT_WIDTH)
+#define SHORTCUT_TOP   (SCREEN_H - TEXT_LINE_HEIGHT)
+
+/* Whether a convenience overlay may be opened without interrupting a modal operation. */
+static bool shortcut_available(void)
+{
+    enum InputMode mode = input_get_mode();
+    return g_game_mode == GAME_MODE_ADVANCED && !g_advanced_screen && !g_ui.candidate && !g_dialog.screen_mode &&
+           !g_main_loop.end && !recovery_is_open() &&
+           (mode == INPUT_MODE_MOVE || mode == INPUT_MODE_INVENTORY || mode == INPUT_MODE_PAUSE ||
+            mode == INPUT_MODE_SLEEP);
+}
+
+void advanced_draw_shortcut(void)
+{
+    if (shortcut_available())
+        text_draw_on_screen(SHORTCUT_LEFT, SCREEN_H - 1, g_ui_colors[UI_WHITE], g_ui_colors[UI_BLACK], SHORTCUT_TEXT);
+}
+
+bool advanced_shortcut_click(int16_t x, int16_t y, int button)
+{
+    if (button != INPUT_BUTTON_LEFT || !shortcut_available() || x < SHORTCUT_LEFT || x >= SCREEN_W ||
+        y < SHORTCUT_TOP || y >= SCREEN_H)
+        return false;
+    input_key_down(KEY_OPTIONS);
+    return true;
 }

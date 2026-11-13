@@ -3,10 +3,8 @@
 #define DM2_UI_CHEATS_H
 /* Prefixes: cheats_ */
 
-/* The cheat screen of the advanced mode (not in the original game): a viewport screen that switches the cheats and
-   the screen filter (ui/filter), offers quick save and quick load, and lists the spells with their runes; a spell
-   line casts its spell (engine/magic). It switches the cheats through engine/game; advanced/ opens and closes the
-   screen, maps the keys, and runs quick save and quick load. */
+/* Optional rule-changing cheats and the explicitly free-cast spell catalog. Ordinary preferences and save rows
+   live in options.h. advanced.h owns opening/closing and the F5/F9 keyboard shortcuts. */
 
 #include <stddef.h>
 #include <stdint.h>
@@ -38,11 +36,9 @@ CheatsCursor cheats_get_cursor(void); /* exported for the tests */
 /* Commands */
 /* Shows the cheat page in the viewport with the first row selected. */
 void cheats_open(void);
-/* Selects the row step rows below (step 1) or above (step -1) the selected row; the selection skips the OPTIONS
-   subtitle and stops at the ends, CLOSE of the cheat page is the last. */
+/* Selects the row step rows below (step 1) or above (step -1); stops at the ends, with CLOSE last. */
 void cheats_move_selection(int16_t step);
-/* Runs the selected row: a cheat row switches its cheat, SCREEN FILTER changes to the next filter, SPELLS, NEXT, and
-   BACK change the page, a spell line casts the spell for the caster of the spell area and closes the screen. */
+/* Runs the selected row: toggles a cheat, navigates spell pages, or free-casts a spell and closes the screen. */
 enum CheatsResult cheats_run_selected_row(void);
 /* A left click at the screen position (x, y): a click on a row selects and runs it. */
 enum CheatsResult cheats_process_click(int16_t x, int16_t y);

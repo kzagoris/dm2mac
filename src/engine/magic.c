@@ -3,6 +3,7 @@
 #include "magic.h"
 #include <stdbool.h>
 #include <stddef.h>
+#include <string.h>
 #include "action.h"
 #include "ai.h"
 #include "creature.h"
@@ -262,6 +263,105 @@ static uint16_t read_event_word(const TimelineEvent *e)
 static void set_event_word(TimelineEvent *e, uint16_t v)
 {
     put_le16(e->data, v);
+}
+
+/* Optional FAVS extension: magic, version, then four favorites and last attempt per champion. */
+#define FAVORITES_MAGIC       "FAVS"
+#define FAVORITES_MAGIC_SIZE  4
+#define FAVORITES_VERSION     1
+#define FAVORITES_HEADER_SIZE (FAVORITES_MAGIC_SIZE + 1)
+
+static uint8_t favorites[CHAMPION_MAX][MAGIC_RECORD_COUNT][CHAMPION_RUNES_SIZE];
+
+/* A contiguous power rune followed by one to three runes from their respective sets. */
+static bool valid_combination(const uint8_t *runes)
+{
+    if (!runes[0] || !runes[1])
+        return false;
+    bool ended = false;
+    for (int step = 0; step < CHAMPION_RUNES_SIZE; step++) {
+        if (!runes[step]) {
+            ended = true;
+            continue;
+        }
+        int rune = runes[step] - SPELL_RUNE_GLYPH_FIRST - step * SPELL_RUNES_PER_SET;
+        if (ended || rune < 0 || rune >= SPELL_RUNES_PER_SET)
+            return false;
+    }
+    return true;
+}
+
+void magic_reset_favorites(void)
+{
+    memset(favorites, 0, sizeof favorites);
+}
+
+/* A valid recorded slot for a recruited champion. */
+static bool valid_favorite(int16_t caster, int16_t slot)
+{
+    return caster >= 0 && caster < g_game.champion_count && slot >= 0 && slot < MAGIC_RECORD_COUNT;
+}
+
+bool magic_record_favorite(int16_t caster, int16_t slot)
+{
+    if (g_game_mode != GAME_MODE_ADVANCED || !valid_favorite(caster, slot) || slot == MAGIC_FAVORITE_LAST)
+        return false;
+    const Champion *c = champion(caster);
+    if (c->rune_count < 2 || c->rune_count > CHAMPION_RUNES_SIZE || !valid_combination((const uint8_t *)c->runes))
+        return false;
+    memcpy(favorites[caster][slot], c->runes, CHAMPION_RUNES_SIZE);
+    return true;
+}
+
+uint8_t magic_favorite_rune(int16_t caster, int16_t slot, int step)
+{
+    return valid_favorite(caster, slot) && step >= 0 && step < CHAMPION_RUNES_SIZE ? favorites[caster][slot][step] : 0;
+}
+
+int magic_favorite_mana(int16_t caster, int16_t slot, int power)
+{
+    if (!valid_favorite(caster, slot) || power < 1 || power > POWER_MON || !valid_combination(favorites[caster][slot]))
+        return -1;
+    int mana = rune_mana[power - 1];
+    for (int step = 1; step < CHAMPION_RUNES_SIZE && favorites[caster][slot][step]; step++) {
+        int rune = favorites[caster][slot][step] - SPELL_RUNE_GLYPH_FIRST;
+        mana += rune_mana[rune] * power_rune_mana_factor[power - 1] >> POWER_RUNE_FACTOR_SHIFT;
+    }
+    return mana;
+}
+
+bool magic_write_favorites(FILE *f)
+{
+    const uint8_t header[FAVORITES_HEADER_SIZE] = {FAVORITES_MAGIC[0], FAVORITES_MAGIC[1], FAVORITES_MAGIC[2],
+                                                   FAVORITES_MAGIC[3], FAVORITES_VERSION};
+    return fwrite(header, 1, sizeof header, f) == sizeof header &&
+           fwrite(favorites, 1, sizeof favorites, f) == sizeof favorites;
+}
+
+bool magic_read_favorites(FILE *f)
+{
+    uint8_t header[FAVORITES_HEADER_SIZE];
+    uint8_t saved[CHAMPION_MAX][MAGIC_RECORD_COUNT][CHAMPION_RUNES_SIZE];
+    magic_reset_favorites();
+    size_t n = fread(header, 1, sizeof header, f);
+    if (!n)
+        return true; /* an older save */
+    if (n != sizeof header || memcmp(header, FAVORITES_MAGIC, FAVORITES_MAGIC_SIZE) ||
+        header[FAVORITES_MAGIC_SIZE] != FAVORITES_VERSION || fread(saved, 1, sizeof saved, f) != sizeof saved ||
+        fgetc(f) != EOF)
+        return false;
+    for (int caster = 0; caster < CHAMPION_MAX; caster++)
+        for (int slot = 0; slot < MAGIC_RECORD_COUNT; slot++) {
+            const uint8_t *r = saved[caster][slot];
+            bool empty = true;
+            for (int step = 0; step < CHAMPION_RUNES_SIZE; step++)
+                empty = empty && !r[step];
+            if (!empty && !valid_combination(r))
+                return false;
+        }
+    if (g_game_mode == GAME_MODE_ADVANCED)
+        memcpy(favorites, saved, sizeof favorites);
+    return true;
 }
 
 /* The runes of a champion with the byte after them: the end mark of 4 runes is unknown_26[0], as in the original. */
@@ -668,6 +768,8 @@ bool magic_cast_entered_runes_failed(void)
     int16_t champion_index = g_action.champion - 1;
     Champion *c = champion(champion_index);
     uint8_t *runes = runes_of(c);
+    if (g_game_mode == GAME_MODE_ADVANCED && valid_combination(runes))
+        memcpy(favorites[champion_index][MAGIC_FAVORITE_LAST], runes, CHAMPION_RUNES_SIZE);
     const Spell *spell = magic_find_spell(runes);
     CastResult result =
         spell ? magic_cast_spell(champion_index, spell, (int16_t)(runes[0] - POWER_RUNE_BASE)) : CAST_UNKNOWN_SPELL;
@@ -720,4 +822,34 @@ void magic_remove_last_rune(void)
     g_action.redraw_delay = ACTION_REDRAW_NEXT;
     g_hooks.update_action_area(false);
     g_hooks.refresh_input_mode();
+}
+
+bool magic_has_empty_flask(int16_t caster)
+{
+    return caster >= 0 && caster < g_game.champion_count && find_flask_in_hands(champion(caster)) >= 0;
+}
+
+bool magic_favorite_needs_flask(int16_t caster, int16_t slot)
+{
+    if (!valid_favorite(caster, slot))
+        return false;
+    uint8_t runes[CHAMPION_RUNES_SIZE + 1] = {0};
+    memcpy(runes, favorites[caster][slot], CHAMPION_RUNES_SIZE);
+    const Spell *spell = magic_find_spell(runes);
+    return spell && spell_kind(spell) == SPELL_POTION;
+}
+
+bool magic_prepare_favorite(int16_t caster, int16_t slot, int power)
+{
+    int mana = magic_favorite_mana(caster, slot, power);
+    if (g_game_mode != GAME_MODE_ADVANCED || mana < 0)
+        return false;
+    Champion *c = champion(caster);
+    if (!c->health || c->action_delay[ACTION_SPELL] || c->rune_count || c->mana < mana)
+        return false;
+    action_area_open_spells(caster);
+    magic_add_rune(power - 1);
+    for (int step = 1; step < CHAMPION_RUNES_SIZE && favorites[caster][slot][step]; step++)
+        magic_add_rune(favorites[caster][slot][step] - SPELL_RUNE_GLYPH_FIRST - step * SPELL_RUNES_PER_SET);
+    return true;
 }

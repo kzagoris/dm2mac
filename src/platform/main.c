@@ -198,6 +198,8 @@ static struct {
 static void present_with_cursor(void)
 {
     memcpy(program.saved_screen, g_video_fb, sizeof program.saved_screen);
+    advanced_draw_shortcut();
+    advanced_draw_focus_pause();
     input_draw_cursor(&g_video_fb[0][0], g_input_mouse_x, g_input_mouse_y);
     plat_present();
     memcpy(g_video_fb, program.saved_screen, sizeof program.saved_screen);
@@ -285,8 +287,12 @@ static void pump_events(void)
     while (plat_poll(&e)) {
         if (e.type == PLAT_QUIT) {
             end_by_platform();
+        } else if (e.type == PLAT_FOCUS_LOST || e.type == PLAT_FOCUS_GAINED) {
+            advanced_focus_changed(e.type == PLAT_FOCUS_GAINED);
         } else if (e.type == PLAT_KEY) {
             uint16_t key = pc_key_code(e.scancode, e.mod);
+            if (advanced_focus_key(key, e.repeat))
+                continue;
             if (key && e.repeat && g_game_mode == GAME_MODE_ADVANCED)
                 input_key_repeat(key);
             else if (key)
@@ -465,7 +471,7 @@ static const char *read_options(int argc, char **argv, Options *options, const c
 }
 
 /* False with a message for an option without a value or an unknown option. */
-static bool options_are_valid(const char *missing, const char *unknown)
+static bool valid_options(const char *missing, const char *unknown)
 {
     if (missing)
         os_log("%s needs a value", missing);
@@ -780,7 +786,7 @@ int main(int argc, char **argv)
         install_make_folder(INSTALL_GAME_FOLDER);
     }
     open_log(options.data); /* before the first message: the Windows build and a macOS bundle have no console */
-    if (!options_are_valid(missing, unknown))
+    if (!valid_options(missing, unknown))
         return EXIT_USAGE;
     int mode_status = select_runnable_mode(&options);
     if (mode_status)

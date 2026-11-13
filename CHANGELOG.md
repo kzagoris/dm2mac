@@ -2,6 +2,16 @@
 
 All notable changes to this project are in this file. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## Unreleased
+
+### Added
+
+- Advanced startup and death recovery offer QUICK.DAT separately from slot saves, with safe retry after a missing or corrupt quick save.
+- Per-champion recorded spell favorites and repeat-last casting (`B`), with power choice, mana/flask feedback and normal game rules; optional FAVS save extension.
+- Advanced focus-loss/minimize pause with cleared input and deliberate Return resume.
+- Visible Options/Help (`F1`), in-game control guidance and mode explanation. Display/save actions are separate from labeled cheats.
+- Linux compilation and SDL3 discovery for feasible headless regression tests.
+
 ## [1.0.0] - 2026-10-31
 
 ### Added

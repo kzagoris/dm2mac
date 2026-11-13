@@ -17,6 +17,8 @@ The advanced mode adds these keys:
 | `Tab` or `M` | Open the automap | Dungeon view only |
 | `Tab`, `M`, or `Esc` | Close the automap | Open automap |
 | `C` | Open the cheat screen | Dungeon view only |
+| `B` | Recorded spell favorites | Dungeon view only |
+| `F1` | Options/Help | Dungeon, inventory, sleep, pause |
 | `C` or `Esc` | Close the cheat screen | Open cheat screen |
 | `Tab` | Close the inventory | Open inventory; not in the name editor or the recruit dialog |
 
@@ -29,7 +31,7 @@ The dungeon view is the screen where the party moves, with at least one champion
 - In the dungeon view the advanced keys work only without a recruit candidate and with an idle party: no held eye or mouth, no champion drag, and no push mode. Otherwise they do nothing.
 - In other places `F5`, `F9`, `Tab`, `M`, and `C` do nothing.
 - `Esc` keeps its original use in both modes: it closes the inventory, and it pauses or resumes the game. Only on the open automap and the open cheat screen it closes the screen.
-- Only one of the automap and the cheat screen is open at a time.
+- Only one Advanced overlay is open at a time.
 
 ## Quick save and quick load
 
@@ -40,7 +42,7 @@ The advanced mode has one quick save slot: `<data>/DATA/QUICK.DAT`. With `--save
 - `GAME SAVED`: the game wrote the file.
 - `UNABLE TO SAVE`: the game cannot write the file. An earlier quick save stays.
 
-A quick save is not a saved game for the save menu. The QUIT question and RESTART GAME after the party's death use only the save slots.
+A quick save is not a saved game for the save menu. The QUIT question uses the save slots. Advanced startup and death use a recovery chooser that explicitly offers QUICK.DAT separately from slots, without requiring a slot to exist. It reports a missing/unreadable or damaged quick file and keeps the chooser open; it never writes a temporary backup of a nonexistent running game.
 
 `F9` loads `QUICK.DAT` without a dialog. The message area shows one of these lines:
 
@@ -91,19 +93,41 @@ The advanced mode has six cheats. The cheat screen (`C`) switches each cheat on 
 
 ## Cheat screen
 
-`C` in the dungeon view opens the cheat screen in the viewport. The cheat page has the title CHEATS with CLOSE at the right of the title line, then 11 rows: the six cheat rows, the subtitle OPTIONS, SCREEN FILTER, QUICK SAVE F5, QUICK LOAD F9, and SPELLS. Click a row, or select it with Up and Down (`W`, `S`) and press Return. The selection skips the subtitle, stops at the first and the last item, and CLOSE is the last item. `C`, `Esc`, and a right click close the screen.
+`C` in the dungeon view opens CHEATS, with CLOSE on the title line, six cheat switches, and SPELLS - FREE CAST CHEAT. Up/Down (`W`, `S`), Return, and clicks select actions; Esc, C, and right click close. Ordinary filter/save actions live in Options/Help (`F1`).
 
 - FULL LIGHT, IMMORTAL, ENDLESS FOOD AND WATER, ONE-HIT KILL, WALK THROUGH WALLS, REVEAL MAP: each row shows `ON` or `OFF` and switches its cheat (see [Cheats](#cheats)).
-- OPTIONS: a subtitle; a click on it does nothing.
-- SCREEN FILTER: shows the window's upscale filter, `NONE`, `SCALE2X`, or `SCALE3X`, and changes to the next filter (after SCALE3X comes NONE). The change shows immediately and goes to [SETTINGS.TXT](#settingstxt). If the window cannot show the filter, the filter stays. The volume stays in the volume dialog of the original game.
-- QUICK SAVE F5: writes `QUICK.DAT`; the screen stays open. `F5` on the screen does the same.
-- QUICK LOAD F9: closes the screen, then loads `QUICK.DAT` as `F9` in the dungeon view does. `F9` on the screen does the same.
+- F5 and F9 remain shortcuts on the cheat screen; ordinary clickable save/filter rows are in Options/Help.
 - SPELLS: the spell pages, `SPELLS n/5`, with 8 spells per page, then NEXT, BACK, and CLOSE. NEXT after the last page shows the first page. BACK on the first page and a right click on a spell page show the cheat page with SPELLS selected.
 - CLOSE: closes the screen.
 
 A spell line shows the runes, their numbers, and the spell name, for example `FUL IR (X,4,4) FIREBALL`. A number is the place of the rune in its row (1 to 6); `X` means any power. A line wider than the viewport shows only the numbers and the name. The spell names are names of the port, because the game files have none.
 
 A click on a spell line (or Return) casts the spell and closes the screen. The caster is the champion of the open spell panel, otherwise the leader, otherwise the first living champion. Without a living champion the message area shows `NO CHAMPION CAN CAST`. No spell of the game has a power rune, so the cast uses MON, the highest power. The cast costs no mana, has no failure roll, and gives no experience; the spell's action delay stays. A potion still needs an empty flask in one of the caster's hands; without it the message area shows `NO EMPTY FLASK IN HAND`.
+
+## Recorded spell favorites
+
+`B` opens four favorites and the last attempted combination per champion. Players record only runes they have
+entered, including unknown combinations. The selected power controls the mana preview and replay. Replay
+requires a living, ready caster with enough mana and no entered runes, opens that champion's normal spell panel,
+and calls `magic_add_rune` for every rune followed by `magic_cast_entered_runes_failed` once. Thus no rune-entry
+cost, skill roll, failure reporting, experience, flask requirement, or delay is bypassed. Recording leaves runes
+and mana alone. Failed casts are also recorded as LAST. A missing flask retains the paid runes as usual.
+
+Favorites use the optional FAVS save block; new games and saves without it start empty. Vanilla and turn-based
+modes neither use nor write favorites. This is separate from the unlimited cheat spell catalog.
+
+## Focus loss and help
+
+Focus loss/minimize latches an Advanced-only pause before processing more commands or timer ticks. All event,
+key, command and deferred queues, held mouse buttons, inspection holds, push/drag capture, map dragging and
+feedback scripts are cleared. The original input mode, running flag, sleep and overlay state stay intact.
+Focus gain alone does nothing. A fresh Return after focus returns clears only the latch, and held-key repeats
+are suppressed until that key is pressed again. Modal waits also stop their timer counts while focus-paused.
+
+The visible F1 Options/Help shortcut and F1 key open ordinary preferences and controls without entering Cheats.
+Help covers movement, inventory, inspection, normal spell entry, favorites, saves and pause. F1 also works in
+inventory, sleep and pause, but save/cast actions require the dungeon view. Name entry, recruiting and dialogs
+keep their original input. The mode screen explains convenience additions and optional cheats off by default.
 
 ## Damage hold
 
@@ -120,7 +144,7 @@ A projectile moves one cell (half a square) per game step, as in the original ga
 
 ## SETTINGS.TXT
 
-The SCREEN FILTER row of the cheat screen keeps the filter in `SETTINGS.TXT` in the folder of `QUICK.DAT` (`--saves DIR`, otherwise `<data>/DATA`). The file format is in [save.md](../formats/save.md#settingstxt).
+The SCREEN FILTER row of Options/Help keeps the filter in `SETTINGS.TXT` in the folder of `QUICK.DAT` (`--saves DIR`, otherwise `<data>/DATA`). The file format is in [save.md](../formats/save.md#settingstxt).
 
 The advanced mode reads the file once on startup and applies the filter. `--filter` and `DM2_FILTER` have priority on startup. The SCREEN FILTER row can still change the filter, and the change writes the file. The vanilla and turn-based modes do not read the file.
 

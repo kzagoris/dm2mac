@@ -215,7 +215,10 @@ def load(lib, gdat, path, mode, data):
 def test_advanced_save_appends_the_chts_block(lib, gdat, game, tmp_path):
     turnbased = save(lib, gdat, tmp_path / "T.DAT", C.GAME_MODE_TURNBASED, C.CHEAT_FOOD)
     mine = save(lib, gdat, tmp_path / "A.DAT", ADVANCED, C.CHEAT_FOOD | C.CHEAT_MAP)
-    assert len(mine) == len(turnbased) + 6 and mine[-6:] == b"CHTS\x01" + bytes([C.CHEAT_FOOD | C.CHEAT_MAP])
+    tail = mine[len(turnbased):]
+    assert tail[:6] == b"CHTS\x01" + bytes([C.CHEAT_FOOD | C.CHEAT_MAP])
+    assert tail[6:11] == b"FAVS\x01"
+    assert len(tail) == 6 + 5 + C.CHAMPION_MAX * C.MAGIC_RECORD_COUNT * C.CHAMPION_RUNES_SIZE
     assert load(lib, gdat, tmp_path / "L.DAT", ADVANCED, mine) == C.CHEAT_FOOD | C.CHEAT_MAP
     for mode in (VANILLA, C.GAME_MODE_TURNBASED):
         assert load(lib, gdat, tmp_path / "L.DAT", mode, mine) == 0, "only the advanced mode uses the cheats"
@@ -227,6 +230,7 @@ def test_advanced_save_appends_the_chts_block(lib, gdat, game, tmp_path):
 @pytest.mark.parametrize("damage", ["short", "long", "magic", "version", "bits"])
 def test_damaged_chts_block_gives_no_cheats(lib, gdat, game, tmp_path, damage):
     data = bytearray(save(lib, gdat, tmp_path / "A.DAT", ADVANCED, C.CHEAT_KILL))
+    del data[-(5 + C.CHAMPION_MAX * C.MAGIC_RECORD_COUNT * C.CHAMPION_RUNES_SIZE):]  # isolate the legacy CHTS block
     if damage == "short":
         del data[-1]
     elif damage == "long":

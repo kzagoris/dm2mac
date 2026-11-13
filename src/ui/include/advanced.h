@@ -17,6 +17,8 @@
 /* PC scan codes of the keys that open the automap and the cheat screen. */
 #define KEY_AUTOMAP   KEY_TAB
 #define KEY_AUTOMAP_M 0x32 /* M */
+#define KEY_OPTIONS   0x3b /* F1 */
+#define KEY_SPELLBOOK 0x30 /* B */
 #define KEY_CHEATS    0x2e /* C */
 
 /* PC scan codes of the numeric keypad keys that move and turn the party. */
@@ -40,7 +42,13 @@
 enum QuickLoadResult { QUICK_LOADED, QUICK_MISSING, QUICK_DAMAGED, QUICK_BLOCKED, QUICK_LOST };
 
 /* The screens that cover the viewport, one at a time; the game time stops while one is open. */
-enum AdvancedScreen { ADVANCED_SCREEN_NONE, ADVANCED_SCREEN_AUTOMAP, ADVANCED_SCREEN_CHEATS };
+enum AdvancedScreen {
+    ADVANCED_SCREEN_NONE,
+    ADVANCED_SCREEN_AUTOMAP,
+    ADVANCED_SCREEN_CHEATS,
+    ADVANCED_SCREEN_SPELLBOOK,
+    ADVANCED_SCREEN_OPTIONS
+};
 
 extern enum AdvancedScreen g_advanced_screen; /* the open viewport screen */
 
@@ -71,6 +79,10 @@ void advanced_automap_drag(int16_t x, int16_t y);
 /* Viewport screens */
 /* Opens the cheat screen in the viewport. */
 void advanced_open_cheats(void);
+/* Opens normal-rule spell favorites. */
+void advanced_open_spellbook(void);
+/* Opens ordinary options and Help. */
+void advanced_open_options(void);
 /* An input event while a viewport screen is open (type INPUT_KEY with the key in x, a mouse button,
    INPUT_LEFT_RELEASED). On the automap Tab, M, and Esc close it, a left drag on the viewport scrolls the map. On the
    cheat screen C and Esc close it, Up, Down, W, and S select a row, Return and a left click run a row, F5 and F9
@@ -79,5 +91,20 @@ void advanced_open_cheats(void);
 void advanced_screen_event(int type, int16_t x, int16_t y);
 /* The key that a closed screen leaves for the game (F9 of QUICK LOAD), 0 for none; clears it. */
 uint16_t advanced_take_pending_key(void);
+
+/* Focus loss */
+/* True until a fresh Return after focus returns; underlying pause/sleep/screens stay intact. */
+bool advanced_focus_paused(void);
+/* Latches a separate Advanced gameplay pause on focus loss; focus gain alone never resumes. */
+void advanced_focus_changed(bool focused);
+/* Consumes input while focus-paused. Only a non-repeat Return when focused clears the latch. */
+bool advanced_focus_key(uint16_t key, bool repeat);
+/* Draws a temporary pause banner before presenting, without changing the underlying UI state. */
+void advanced_draw_focus_pause(void);
+
+/* Draws the visible F1 Options/Help shortcut during stable gameplay, before presenting. */
+void advanced_draw_shortcut(void);
+/* Consumes a click on the visible shortcut when eligible. */
+bool advanced_shortcut_click(int16_t x, int16_t y, int button);
 
 #endif /* DM2_UI_ADVANCED_H */

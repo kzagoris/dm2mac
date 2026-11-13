@@ -12,8 +12,8 @@ from dm2test.modes import (ADVANCED, INPUT_MODE_INVENTORY, INPUT_MODE_MOVE, VANI
 
 SPELL_COUNT, SPELLS_PER_PAGE = 34, 8
 PAGE_COUNT = (SPELL_COUNT + SPELLS_PER_PAGE - 1) // SPELLS_PER_PAGE
-ROW_LIGHT, ROW_FOOD, ROW_MAP, ROW_OPTIONS, ROW_FILTER = 0, 2, 5, 6, 7
-ROW_QUICK_SAVE, ROW_QUICK_LOAD, ROW_SPELLS, ROW_CLOSE = 8, 9, 10, 11  # CLOSE: the title item
+ROW_LIGHT, ROW_FOOD, ROW_MAP = 0, 2, 5
+ROW_SPELLS, ROW_CLOSE = 6, 7  # CLOSE: the title item
 STAY, CLOSE, QUICK_SAVE, QUICK_LOAD = C.CHEATS_STAY, C.CHEATS_CLOSE, C.CHEATS_QUICK_SAVE, C.CHEATS_QUICK_LOAD
 SCAN_ESCAPE, SCAN_RETURN, SCAN_S = 0x01, 0x1C, 0x1F
 FIREBALL_EFFECT = 0x5402  # a missile spell of type 0 (fireball)
@@ -91,16 +91,16 @@ def test_rows_and_pages(lib, screen):
     for _ in range(ROW_CLOSE):
         order.append(cursor(lib)[1])
         lib.cheats_move_selection(1)
-    assert order == [r for r in range(ROW_CLOSE + 1) if r != ROW_OPTIONS], "the selection skips the subtitle"
+    assert order == list(range(ROW_CLOSE)), "all cheat rows are selectable"
     assert cursor(lib) == (C.CHEATS_PAGE, ROW_CLOSE), "the selection stops at the last row, CLOSE"
     lib.cheats_move_selection(-1)
     assert cursor(lib) == (C.CHEATS_PAGE, ROW_SPELLS)
     select(lib, ROW_MAP)
     lib.cheats_move_selection(1)
-    assert cursor(lib) == (C.CHEATS_PAGE, ROW_FILTER)
+    assert cursor(lib) == (C.CHEATS_PAGE, ROW_SPELLS)
     lib.cheats_move_selection(-1)
     assert cursor(lib) == (C.CHEATS_PAGE, ROW_MAP)
-    for row, result in ((ROW_QUICK_SAVE, QUICK_SAVE), (ROW_QUICK_LOAD, QUICK_LOAD), (ROW_CLOSE, CLOSE)):
+    for row, result in ((ROW_CLOSE, CLOSE),):
         select(lib, row)
         assert lib.cheats_run_selected_row() == result
     select(lib, ROW_FOOD)

@@ -931,6 +931,10 @@ uint16_t input_click_command(enum InputMode mode, int16_t x, int16_t y, int butt
 
 uint16_t input_key_command(enum InputMode mode, uint16_t key, int16_t *rect)
 {
+    if (g_game_mode == GAME_MODE_ADVANCED && key == KEY_OPTIONS && !g_ui.candidate &&
+        (mode == INPUT_MODE_MOVE || mode == INPUT_MODE_INVENTORY || mode == INPUT_MODE_PAUSE ||
+         mode == INPUT_MODE_SLEEP))
+        return CMD_OPTIONS;
     uint16_t command = find_key_command(&g_input_mode_roots[mode], key, rect);
     if (command || g_game_mode != GAME_MODE_ADVANCED)
         return command;
@@ -938,6 +942,8 @@ uint16_t input_key_command(enum InputMode mode, uint16_t key, int16_t *rect)
         return key == KEY_QUICK_SAVE ? CMD_QUICK_SAVE : CMD_QUICK_LOAD;
     if (mode == INPUT_MODE_MOVE && (key == KEY_AUTOMAP || key == KEY_AUTOMAP_M))
         return CMD_AUTOMAP;
+    if (mode == INPUT_MODE_MOVE && key == KEY_SPELLBOOK)
+        return CMD_SPELLBOOK;
     if (mode == INPUT_MODE_MOVE && key == KEY_CHEATS)
         return CMD_CHEATS;
     if (mode == INPUT_MODE_INVENTORY && key == KEY_AUTOMAP && !g_ui.candidate)

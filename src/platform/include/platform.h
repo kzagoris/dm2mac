@@ -11,7 +11,7 @@
 #include "settings.h"
 
 /* Types of a platform event. */
-typedef enum { PLAT_QUIT, PLAT_KEY, PLAT_MOUSE, PLAT_MOUSE_UP } PlatEventType;
+typedef enum { PLAT_QUIT, PLAT_KEY, PLAT_MOUSE, PLAT_MOUSE_UP, PLAT_FOCUS_LOST, PLAT_FOCUS_GAINED } PlatEventType;
 
 typedef struct {
     PlatEventType type;

@@ -17,6 +17,7 @@
 #include "move.h"
 #include "music.h"
 #include "play.h"
+#include "recovery.h"
 #include "recruit.h"
 #include "sensor.h"
 #include "session.h"
@@ -211,12 +212,22 @@ void input_mouse_click(int16_t x, int16_t y, int type)
 
 void input_mouse_down(int16_t x, int16_t y, int button)
 {
+    if (advanced_focus_paused())
+        return;
+    if (recovery_is_open()) {
+        recovery_event(button, x, y);
+        return;
+    }
+    if (advanced_shortcut_click(x, y, button))
+        return;
     game_set_mouse_buttons(g_input_mouse_buttons | button);
     input_mouse_click(x, y, button);
 }
 
 void input_mouse_up(int16_t x, int16_t y, int button)
 {
+    if (advanced_focus_paused())
+        return;
     game_set_mouse_buttons(g_input_mouse_buttons & ~button);
     if (button == INPUT_BUTTON_LEFT && (g_ui.eye || g_ui.mouth || g_advanced_screen))
         input_mouse_click(x, y, INPUT_LEFT_RELEASED);
@@ -244,12 +255,20 @@ void input_enqueue_key(uint16_t key)
 
 void input_key_down(uint16_t key)
 {
+    if (advanced_focus_key(key, false))
+        return;
+    if (recovery_is_open()) {
+        recovery_event(INPUT_KEY, (int16_t)key, 0);
+        return;
+    }
     if (g_input.key_count < KEY_BUFFER)
         g_input.keys[g_input.key_count++] = key;
 }
 
 void input_key_repeat(uint16_t key)
 {
+    if (advanced_focus_key(key, true))
+        return;
     if (input_is_idle())
         input_key_down(key);
 }
@@ -286,6 +305,19 @@ void input_flush(void)
     g_input_match.choice = 0;
     g_input.events_locked = false;
     input_flush_deferred_click();
+}
+
+void input_cancel_pending(void)
+{
+    g_input.deferred = false;
+    input_reset_states();
+    input_flush();
+    g_input.event_count = 0;
+    g_input.event_head = 0;
+    g_input.event_tail = EVENT_RING - 1;
+    g_input.dropped_left = false;
+    g_input.arrow_pressed = false;
+    game_set_mouse_buttons(0);
 }
 
 /* ---- Clicks in the dungeon view ---- */
@@ -744,6 +776,12 @@ static bool execute_champion_command(int command, bool idle)
             champ_drag_click(command - CMD_DRAG_FIRST);
         input_refresh_mode();
         area_update(false);
+    } else if (command == CMD_OPTIONS) {
+        if (g_game_mode == GAME_MODE_ADVANCED && !g_ui.candidate && idle)
+            advanced_open_options();
+    } else if (command == CMD_SPELLBOOK) {
+        if (g_game_mode == GAME_MODE_ADVANCED && g_game.champion_count && !g_ui.candidate && idle)
+            advanced_open_spellbook();
     } else if (command >= CMD_QUICK_SAVE && command <= CMD_CHEATS) {
         if (g_game.champion_count && !g_ui.candidate && idle) {
             if (command == CMD_QUICK_SAVE)
@@ -796,6 +834,8 @@ void input_set_wait(int steps)
 
 void command_process_queue(void)
 {
+    if (advanced_focus_paused())
+        return;
     if (g_input.wait)
         g_input.wait--;
     g_input.feedback_waiting = false;

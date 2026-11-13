@@ -11,6 +11,7 @@
 #include "gdat.h"
 #include "ids.h"
 #include "le.h"
+#include "magic.h"
 #include "os.h"
 #include "random.h"
 #include "seen.h"
@@ -21,7 +22,7 @@
 /* Save file: a 42-byte header, the dungeon image, then the game state as one bit stream. Each record
    of the bit stream stores only the bits that its mask table selects, most significant bit first.
    Format analysis: reDM2 docs/savegame.md and docs/formats/save.md. Outside the vanilla mode the AMAP
-   block of the automap follows the bit stream (seen.h), in the advanced mode then the CHTS block of the cheats; the
+   block of the automap follows the bit stream (seen.h), then Advanced CHTS and FAVS blocks; the
    original loader ignores them. */
 
 /* The save file header and the sizes of the game state. */
@@ -977,10 +978,10 @@ static bool write_cheats(FILE *f)
     return fwrite(block, 1, sizeof block, f) == sizeof block;
 }
 
-/* Reads the rest of f: nothing, a valid CHTS block (its cheat bits to *cheats), or other bytes. */
+/* Reads EOF or CHTS followed by optional FAVS; unknown tails discard optional state. */
 static enum SaveTail read_tail(FILE *f, uint8_t *cheats)
 {
-    uint8_t block[CHEAT_BLOCK_SIZE + 1]; /* one byte more: the block must end the file */
+    uint8_t block[CHEAT_BLOCK_SIZE];
     size_t size = fread(block, 1, sizeof block, f);
     if (!size)
         return TAIL_END;
@@ -988,18 +989,21 @@ static enum SaveTail read_tail(FILE *f, uint8_t *cheats)
         block[CHEAT_MAGIC_SIZE] != CHEAT_VERSION || block[CHEAT_BITS_AT] & ~CHEAT_ALL)
         return TAIL_OTHER;
     *cheats = block[CHEAT_BITS_AT];
-    return TAIL_CHEATS;
+    return magic_read_favorites(f) ? TAIL_CHEATS : TAIL_OTHER;
 }
 
 /* Reads the blocks after the bit stream. The AMAP block counts only at the end of the file or before a valid CHTS
    block; the cheats come only from a valid CHTS block after it, and only in the advanced mode. */
 static void read_extension(FILE *f)
 {
+    magic_reset_favorites();
     uint8_t cheats = 0;
     bool amap = seen_read(f);
     enum SaveTail tail = read_tail(f, &cheats);
     if (tail == TAIL_OTHER)
         seen_reset();
+    if (!amap || tail == TAIL_OTHER)
+        magic_reset_favorites();
     game_set_cheats(amap && tail == TAIL_CHEATS && g_game_mode == GAME_MODE_ADVANCED ? cheats : 0);
 }
 
@@ -1060,9 +1064,9 @@ SaveResult save_write(const char *path, const char *bak_path, const char *name, 
     /* the records keep the indices of the active groups; the timeline loses their events (session_save) */
     bool ok = fwrite(header, 1, SAVE_HEADER_SIZE, f) == SAVE_HEADER_SIZE && dungeon_write(f);
     creature_deactivate_all_groups();
-    ok =
-        ok && write_state() &&
-        (g_game_mode == GAME_MODE_VANILLA || (seen_write(f) && (g_game_mode != GAME_MODE_ADVANCED || write_cheats(f))));
+    ok = ok && write_state() &&
+         (g_game_mode == GAME_MODE_VANILLA ||
+          (seen_write(f) && (g_game_mode != GAME_MODE_ADVANCED || (write_cheats(f) && magic_write_favorites(f)))));
     free(io.group_order);
     free(io.container_order);
     if (fclose(f) != 0)

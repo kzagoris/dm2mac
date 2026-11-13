@@ -35,8 +35,11 @@ void (*g_play_frame_hook)(void);
 
 void play_wait_frames(int count)
 {
-    while (count-- > 0) {
-        game_count_timer_tick();
+    while (count > 0 && !g_main_loop.quit) {
+        if (!advanced_focus_paused()) {
+            game_count_timer_tick();
+            count--;
+        }
         if (g_play_frame_hook)
             g_play_frame_hook();
     }
@@ -254,7 +257,7 @@ static void show_projectile_flight(void)
 
 void play_tick(void)
 {
-    if (g_main_loop.end || g_main_loop.quit)
+    if (g_main_loop.end || g_main_loop.quit || advanced_focus_paused())
         return;
     game_count_timer_tick();
     if (game_count_step_tick())

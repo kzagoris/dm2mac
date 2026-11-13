@@ -7,6 +7,7 @@
 
 #include <stdbool.h>
 #include <stdint.h>
+#include <stdio.h>
 #include "champion.h"
 #include "timeline.h"
 
@@ -28,6 +29,24 @@ typedef enum { CAST_OK, CAST_FAILED, CAST_UNKNOWN_SPELL, CAST_NEEDS_FLASK } Cast
 
 /* The power of the MON rune, the strongest power rune. */
 #define POWER_MON 6
+
+/* Player-recorded combinations per champion; the last attempted cast follows the four favorites. */
+#define MAGIC_FAVORITE_COUNT 4
+#define MAGIC_FAVORITE_LAST  MAGIC_FAVORITE_COUNT
+#define MAGIC_RECORD_COUNT   (MAGIC_FAVORITE_COUNT + 1)
+
+/* Clears recorded combinations for a new adventure or an old save. */
+void magic_reset_favorites(void);
+/* Records the currently entered runes in a favorite slot; false for invalid/incomplete input. */
+bool magic_record_favorite(int16_t caster, int16_t slot);
+/* Recorded glyph at step, or 0 for an absent/invalid entry. */
+uint8_t magic_favorite_rune(int16_t caster, int16_t slot, int step);
+/* Total rune-entry mana at the chosen power; -1 for no combination or invalid power. */
+int magic_favorite_mana(int16_t caster, int16_t slot, int power);
+/* Writes the versioned optional FAVS save extension. */
+bool magic_write_favorites(FILE *f);
+/* Reads an optional FAVS extension at EOF; rejects malformed/unknown data and clears old entries. */
+bool magic_read_favorites(FILE *f);
 
 /* Spell lookup */
 /* The spell of the entered runes (a power rune and 1 to 3 runes), NULL when no spell has them. */
@@ -71,5 +90,12 @@ uint16_t magic_rune_mana_cost(int16_t champion_index, int rune);
 void magic_add_rune(int rune);
 /* The champion who casts takes back the last rune. */
 void magic_remove_last_rune(void);
+
+/* Whether the caster has an empty flask in either hand. */
+bool magic_has_empty_flask(int16_t caster);
+/* Whether the recorded spell needs a flask at its recorded power. */
+bool magic_favorite_needs_flask(int16_t caster, int16_t slot);
+/* Enters recorded runes through magic_add_rune; rejects dead/busy casters, existing runes, and insufficient mana. */
+bool magic_prepare_favorite(int16_t caster, int16_t slot, int power);
 
 #endif /* DM2_ENGINE_MAGIC_H */

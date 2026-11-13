@@ -85,7 +85,7 @@ Method (`tests/differential/test_save.py`, `original_round_trip`): `dm2tools.emu
 
 ## AMAP and CHTS blocks
 
-In advanced mode, a slot save and the quick save `QUICK.DAT` end with two blocks after the original save data: the AMAP block, then the CHTS block. Turn-based mode writes only the AMAP block. The bytes before the blocks are the same as in vanilla mode. The AMAP block holds the automap's seen squares; the CHTS block holds the cheats ([manual.md](../manual.md#advanced-mode)).
+In advanced mode, a slot save and the quick save `QUICK.DAT` end with three blocks after the original save data: AMAP, CHTS, then FAVS. Turn-based mode writes only the AMAP block. The bytes before the blocks are the same as in vanilla mode. The AMAP block holds the automap's seen squares; the CHTS block holds the cheats ([manual.md](../manual.md#advanced-mode)).
 
 The AMAP block:
 
@@ -107,23 +107,35 @@ The CHTS block:
 
 A load reads the blocks if they are present.
 
-- AMAP: a missing block, a block with different map sizes, or a value other than 0 or 1 gives an empty automap. Only the end of the file or a valid CHTS block may follow the block; other bytes give an empty automap.
-- CHTS: in advanced mode, the cheats come from the block. A missing block, a wrong version, an unknown bit, bytes after the block, or a damaged AMAP block give no cheats. Vanilla and turn-based modes ignore the block and use no cheats.
+- AMAP: a missing block, a block with different map sizes, or a value other than 0 or 1 gives an empty automap. Only the end of the file or a valid CHTS block (optionally followed by valid FAVS) may follow the block; other bytes give an empty automap.
+- CHTS: in advanced mode, the cheats come from the block. A missing block, a wrong version, an unknown bit, unrecognized or malformed trailing data, or a damaged AMAP block give no cheats. Vanilla and turn-based modes ignore the block and use no cheats.
 - The game loads in all these cases. A save with only the original data (vanilla) loads with an empty automap and no cheats.
+
+The optional FAVS block is `FAVS`, one version byte (`1`), then 80 bytes: four champion slots, each with five
+four-byte rune sequences (four favorites, then the last attempted combination). Glyphs use the original spell
+rune encoding. An empty sequence is all zero; otherwise it contains a power rune and one to three runes from
+the respective sets, with trailing zeroes. Truncation, unknown versions, invalid glyphs, gaps or extra bytes
+reject the extension. A legacy save ending after AMAP or CHTS loads with empty favorites. Only Advanced restores
+the favorites. Corrupt optional tails do not reject the original adventure state; they reset optional state.
+Older port versions that require EOF after CHTS will discard map/cheat extensions from a new Advanced save;
+the core save still loads. Vanilla and turn-based save output is unchanged.
 
 The original game loads a save with the blocks because its loader stops at the last bit of the game state. A save in the original game writes the file again without the blocks.
 
 ## Quick save files
 
-In advanced and turn-based modes, the quick save `QUICK.DAT` is in the `--saves` folder, otherwise in `<data>/DATA` ([manual.md](../manual.md#quick-save-and-quick-load)). A quick load uses a copy of the running game, `QUICK.TMP` next to `QUICK.DAT` (`advanced_quick_load` in `src/ui/advanced.c`):
+In advanced and turn-based modes, the quick save `QUICK.DAT` is in the `--saves` folder, otherwise in `<data>/DATA` ([manual.md](../manual.md#quick-save-and-quick-load)). An in-game quick load uses a copy of the running game, `QUICK.TMP` next to `QUICK.DAT` (`advanced_quick_load` in `src/ui/advanced.c`):
 
 - Before the load, the game writes the running game to `QUICK.TMP`. If this write fails, the quick load stops.
 - If `QUICK.DAT` does not load, the game loads `QUICK.TMP` back. After a load or a restore, the game deletes `QUICK.TMP`.
 - If `QUICK.TMP` does not load either, the game is lost: `QUICK.TMP` stays, and the game writes an error line to the log. Advanced mode ends the program (`EXIT_GAME_LOST`, [game-flow.md](../rules/game-flow.md#deviations-from-the-original)); turn-based mode continues without a game ([turn-based.md](../llm/turn-based.md#turn-based-commands)).
 
+Advanced startup/death recovery loads QUICK.DAT directly without QUICK.TMP, because there is no running
+adventure to preserve. A missing/corrupt quick file leaves the chooser open and never changes any save file.
+
 ## SETTINGS.TXT
 
-The settings file of advanced mode keeps the upscale filter of the SCREEN FILTER row of the cheat screen ([manual.md](../manual.md#screen-filter)). The SCREEN FILTER row writes it. It is in the same folder as `QUICK.DAT`. The file is a text file of `key=value` lines (`src/data/settings.c`). It has one line:
+The settings file of advanced mode keeps the upscale filter of the SCREEN FILTER row of Options/Help ([manual.md](../manual.md#screen-filter)). The SCREEN FILTER row writes it. It is in the same folder as `QUICK.DAT`. The file is a text file of `key=value` lines (`src/data/settings.c`). It has one line:
 
 ```
 filter=scale2x

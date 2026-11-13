@@ -227,6 +227,13 @@ bool plat_poll(PlatEvent *e)
         case SDL_EVENT_QUIT:
             e->type = PLAT_QUIT;
             return true;
+        case SDL_EVENT_WINDOW_FOCUS_LOST:
+        case SDL_EVENT_WINDOW_MINIMIZED:
+            e->type = PLAT_FOCUS_LOST;
+            return true;
+        case SDL_EVENT_WINDOW_FOCUS_GAINED:
+            e->type = PLAT_FOCUS_GAINED;
+            return true;
         case SDL_EVENT_KEY_DOWN:
             e->type = PLAT_KEY;
             e->scancode = ev.key.scancode;
