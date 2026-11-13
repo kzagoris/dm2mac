@@ -32,6 +32,7 @@ typedef struct {
     enum SettingsFilter filter;
     bool aspect;    /* the picture is 4:3, as on a VGA monitor, instead of square pixels */
     bool scanlines; /* a dark line below every line of the game screen */
+    bool classic_steps; /* skip intermediate walking frames */
 } Settings;
 
 /* Queries */

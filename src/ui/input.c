@@ -216,8 +216,6 @@ void input_mouse_down(int16_t x, int16_t y, int button)
         recovery_event(button, x, y);
         return;
     }
-    if (advanced_shortcut_click(x, y, button))
-        return;
     game_set_mouse_buttons(g_input_mouse_buttons | button);
     input_mouse_click(x, y, button);
 }

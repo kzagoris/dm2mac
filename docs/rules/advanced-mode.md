@@ -19,10 +19,11 @@ The advanced mode adds these keys:
 | `C` | Open the cheat screen | Dungeon view only |
 | `B` | Recorded spell favorites | Dungeon view only |
 | `F1` | Options/Help | Dungeon, inventory, sleep, pause |
+| `Esc` | Options/Help | Dungeon view only |
 | `C` or `Esc` | Close the cheat screen | Open cheat screen |
-| `Tab` | Close the inventory | Open inventory; not in the name editor or the recruit dialog |
+| `Tab` or `Esc` | Close the inventory | Open inventory; not in the name editor or the recruit dialog |
 
-A right click closes the automap and the cheat screen; on a spell page of the cheat screen it shows the cheat page. In the save menu a right click is RESUME, in the save menu's slot list CANCEL, and in the question before a quit CANCEL. The other dialogs keep the original right click.
+A right click closes the automap and the cheat screen; on an automap item list it returns to the map, and on a spell page of the cheat screen it shows the cheat page. In the save menu a right click is RESUME, in the save menu's slot list CANCEL, and in the question before a quit CANCEL. The other dialogs keep the original right click.
 
 A letter key moves the party only if the letter has no command of its own. In the slot name of the save dialog and in the name editor, the letters type text.
 
@@ -30,7 +31,7 @@ The dungeon view is the screen where the party moves, with at least one champion
 
 - In the dungeon view the advanced keys work only without a recruit candidate and with an idle party: no held eye or mouth, no champion drag, and no push mode. Otherwise they do nothing.
 - In other places `F5`, `F9`, `Tab`, `M`, and `C` do nothing.
-- `Esc` keeps its original use in both modes: it closes the inventory, and it pauses or resumes the game. Only on the open automap and the open cheat screen it closes the screen.
+- `Esc` closes the inventory, like `Tab`; the original pauses there. In the pause it keeps its original use and ends the pause. In the dungeon view it opens Options/Help, which also stops game time; on the open automap, the open cheat screen and Options/Help it closes the screen.
 - Only one Advanced overlay is open at a time.
 
 ## Quick save and quick load
@@ -64,7 +65,9 @@ The automap and the cheat screen open in the viewport and stop the game time. Th
 
 The automap shows the seen squares of all maps of the party level, each at its place on the level. It covers the viewport. The party square is in the middle of the viewport, north is up.
 
-- The squares use the icons of the minion map: walls, floors, pits, stairs, doors, wall and floor ornaments, teleporter fields, and the level digits. The automap shows the static creatures that have a map icon (trees and other creatures that do not move); moving creatures, merchants, and items do not show. A red frame and the champion icons mark the party square. The side of the frame that faces the party's direction is white.
+- The squares use the icons of the minion map: walls, floors, pits, stairs, doors, wall and floor ornaments, teleporter fields, and the level digits. The automap shows the static creatures that have a map icon (trees and other creatures that do not move); moving creatures and merchants do not show. A red frame and the champion icons mark the party square. The side of the frame that faces the party's direction is white.
+- Current loose items on explored squares have a yellow diamond in the upper right of their square. A pile of two to nine items shows its count; ten or more shows `+`. The marker also covers alcove items and items without map graphics. Containers count once; their contents, champion/creature inventories, missiles, and effects are excluded. Reveal map also exposes items on unexplored squares without marking them explored.
+- A short left click on a square with items opens its item list. Matching names are grouped with quantities, and the subtitle shows the exact total. Use Left/Right or A/D, or click PREVIOUS/NEXT, to page through every item group. Click MAP, press Esc, or right-click to return to the map. Tab/M close the automap from either view. The list and markers read the current dungeon state whenever drawn; no separate item history is saved.
 - A wall that the dungeon view shows at the edge of a map shows as a wall ([view.md](view.md#automap)).
 - A 1-pixel white frame surrounds the level with its maps' margins, just outside its last squares. It marks the end of the level, even where squares are not seen.
 - An imaginary wall (a closed fake wall that the party can walk through) shows as the wall icon with a light gray checkerboard.
@@ -124,7 +127,7 @@ feedback scripts are cleared. The original input mode, running flag, sleep and o
 Focus gain alone does nothing. A fresh Return after focus returns clears only the latch, and held-key repeats
 are suppressed until that key is pressed again. Modal waits also stop their timer counts while focus-paused.
 
-The visible F1 Options/Help shortcut and F1 key open ordinary preferences and controls without entering Cheats.
+Esc in the dungeon view and the F1 key open ordinary preferences and controls without entering Cheats.
 Help covers movement, inventory, inspection, normal spell entry, favorites, saves and pause. F1 also works in
 inventory, sleep and pause, but save/cast actions require the dungeon view. Name entry, recruiting and dialogs
 keep their original input. The mode screen explains convenience additions and optional cheats off by default.

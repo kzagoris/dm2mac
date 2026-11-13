@@ -97,3 +97,5 @@ The code is in `src/ui/play.c`, `src/ui/input.c`, `src/ui/input_tree.c`, `src/ui
   - The dialog button opcodes `0xf` and `0x10` of a click feedback script forget the feedback bitmap that the script opened (`feedback_draw_op`).
   - A frame step sensor (`0x41`, `SENSOR_FRAME_STEP`) that steps back from frame 0 wraps to frame `0xffff` before the modulo by its ornament's frame count, so it goes to the last frame only if the frame count divides `0x10000` (`wall_sensor_event`).
 - Not ported: the enter and leave events of the cursor zones ([champions.md](champions.md#the-cursor)); the mouse drag through a fake wall; `input_check_memory_cheat`, a key sequence that prints the free memory in the message area.
+
+Advanced mode offers **Smooth stepping: Off** in Options (F1 or Esc). It skips the intermediate walking frames and enters the destination square immediately, retaining collision checks and champion movement cooldowns. Smooth stepping defaults to On; `classic_steps=on` in `SETTINGS.TXT` remembers the alternative. Vanilla mode always keeps the original DM2 walking.

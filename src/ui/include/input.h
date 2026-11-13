@@ -142,8 +142,8 @@ bool input_is_idle(void);
 uint16_t input_click_command(enum InputMode mode, int16_t x, int16_t y, int buttons, int16_t *rect);
 /* The command of key in mode, and the rectangle of its zone; 0 for none. In the advanced mode, F5 and F9 in the
    movement mode give the quick save and the quick load, Tab and M there open the automap, C the cheat screen,
-   B the recorded spell favorites, and F1 opens Options/Help in movement, inventory, pause, and sleep;
-   Tab in the inventory closes it, and a letter key W S A D Q E without a
+   B the recorded spell favorites, Esc opens Options/Help, and F1 opens it in movement, inventory, pause, and sleep;
+   Tab and Esc in the inventory close it, and a letter key W S A D Q E without a
    command gives the command of its keypad key. */
 uint16_t input_key_command(enum InputMode mode, uint16_t key, int16_t *rect); /* exported for the tests */
 /* Selects the input tree of mode (move, inventory, sleep, pause, ...); a new mode clears the pending input. */

@@ -75,7 +75,7 @@ Save in a slot with Alt+S and load a slot from the start menu, as in the origina
 
 ## Advanced mode
 
-Advanced means convenience additions. Cheats are separate, optional, and off in a new game. Press `Esc` or `F1`, or click the visible **ESC OPTIONS/HELP** shortcut for controls, display preferences, saves, and spell favorites. Advanced mode also
+Advanced means convenience additions. Cheats are separate, optional, and off in a new game. Press `Esc` in the dungeon view, or `F1`, for controls, display preferences, saves, and spell favorites. Advanced mode also
 changes a few things:
 
 - When you release a held key, the party stops. In vanilla mode the party keeps walking, as in the original.
@@ -89,6 +89,12 @@ changes a few things:
 The automap, Options/Help, spell favorites, and cheat screen stop game time while open. The exact rules are in
 [Advanced mode rules](rules/advanced-mode.md).
 
+On the automap, yellow diamonds mark items on explored squares. Piles show a count (`+` for ten or more).
+Click a marked square to see item names and quantities; Left/Right or A/D and PREVIOUS/NEXT change pages.
+Click MAP, press Esc, or right-click to return to the map. Dragging still scrolls; Tab/M close the automap.
+Reveal map also shows items in unexplored areas. Markers update after pickup/drop, including items in alcoves;
+containers are marked without revealing their contents.
+
 ### Advanced keys
 
 | Key | Action |
@@ -100,12 +106,13 @@ The automap, Options/Help, spell favorites, and cheat screen stop game time whil
 | `Ctrl+R` | Rest (same as the Zzz icon) |
 | `Tab` or `M` | Automap |
 | `C` | Cheat screen |
-| `Esc` / `F1` | Pause with Options/Help; close to resume (also in inventory, sleep, and pause) |
+| `Esc` | Pause with Options/Help in the dungeon view; close to resume. In the inventory it closes the inventory (the original pauses) |
+| `F1` | Pause with Options/Help; close to resume (also in inventory, sleep, and pause) |
 | `B` | Recorded spell favorites |
-| `Tab` | Close the inventory |
+| `Tab` or `Esc` | Close the inventory |
 
 The keys work only in the dungeon view. In the inventory, a dialog, or a menu they do nothing, except `Tab`, which
-closes the inventory, and `F1`, which opens Options/Help in inventory, sleep, and pause. Save/cast options require the dungeon view. `Esc` and a right click close the automap and the cheat screen.
+closes the inventory, `Esc`, which closes the inventory (the original pauses there) and resumes from the pause, and `F1`, which opens Options/Help in inventory, sleep, and pause. Save/cast options require the dungeon view. `Esc` and a right click close the automap and the cheat screen.
 
 ### Quick save and quick load
 
@@ -121,7 +128,7 @@ Select one of four favorites and **RECORD ENTERED RUNES IN FAVORITE**. Recording
 charges no extra mana. Cast those runes normally, or remove them before replaying a favorite; removing runes
 retains the original no-refund rule.
 
-In Favorites, choose the caster, power (1â€“6), and recorded favorite or **LAST**. The screen shows the required
+In Favorites, choose the caster, power (1Ã¢â‚¬â€œ6), and recorded favorite or **LAST**. The screen shows the required
 mana and whether an empty flask is required and present. **CAST** enters the runes at the chosen power and casts
 once through the normal game rules: mana, skill checks, failures, experience, and action delays all apply.
 A dead or busy caster, insufficient mana, or existing entered runes prevents replay. A missing flask uses the
@@ -184,6 +191,10 @@ Click a spell to cast it at full power, with no mana cost and no chance of failu
 panel casts it, otherwise the leader. A potion spell still needs an empty flask in a hand.
 
 Sound and music volume stay in the original game's volume dialog (the speaker button in the inventory).
+
+### Stepping
+
+Open Options with F1 or Esc in Advanced mode and set **Smooth stepping: Off** for a quicker, direct step between squares, like Dungeon Master I or Eye of the Beholder. Collision checks and champion movement cooldowns still apply. The setting is remembered in `SETTINGS.TXT`; smooth stepping is On by default.
 
 ### Screen filter
 

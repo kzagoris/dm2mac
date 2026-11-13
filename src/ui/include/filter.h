@@ -41,5 +41,7 @@ void upscale_toggle_aspect(void);
 /* Turns the scanlines on or off, shows them in the window, and writes them to SETTINGS.TXT, as
    upscale_cycle_filter. */
 void upscale_toggle_scanlines(void);
+/* Toggles smooth walking and saves the preference. */
+void upscale_toggle_stepping(void);
 
 #endif /* DM2_UI_FILTER_H */

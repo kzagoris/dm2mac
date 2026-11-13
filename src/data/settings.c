@@ -41,6 +41,8 @@ static void parse_line(char *line, Settings *settings)
         parse_switch(value, &settings->aspect);
     if (!strcmp(line, "scanlines"))
         parse_switch(value, &settings->scanlines);
+    if (!strcmp(line, "classic_steps"))
+        parse_switch(value, &settings->classic_steps);
     if (strcmp(line, "filter"))
         return;
     enum SettingsFilter filter = settings_filter_parse(value);
@@ -121,8 +123,9 @@ bool settings_save(const char *folder, const Settings *settings)
         !settings_filter_name(settings->filter))
         return false;
     int length =
-        snprintf(text, sizeof text, "filter=%s\naspect=%s\nscanlines=%s\n", settings_filter_name(settings->filter),
-                 settings->aspect ? SWITCH_ON : SWITCH_OFF, settings->scanlines ? SWITCH_ON : SWITCH_OFF);
+        snprintf(text, sizeof text, "filter=%s\naspect=%s\nscanlines=%s\nclassic_steps=%s\n", settings_filter_name(settings->filter),
+                 settings->aspect ? SWITCH_ON : SWITCH_OFF, settings->scanlines ? SWITCH_ON : SWITCH_OFF,
+                 settings->classic_steps ? SWITCH_ON : SWITCH_OFF);
     FILE *file = fopen(temporary, "wb");
     if (!file)
         return false;

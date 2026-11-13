@@ -1,5 +1,6 @@
 """The screen filter of the advanced mode (src/ui/filter.c) and its row on the cheat screen (src/ui/cheats.c): the
-start from --filter and SETTINGS.TXT, the cycle, the SETTINGS.TXT write, the window hook, and Esc, which pauses."""
+start from --filter and SETTINGS.TXT, the cycle, the SETTINGS.TXT write, the window hook, and Esc, which opens Options/Help in
+the dungeon view and resumes from the pause."""
 
 import ctypes
 
@@ -70,13 +71,13 @@ def test_click_cycles_the_filter_and_the_subtitle_does_nothing(lib, screen):
 def test_a_change_goes_to_the_file_once(lib, screen):
     _, data = screen
     cycle(lib)
-    assert (data / "SETTINGS.TXT").read_text() == "filter=scale2x\naspect=off\nscanlines=off\n"
+    assert (data / "SETTINGS.TXT").read_text() == "filter=scale2x\naspect=off\nscanlines=off\nclassic_steps=off\n"
     (data / "SETTINGS.TXT").unlink()
     lib.cheats_move_selection(1)
     lib.cheats_move_selection(-1)
     assert not (data / "SETTINGS.TXT").exists(), "no change, no write"
     cycle(lib)
-    assert (data / "SETTINGS.TXT").read_text() == "filter=scale3x\naspect=off\nscanlines=off\n"
+    assert (data / "SETTINGS.TXT").read_text() == "filter=scale3x\naspect=off\nscanlines=off\nclassic_steps=off\n"
 
 
 def test_the_window_refuses_a_filter(lib, screen):
@@ -86,7 +87,7 @@ def test_the_window_refuses_a_filter(lib, screen):
     cycle(lib)
     cycle(lib)
     assert seen == [SCALE2X, SCALE3X] and state(lib) == (ROW_FILTER, SCALE2X)
-    assert (screen[1] / "SETTINGS.TXT").read_text() == "filter=scale2x\naspect=off\nscanlines=off\n"
+    assert (screen[1] / "SETTINGS.TXT").read_text() == "filter=scale2x\naspect=off\nscanlines=off\nclassic_steps=off\n"
 
 
 def test_failed_write_keeps_the_filter(lib, screen):
@@ -113,14 +114,14 @@ def test_start_takes_the_file_unless_a_filter_is_given(lib, screen, given, file,
     assert lib.upscale_get_filter() == NONE, "the vanilla mode reads no file"
 
 
-def test_escape_pauses_in_the_advanced_mode_as_in_vanilla(lib, advanced):
+def test_escape_opens_options_in_the_advanced_mode_and_resumes_from_the_pause(lib, advanced):
     game, _ = advanced
     screen = ctypes.c_int.in_dll(lib, "g_advanced_screen")
-    assert key_command(lib, INPUT_MODE_MOVE, SCAN_ESCAPE) == C.CMD_PAUSE
+    assert key_command(lib, INPUT_MODE_MOVE, SCAN_ESCAPE) == C.CMD_OPTIONS
     set_mode(lib, VANILLA)
     assert key_command(lib, INPUT_MODE_MOVE, SCAN_ESCAPE) == C.CMD_PAUSE
-    set_mode(lib, ADVANCED)
     press(lib, SCAN_ESCAPE)
+    set_mode(lib, ADVANCED)
     assert screen.value == C.ADVANCED_SCREEN_NONE and lib.input_get_mode() == C.INPUT_MODE_PAUSE
     time = game.game_time
     run_ticks(lib, 40)
@@ -129,3 +130,23 @@ def test_escape_pauses_in_the_advanced_mode_as_in_vanilla(lib, advanced):
     assert lib.input_get_mode() == INPUT_MODE_MOVE
     run_ticks(lib, 40)
     assert game.game_time > time
+
+
+def test_stepping_option_persists_and_vanilla_ignores_it(lib, tmp_path):
+    from dm2test.structs import Session
+
+    data = tmp_path
+    state = Session.in_dll(lib, "g_session")
+    state.save_dir = str(data).encode()
+    set_mode(lib, ADVANCED)
+    lib.upscale_start(NONE)
+    assert not lib.move_has_classic_steps()
+    lib.upscale_toggle_stepping()
+    assert lib.move_has_classic_steps()
+    assert "classic_steps=on" in (data / "SETTINGS.TXT").read_text()
+    lib.upscale_start(NONE)
+    assert lib.move_has_classic_steps()
+    set_mode(lib, VANILLA)
+    lib.upscale_start(NONE)
+    assert not lib.move_has_classic_steps()
+    state.save_dir = b""

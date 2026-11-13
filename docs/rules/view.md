@@ -45,7 +45,7 @@ The advanced and the turn-based modes mark the seen squares of the automap (`see
 
 The automap of the advanced mode (`src/ui/automap.c`; the original game has none) draws each square with the icons of the minion map (`mmap_draw_square_icon`, [creatures.md](creatures.md#minion-map)).
 
-- A square shows what a minion map without its options shows (`MAP_STATIC_CREATURES`): the static creatures with a map icon show on the seen squares; moving creatures, merchants, and items do not. The champion icons on the party square are the icons of a minion map item (`mmap_party_icons_item`).
+- A square shows what a minion map without its options shows (`MAP_STATIC_CREATURES`): the static creatures with a map icon show on the seen squares; moving creatures and merchants do not. The champion icons on the party square are the icons of a minion map item (`mmap_party_icons_item`). The automap adds yellow item markers and pile counts independently of the minion map graphics, including items without an icon; a click opens the current names and quantities ([advanced-mode.md](advanced-mode.md#automap)).
 - An edge wall is a square in the 1-square margin around a map (`MAP_MARGIN`), outside every other map of the level or on an unknown square of another map. There the dungeon view draws a wall (outdoors: trees) beside an open square of the map (`dungeon_square_edge`). The automap shows it if a square of that map next to it is seen (`automap_level_seen`).
 - A pressure pad (`automap_is_pressure_pad`) is a floor square with a floor sensor whose floor ornament the dungeon view draws. The party, a creature, or an item triggers the sensor (sensor types any, party or creature, party, creature, party possesses an item, item). A floor trigger without an ornament stays hidden.
 

@@ -3,6 +3,7 @@
 #include <stdio.h>
 #include "game.h"
 #include "game_text.h"
+#include "move.h"
 #include "text.h"
 
 /* The filters, from SETTINGS_FILTER_NONE. */
@@ -46,6 +47,7 @@ void upscale_start(enum SettingsFilter filter)
         upscale.shown.aspect = false;
         upscale.shown.scanlines = false;
     }
+    move_set_classic_steps(upscale.shown.classic_steps);
     upscale.saved = upscale.shown;
 }
 
@@ -73,7 +75,8 @@ static void write_change(void)
 {
     char dir[OS_DIR_SIZE + sizeof "/DATA"];
     if (upscale.shown.filter == upscale.saved.filter && upscale.shown.aspect == upscale.saved.aspect &&
-        upscale.shown.scanlines == upscale.saved.scanlines)
+        upscale.shown.scanlines == upscale.saved.scanlines &&
+        upscale.shown.classic_steps == upscale.saved.classic_steps)
         return;
     if (settings_save(find_folder(dir, sizeof dir), &upscale.shown)) {
         upscale.saved = upscale.shown;
@@ -112,4 +115,11 @@ void upscale_toggle_aspect(void)
 void upscale_toggle_scanlines(void)
 {
     change_picture(upscale.shown.aspect, !upscale.shown.scanlines);
+}
+
+void upscale_toggle_stepping(void)
+{
+    upscale.shown.classic_steps = !upscale.shown.classic_steps;
+    move_set_classic_steps(upscale.shown.classic_steps);
+    write_change();
 }

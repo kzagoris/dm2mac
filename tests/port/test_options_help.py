@@ -67,13 +67,18 @@ def test_options_cover_the_game_and_help_back_button_remains_clickable(lib):
     assert bytes(pixels) == bytes([42]) * len(pixels)
 
 
-def test_escape_opens_options_in_advanced_gameplay(lib):
+def test_escape_opens_options_only_in_the_dungeon_view(lib):
     lib.input_init()
     set_mode(lib, ADVANCED)
     UiState.in_dll(lib, 'g_ui').candidate = 0
     rect = (ctypes.c_int16 * 4)()
-    for mode in (C.INPUT_MODE_MOVE, C.INPUT_MODE_INVENTORY, C.INPUT_MODE_PAUSE, C.INPUT_MODE_SLEEP):
-        assert lib.input_key_command(mode, C.SCAN_ESCAPE, rect) == C.CMD_OPTIONS
+    assert lib.input_key_command(C.INPUT_MODE_MOVE, C.SCAN_ESCAPE, rect) == C.CMD_OPTIONS
+    assert lib.input_key_command(C.INPUT_MODE_INVENTORY, C.SCAN_ESCAPE, rect) == C.CMD_INVENTORY_LEADER
+    for mode in (C.INPUT_MODE_PAUSE, C.INPUT_MODE_SLEEP):
+        set_mode(lib, VANILLA)
+        original = lib.input_key_command(mode, C.SCAN_ESCAPE, rect)
+        set_mode(lib, ADVANCED)
+        assert lib.input_key_command(mode, C.SCAN_ESCAPE, rect) == original != C.CMD_OPTIONS
     assert not lib.input_key_command(C.INPUT_MODE_NAME, C.SCAN_ESCAPE, rect) == C.CMD_OPTIONS
     set_mode(lib, VANILLA)
     assert not lib.input_key_command(C.INPUT_MODE_MOVE, C.SCAN_ESCAPE, rect) == C.CMD_OPTIONS

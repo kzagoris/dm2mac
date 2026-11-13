@@ -19,11 +19,25 @@ bool automap_is_pressure_pad(Position at);
 bool automap_level_square(Location level_at, Position *position);
 /* True when a map of the party level that covers the level position level_at has seen its square there; exported for the tests. */
 bool automap_level_seen(Location level_at);
+/* The current loose items on a visible level square: fills at most capacity references (NULL: count only) and
+   returns the total count. Unseen squares require Reveal map; edge walls and container contents have no items;
+   exported for the tests. */
+int automap_items(Location level_at, uint16_t *items, int capacity);
+/* True while a selected square's item list covers the map picture. */
+bool automap_items_open(void);
 
 /* Drawing */
 /* Draws the seen squares of the maps of the party level into the screen rect clip of o, with the party square at the
    middle, moved by the scroll. */
 void automap_draw(Offscreen *o, const int16_t *clip);
+/* Draws the selected square's current item names and quantities, with previous/next pages and a MAP title item. */
+void automap_draw_items(void);
+
+/* Inspection */
+/* Opens the items at the screen point (x, y) of the scrolled viewport; false outside it or without visible items. */
+bool automap_select(int16_t x, int16_t y);
+/* Handles an event on the item list; true when the list consumed it. Escape/right click return to the map. */
+bool automap_items_event(int type, int16_t x, int16_t y);
 
 /* Scrolling */
 /* Moves the middle of the drawn map by (dx, dy) squares; the middle stays inside the level rectangle. */

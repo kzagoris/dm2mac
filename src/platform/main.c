@@ -198,7 +198,6 @@ static struct {
 static void present_with_cursor(void)
 {
     memcpy(program.saved_screen, g_video_fb, sizeof program.saved_screen);
-    advanced_draw_shortcut();
     input_draw_cursor(&g_video_fb[0][0], g_input_mouse_x, g_input_mouse_y);
     plat_present();
     memcpy(g_video_fb, program.saved_screen, sizeof program.saved_screen);

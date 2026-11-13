@@ -404,6 +404,18 @@ static bool step_party(int command, uint8_t here, bool on_stairs)
     return true;
 }
 
+static bool classic_steps;
+
+void move_set_classic_steps(bool enabled)
+{
+    classic_steps = enabled;
+}
+
+bool move_has_classic_steps(void)
+{
+    return classic_steps;
+}
+
 bool move_party(int command)
 {
     uint8_t here = dungeon_square_at((Location){g_current_map.square_x, g_current_map.square_y});
@@ -416,7 +428,7 @@ bool move_party(int command)
                 delay = d;
         }
     int half = (int16_t)delay >> 1;
-    if (delay > 1 && !g_party.move_steps &&
+    if (!classic_steps && delay > 1 && !g_party.move_steps &&
         (command == CMD_MOVE_FORWARD || (command == CMD_MOVE_BACK && !g_current_map.alt_view_active && !on_stairs) ||
          g_party.push_pending_group != THING_NONE)) {
         g_party.move_steps = (int16_t)half;

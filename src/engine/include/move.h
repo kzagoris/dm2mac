@@ -9,6 +9,10 @@
 #include <stdint.h>
 #include "dungeon.h"
 
+/* Player preference, outside saved game state. */
+void move_set_classic_steps(bool enabled);
+bool move_has_classic_steps(void);
+
 /* Movement commands: turn left and right, then step forward, right, back, and left. */
 #define CMD_TURN_LEFT    0x01
 #define CMD_TURN_RIGHT   0x02

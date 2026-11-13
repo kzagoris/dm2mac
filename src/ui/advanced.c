@@ -6,7 +6,6 @@
 #include <string.h>
 #include "automap.h"
 #include "cheats.h"
-#include "dialog.h"
 #include "draw.h"
 #include "dungeon.h"
 #include "game.h"
@@ -37,6 +36,9 @@
 #define READOUT_POSITION  0
 #define READOUT_DIRECTION 1
 
+/* A click tolerates small mouse jitter; a larger movement is a drag even below one whole map square. */
+#define MAP_CLICK_SLOP 3
+
 enum AdvancedScreen g_advanced_screen;
 
 /* Options may cover an inventory, sleep or pause picture that will not redraw on its own. */
@@ -46,7 +48,9 @@ static uint8_t options_picture[SCREEN_H][SCREEN_W];
 static struct {
     struct {
         bool active;
-        int x, y; /* the mouse position that matches the current scroll */
+        bool moved;
+        int x, y;             /* the mouse position that matches the current scroll */
+        int start_x, start_y; /* the press position, before any scrolling */
     } drag;
     bool lost;            /* a quick load lost the game: there is no running game to keep */
     uint16_t pending_key; /* the key that the closed screen leaves for the game (F9 of QUICK LOAD), 0 for none */
@@ -198,6 +202,11 @@ static void render_readout_line(Offscreen *o, int row, const char *text)
 
 void advanced_draw_automap(void)
 {
+    if (automap_items_open()) {
+        automap_draw_items();
+        draw_free_temp();
+        return;
+    }
     Offscreen o;
     char line[TEXT_SIZE];
     if (!zone_get_viewport_rect(o.rect))
@@ -218,6 +227,9 @@ void advanced_automap_drag(int16_t x, int16_t y)
 {
     if (!advanced.drag.active)
         return;
+    if (x - advanced.drag.start_x > MAP_CLICK_SLOP || advanced.drag.start_x - x > MAP_CLICK_SLOP ||
+        y - advanced.drag.start_y > MAP_CLICK_SLOP || advanced.drag.start_y - y > MAP_CLICK_SLOP)
+        advanced.drag.moved = true;
     int dx = (x - advanced.drag.x) / MAP_CELL_SIZE;
     int dy = (y - advanced.drag.y) / MAP_CELL_SIZE;
     if (!dx && !dy)
@@ -234,17 +246,33 @@ void advanced_automap_drag(int16_t x, int16_t y)
 static void map_event(int type, int16_t x, int16_t y)
 {
     int16_t r[RECT_SIZE];
+    if (type == INPUT_KEY && (x == KEY_AUTOMAP || x == KEY_AUTOMAP_M)) {
+        close_screen();
+        return;
+    }
+    if (automap_items_event(type, x, y)) {
+        advanced_draw_automap();
+        return;
+    }
     if (type == INPUT_KEY) {
-        if (x == KEY_AUTOMAP || x == KEY_AUTOMAP_M || x == SCAN_ESCAPE)
+        if (x == SCAN_ESCAPE)
             close_screen();
+    } else if (type == INPUT_BUTTON_RIGHT) {
+        close_screen();
     } else if (type == INPUT_LEFT_RELEASED) {
         advanced_automap_drag(x, y);
+        bool select = advanced.drag.active && !advanced.drag.moved;
         advanced.drag.active = false;
+        if (select && automap_select(x, y))
+            advanced_draw_automap();
     } else if (type & INPUT_BUTTON_LEFT && zone_get_viewport_rect(r) && x >= r[RECT_X] && x < r[RECT_X] + r[RECT_W] &&
                y >= r[RECT_Y] && y < r[RECT_Y] + r[RECT_H]) {
         advanced.drag.active = true;
+        advanced.drag.moved = false;
         advanced.drag.x = x;
         advanced.drag.y = y;
+        advanced.drag.start_x = x;
+        advanced.drag.start_y = y;
     }
 }
 
@@ -340,10 +368,10 @@ void advanced_screen_event(int type, int16_t x, int16_t y)
     }
     if (g_advanced_screen == ADVANCED_SCREEN_CHEATS)
         cheat_event(type, x, y);
-    else if (type == INPUT_BUTTON_RIGHT)
-        close_screen();
     else if (g_advanced_screen == ADVANCED_SCREEN_AUTOMAP)
         map_event(type, x, y);
+    else if (type == INPUT_BUTTON_RIGHT)
+        close_screen();
 }
 
 uint16_t advanced_take_pending_key(void)
@@ -378,35 +406,4 @@ bool advanced_focus_key(uint16_t key, bool repeat)
             repeat_armed[key & 0xff] = true;
     }
     return false;
-}
-
-/* The small, always visible shortcut occupies the bottom right message line during stable gameplay. */
-#define SHORTCUT_TEXT  "ESC OPTIONS/HELP"
-#define SHORTCUT_WIDTH ((int)(sizeof SHORTCUT_TEXT - 1) * FONT_ADVANCE)
-#define SHORTCUT_LEFT  (SCREEN_W - SHORTCUT_WIDTH)
-#define SHORTCUT_TOP   (SCREEN_H - TEXT_LINE_HEIGHT)
-
-/* Whether a convenience overlay may be opened without interrupting a modal operation. */
-static bool shortcut_available(void)
-{
-    enum InputMode mode = input_get_mode();
-    return g_game_mode == GAME_MODE_ADVANCED && !g_advanced_screen && !g_ui.candidate && !g_dialog.screen_mode &&
-           !g_main_loop.end && !recovery_is_open() &&
-           (mode == INPUT_MODE_MOVE || mode == INPUT_MODE_INVENTORY || mode == INPUT_MODE_PAUSE ||
-            mode == INPUT_MODE_SLEEP);
-}
-
-void advanced_draw_shortcut(void)
-{
-    if (shortcut_available())
-        text_draw_on_screen(SHORTCUT_LEFT, SCREEN_H - 1, g_ui_colors[UI_WHITE], g_ui_colors[UI_BLACK], SHORTCUT_TEXT);
-}
-
-bool advanced_shortcut_click(int16_t x, int16_t y, int button)
-{
-    if (button != INPUT_BUTTON_LEFT || !shortcut_available() || x < SHORTCUT_LEFT || x >= SCREEN_W ||
-        y < SHORTCUT_TOP || y >= SCREEN_H)
-        return false;
-    input_key_down(KEY_OPTIONS);
-    return true;
 }

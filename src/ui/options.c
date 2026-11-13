@@ -7,6 +7,7 @@
 #include "filter.h"
 #include "game_text.h"
 #include "ids.h"
+#include "move.h"
 #include "text.h"
 #include "ui.h"
 #include "video.h"
@@ -17,10 +18,11 @@
 #define OPTIONS_ROW_FILTER    2
 #define OPTIONS_ROW_ASPECT    3
 #define OPTIONS_ROW_SCANLINES 4
-#define OPTIONS_ROW_SAVE      5
-#define OPTIONS_ROW_LOAD      6
-#define OPTIONS_ROW_CHEATS    7
-#define OPTIONS_ROW_ROWS      8
+#define OPTIONS_ROW_STEPPING  5
+#define OPTIONS_ROW_SAVE      6
+#define OPTIONS_ROW_LOAD      7
+#define OPTIONS_ROW_CHEATS    8
+#define OPTIONS_ROW_ROWS      9
 #define OPTIONS_ROW_TEXT_SIZE 40
 
 static bool help;
@@ -32,7 +34,7 @@ static bool blocked;
 #define PANEL_VALUE_LEFT 108
 #define PANEL_TITLE_Y 20
 #define PANEL_FIRST_Y 46
-#define PANEL_ROW_HEIGHT 14
+#define PANEL_ROW_HEIGHT 12
 #define PANEL_BACK_LEFT 260
 #define PANEL_FOOTER_Y 186
 
@@ -78,6 +80,7 @@ static void show_options(void)
             filter,
             upscale_has_aspect() ? "4:3 ASPECT: ON" : "4:3 ASPECT: OFF",
             upscale_has_scanlines() ? "SCANLINES: ON" : "SCANLINES: OFF",
+            move_has_classic_steps() ? "SMOOTH STEPPING: OFF" : "SMOOTH STEPPING: ON",
             "QUICK SAVE (F5)",
             "QUICK LOAD (F9)",
             "CHEATS (OPTIONAL)"};
@@ -106,7 +109,8 @@ void options_open(void)
 static OptionsResult run_option(void)
 {
     if (selected != OPTIONS_ROW_HELP && selected != OPTIONS_ROW_FILTER && selected != OPTIONS_ROW_ASPECT &&
-        selected != OPTIONS_ROW_SCANLINES && selected != OPTIONS_ROW_ROWS && input_get_mode() != INPUT_MODE_MOVE) {
+        selected != OPTIONS_ROW_STEPPING && selected != OPTIONS_ROW_SCANLINES && selected != OPTIONS_ROW_ROWS &&
+        input_get_mode() != INPUT_MODE_MOVE) {
         blocked = true;
         show_options();
         return OPTIONS_STAY;
@@ -125,6 +129,9 @@ static OptionsResult run_option(void)
         break;
     case OPTIONS_ROW_SCANLINES:
         upscale_toggle_scanlines();
+        break;
+    case OPTIONS_ROW_STEPPING:
+        upscale_toggle_stepping();
         break;
     case OPTIONS_ROW_SAVE:
         return OPTIONS_QUICK_SAVE;

@@ -11,7 +11,7 @@ XBRZ2X, XBRZ3X, XBRZ4X = C.SETTINGS_FILTER_XBRZ2X, C.SETTINGS_FILTER_XBRZ3X, C.S
 
 
 class Settings(ctypes.Structure):
-    _fields_ = [("filter", ctypes.c_int), ("aspect", ctypes.c_bool), ("scanlines", ctypes.c_bool)]
+    _fields_ = [("filter", ctypes.c_int), ("aspect", ctypes.c_bool), ("scanlines", ctypes.c_bool), ("classic_steps", ctypes.c_bool)]
 
 
 @pytest.fixture(scope="module", autouse=True)
@@ -70,10 +70,10 @@ def test_save_and_load(lib, tmp_path):
     for filter, name in ((SCALE3X, "scale3x"), (SCALE2X, "scale2x"), (NONE, "none"),
                          (XBRZ2X, "xbrz2x"), (XBRZ3X, "xbrz3x"), (XBRZ4X, "xbrz4x")):
         assert lib.settings_save(folder, ctypes.byref(Settings(filter)))
-        assert (tmp_path / "SETTINGS.TXT").read_text() == f"filter={name}\naspect=off\nscanlines=off\n"
+        assert (tmp_path / "SETTINGS.TXT").read_text() == f"filter={name}\naspect=off\nscanlines=off\nclassic_steps=off\n"
         assert lib.settings_load(folder).filter == filter
     assert lib.settings_save(folder, ctypes.byref(Settings(SCALE2X, True, True)))
-    assert (tmp_path / "SETTINGS.TXT").read_text() == "filter=scale2x\naspect=on\nscanlines=on\n"
+    assert (tmp_path / "SETTINGS.TXT").read_text() == "filter=scale2x\naspect=on\nscanlines=on\nclassic_steps=off\n"
     loaded = lib.settings_load(folder)
     assert (loaded.filter, loaded.aspect, loaded.scanlines) == (SCALE2X, True, True)
     assert [p.name for p in tmp_path.iterdir()] == ["SETTINGS.TXT"], "no temporary file stays"
@@ -84,7 +84,7 @@ def test_failed_save_keeps_the_old_file(lib, tmp_path):
     lib.settings_save(folder, ctypes.byref(Settings(SCALE2X)))
     (tmp_path / "SETTINGS.TMP").mkdir()  # the temporary file cannot be created
     assert not lib.settings_save(folder, ctypes.byref(Settings(SCALE3X)))
-    assert (tmp_path / "SETTINGS.TXT").read_text() == "filter=scale2x\naspect=off\nscanlines=off\n"
+    assert (tmp_path / "SETTINGS.TXT").read_text() == "filter=scale2x\naspect=off\nscanlines=off\nclassic_steps=off\n"
     assert not lib.settings_save(str(tmp_path / "missing").encode(), ctypes.byref(Settings(SCALE3X)))
     assert not lib.settings_save(folder, ctypes.byref(Settings(0)))
 
@@ -93,3 +93,19 @@ def test_failed_save_keeps_the_old_file(lib, tmp_path):
                                           (XBRZ2X, 2), (XBRZ3X, 3), (XBRZ4X, 4), (0, 0), (99, 0)])
 def test_filter_texture_scale_is_independent_of_the_filter_id(lib, filter, factor):
     assert lib.settings_filter_factor(filter) == factor
+
+
+@pytest.mark.parametrize("text, expected", [
+    (b"", False),
+    (b"classic_steps=on\n", True),
+    (b"classic_steps=on\nclassic_steps=bad\n", True),
+    (b"classic_steps=on\nclassic_steps=off\n", False),
+])
+def test_classic_steps_parse(lib, text, expected):
+    assert lib.settings_parse(text, len(text)).classic_steps == expected
+
+
+def test_classic_steps_round_trip(lib, tmp_path):
+    folder = str(tmp_path).encode()
+    assert lib.settings_save(folder, ctypes.byref(Settings(NONE, False, False, True)))
+    assert lib.settings_load(folder).classic_steps
