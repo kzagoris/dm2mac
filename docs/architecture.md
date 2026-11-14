@@ -103,6 +103,7 @@ paragraph. A module with several `.c` files has one `<module>_internal.h` for it
 | `ui/advanced.h` | `advanced_` | The advanced mode: quick save and load, the viewport screens (the automap and the cheat screen) and their keys, and the movement letter keys. |
 | `ui/automap.h` | `automap_` | The advanced-mode automap: a map picture of the squares that the dungeon view has shown. |
 | `ui/cheats.h` | `cheats_` | The advanced-mode cheat screen (not in the original game): turns the cheats and the screen filter on and off, offers quick save and quick load, and lists the spells with their runes. |
+| `ui/combat_feedback.h` | `combat_` | The advanced-mode damage stars over the creatures of the dungeon view (not in the original game). |
 | `ui/dialog.h` | `dialog_` | Dialogs: message, question, and progress pictures with buttons, and the volume settings. |
 | `ui/draw.h` | `draw_` | Drawing GDAT images into the frame buffer: blits, transparency, and the interface colors. |
 | `ui/filter.h` | `upscale_` | The advanced-mode screen filter (not in the original game): the filter at the start, the filter in use, and its change with the write of SETTINGS.TXT; the same for the 4:3 picture and the scanlines. |

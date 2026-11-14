@@ -83,6 +83,10 @@ changes a few things:
 - A click on a champion's status box puts the object in your hand into that champion's inventory, or opens the
   inventory if your hand is empty.
 - After a hit, the damage star stays a moment longer in the action area. A click ends it.
+- A click on an enemy orders a party attack: over a creature that the party can attack, the pointer becomes crossed
+  swords, bright when a champion is ready and grey while the party recovers. Each ready champion repeats their last
+  melee or shooting action, or uses a basic one. Spells and throwing are excluded. Your hand must be empty.
+- A damage star with the damage shows for a moment over a creature that takes a hit.
 - Projectiles fly smoothly from square to square in the dungeon view.
 - A save keeps the automap and the cheats.
 

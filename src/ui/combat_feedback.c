@@ -25,32 +25,39 @@
 #define HIT_STAR_SCALE_Y 53
 
 typedef struct {
-    bool active, anchored;
+    bool active;
+    bool anchored; /* x and y are set */
     uint16_t group;
-    int damage;
-    uint32_t tick, step;
-    int16_t x, y;
+    int damage;    /* the sum of the hits of one game step */
+    uint32_t tick; /* timer tick of the last hit */
+    uint32_t step; /* game time of the last hit */
+    int16_t x;     /* the middle of the creature in the viewport */
+    int16_t y;
 } HitFeedback;
 
-static HitFeedback hits[HIT_TARGETS];
-static int next_hit;
-static int16_t eye_map, eye_dir;
-static Location eye;
+static struct {
+    HitFeedback hits[HIT_TARGETS];
+    int next_hit;
+    /* the party position and direction that the screen places of the hits belong to */
+    int16_t eye_map;
+    int16_t eye_dir;
+    Location eye;
+} combat;
 
 /* Camera changes end feedback at old screen positions. */
 static bool same_eye(void)
 {
-    return eye_map == g_game.party_map && eye.x == g_game.party_x && eye.y == g_game.party_y &&
-           eye_dir == g_game.party_dir;
+    return combat.eye_map == g_game.party_map && combat.eye.x == g_game.party_x && combat.eye.y == g_game.party_y &&
+           combat.eye_dir == g_game.party_dir;
 }
 
 void combat_reset_feedback(void)
 {
-    memset(hits, 0, sizeof hits);
-    next_hit = 0;
-    eye_map = (int16_t)g_game.party_map;
-    eye_dir = (int16_t)g_game.party_dir;
-    eye = (Location){g_game.party_x, g_game.party_y};
+    memset(combat.hits, 0, sizeof combat.hits);
+    combat.next_hit = 0;
+    combat.eye_map = (int16_t)g_game.party_map;
+    combat.eye_dir = (int16_t)g_game.party_dir;
+    combat.eye = (Location){g_game.party_x, g_game.party_y};
 }
 
 /* Keeps a killing blow anchored even after the creature's next drawing disappears. */
@@ -73,11 +80,11 @@ void combat_show_hit(uint16_t group, Location at, int damage)
         combat_reset_feedback();
     HitFeedback *hit = NULL;
     for (int i = 0; i < HIT_TARGETS; i++)
-        if (hits[i].active && hits[i].group == (group & THING_ID_MASK))
-            hit = &hits[i];
+        if (combat.hits[i].active && combat.hits[i].group == (group & THING_ID_MASK))
+            hit = &combat.hits[i];
     if (!hit) {
-        hit = &hits[next_hit];
-        next_hit = (next_hit + 1) % HIT_TARGETS;
+        hit = &combat.hits[combat.next_hit];
+        combat.next_hit = (combat.next_hit + 1) % HIT_TARGETS;
         memset(hit, 0, sizeof *hit);
     }
     int total = hit->active && hit->step == g_game.game_time ? hit->damage : 0;
@@ -132,7 +139,7 @@ void combat_draw_feedback(void)
     if (!zone_get_viewport_rect(viewport))
         return;
     for (int i = 0; i < HIT_TARGETS; i++) {
-        HitFeedback *hit = &hits[i];
+        HitFeedback *hit = &combat.hits[i];
         if (!hit->active)
             continue;
         if (g_main_loop.timer_ticks - hit->tick >= HIT_SHOW_TICKS) {

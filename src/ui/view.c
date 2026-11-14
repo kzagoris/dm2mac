@@ -102,6 +102,9 @@
 #define FLIP_CEILING_BY_PARTY  0x20
 #define FLIP_FLOOR_BY_PARTY    0x40
 
+/* The creature pictures of one view that a click can attack. */
+#define ATTACK_TARGET_MAX 64
+
 /* The scale (1/64) of the pictures at each depth. */
 const uint8_t g_view_depth_scale[POS_DEPTH_MAX + 1] = {96, 64, 43, 28, 19};
 /* The wall faces that a wall square shows. */
@@ -214,6 +217,19 @@ uint8_t g_view_object_grid[VIEW_GRID_SIZE];
 uint32_t g_view_missile_masks[VIEW_SQUARE_COUNT];
 uint32_t g_view_object_masks[VIEW_SQUARE_COUNT];
 int16_t g_view_hit_offset_y;
+/* The attack targets of the last view. A pixel holds the number of its creature picture plus 1, or 0 for the
+   background and for a picture in front of the creatures; the pixels follow the scaled, clipped and mirrored blits of
+   the view. */
+static struct {
+    uint8_t pixels[VIEWPORT_WIDTH * VIEWPORT_HEIGHT];
+    struct {
+        uint16_t group;
+        Location at;
+    } targets[ATTACK_TARGET_MAX];
+    int target_count;
+    uint16_t picture_group; /* the creature of the picture that view_setup_picture prepared, or THING_NONE */
+    Location picture_at;
+} attack = {.picture_group = THING_NONE};
 
 int view_lateral_of(int pos)
 {
@@ -572,28 +588,17 @@ void view_get_depth_shading(uint8_t *palette, int depth, int key1, int key2, int
                             key1, key2, count);
 }
 
-/* Pixel ownership follows the same scaled, clipped, mirrored blits as the view. */
-#define ATTACK_TARGET_MAX 64
-static uint8_t attack_pixels[VIEWPORT_WIDTH * VIEWPORT_HEIGHT];
-static struct {
-    uint16_t group;
-    Location at;
-} attack_targets[ATTACK_TARGET_MAX];
-static int attack_target_count;
-static uint16_t attack_picture_group = THING_NONE;
-static Location attack_picture_at;
-
 void view_set_attack_group(uint16_t group, int pos)
 {
-    attack_picture_group = group;
-    attack_picture_at = (Location){g_view_squares[pos].x, g_view_squares[pos].y};
+    attack.picture_group = group;
+    attack.picture_at = (Location){g_view_squares[pos].x, g_view_squares[pos].y};
 }
 
 /* Closes transparent holes inside each row of the visible body, keeping its outer contour. */
 static void fill_attack_body(const int16_t *rect, uint8_t tag)
 {
     for (int y = rect[RECT_Y]; y < rect[RECT_Y] + rect[RECT_H]; y++) {
-        uint8_t *row = &attack_pixels[y * VIEWPORT_WIDTH];
+        uint8_t *row = &attack.pixels[y * VIEWPORT_WIDTH];
         int left = rect[RECT_X];
         int right = left + rect[RECT_W] - 1;
         while (left <= right && row[left] != tag)
@@ -611,15 +616,15 @@ void view_record_attack_pixels(const DrawCtx *ctx, uint16_t group, Location at)
         ctx->w <= 0 || ctx->h <= 0)
         return;
     int tag = 0;
-    if (group != THING_NONE && attack_target_count < ATTACK_TARGET_MAX) {
-        tag = ++attack_target_count;
-        attack_targets[tag - 1].group = group;
-        attack_targets[tag - 1].at = at;
+    if (group != THING_NONE && attack.target_count < ATTACK_TARGET_MAX) {
+        tag = ++attack.target_count;
+        attack.targets[tag - 1].group = group;
+        attack.targets[tag - 1].at = at;
     }
     uint8_t colors[REMAP_COLORS];
     memset(colors, tag, sizeof colors);
     Blit blit = {.src = ctx->image->pixels,
-                 .dst = attack_pixels,
+                 .dst = attack.pixels,
                  .src_x = ctx->src_x,
                  .src_y = ctx->src_y,
                  .src_width = ctx->image->width,
@@ -636,7 +641,7 @@ void view_record_attack_pixels(const DrawCtx *ctx, uint16_t group, Location at)
 
 void view_setup_picture(const PicturePlace *p, int category, int index, int entry)
 {
-    attack_picture_group = THING_NONE;
+    attack.picture_group = THING_NONE;
     DrawCtx *c = draw_ctx_init(&g_view_state.ctx, category, index, entry);
     int scale_x = p->scale_x;
     int depth = p->depth;
@@ -661,7 +666,7 @@ void view_setup_picture(const PicturePlace *p, int category, int index, int entr
 
 void view_flush_picture(void)
 {
-    view_draw_attack_picture(&g_view_state.ctx, attack_picture_group, attack_picture_at, false);
+    view_draw_attack_picture(&g_view_state.ctx, attack.picture_group, attack.picture_at, false);
 }
 
 void view_flush_effect_picture(void)
@@ -1061,11 +1066,11 @@ uint16_t view_attack_target(int16_t x, int16_t y, Location *at)
 {
     if (!view_shows_party() || x < 0 || y < 0 || x >= VIEWPORT_WIDTH || y >= VIEWPORT_HEIGHT)
         return THING_NONE;
-    int tag = attack_pixels[y * VIEWPORT_WIDTH + x];
-    if (!tag || tag > attack_target_count)
+    int tag = attack.pixels[y * VIEWPORT_WIDTH + x];
+    if (!tag || tag > attack.target_count)
         return THING_NONE;
-    *at = attack_targets[tag - 1].at;
-    return attack_targets[tag - 1].group;
+    *at = attack.targets[tag - 1].at;
+    return attack.targets[tag - 1].group;
 }
 
 bool view_attack_target_rect(uint16_t group, int16_t *rect)
@@ -1078,9 +1083,9 @@ bool view_attack_target_rect(uint16_t group, int16_t *rect)
     int bottom = -1;
     for (int y = 0; y < VIEWPORT_HEIGHT; y++)
         for (int x = 0; x < VIEWPORT_WIDTH; x++) {
-            int tag = attack_pixels[y * VIEWPORT_WIDTH + x];
-            if (!tag || tag > attack_target_count ||
-                (attack_targets[tag - 1].group & THING_ID_MASK) != (group & THING_ID_MASK))
+            int tag = attack.pixels[y * VIEWPORT_WIDTH + x];
+            if (!tag || tag > attack.target_count ||
+                (attack.targets[tag - 1].group & THING_ID_MASK) != (group & THING_ID_MASK))
                 continue;
             left = min_int(left, x);
             top = min_int(top, y);
@@ -1123,8 +1128,8 @@ static void start_tracks(int16_t dir, int16_t x, int16_t y)
 
 void view_draw_dungeon(Location at, int16_t dir)
 {
-    memset(attack_pixels, 0, sizeof attack_pixels);
-    attack_target_count = 0;
+    memset(attack.pixels, 0, sizeof attack.pixels);
+    attack.target_count = 0;
     g_view_state.party_map = g_game.party_map;
     g_view_state.map = g_view_state.party_map;
     g_view_state.party_dir = dir;

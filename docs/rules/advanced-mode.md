@@ -145,6 +145,40 @@ A projectile moves one cell (half a square) per game step, as in the original ga
 - It does not show in the inventory, during sleep or pause, while the automap or the cheat screen is open, or in the vanilla and turn-based modes.
 - The flight changes no game state ([view.md](view.md#deviations-from-the-original)).
 
+## Party attack
+
+A left click on a creature in the dungeon view orders one attack of the party. The click works with an empty leader hand, an idle party (no walk step, no push mode, no champion drag, no held eye or mouth, no recruit candidate), and no open inventory or advanced screen.
+
+The target is the moving creature whose picture is under the pointer.
+
+- A gap inside the body of the creature counts as the creature: in each pixel row, everything between its leftmost and rightmost pixel.
+- A missile or an explosion in front of the creature does not hide it. A wall, a door, or an object in front of it does.
+- A static creature (a tree, for example) is no target; it keeps its original click.
+
+Each living champion who faces the party direction takes part with one action:
+
+- The remembered action: the last melee or shooting action that the player chose for this champion in the action menu. The game remembers it while the same item stays in the same hand and still offers the action. Taking the item out of the hand, a new game, and a load forget it. The save does not store it. The action that a party attack runs becomes the remembered action.
+- Without a remembered action: the first melee or shooting action of the item in the action hand, then of the item in the ready hand, that can reach the target. A hand that is ready has priority over a hand that still recovers. A chest and a money box have no such action.
+- Spells, throwing, and all other actions never take part.
+
+An action can reach the target under the rules of a manual attack:
+
+- Melee: the creature is on the square in front of the party, and that square does not block movement. A champion in the back row attacks only if no champion stands in front of them. An action that reaches only non-material creatures needs such a creature.
+- Shooting: the other hand holds ammunition for the weapon. The creature is at most 4 squares ahead on the line of the party direction, every square up to it lets the missile pass, and no other creature stands between. The shot flies along the party direction; the click does not aim it.
+
+The pointer shows the result. Bright crossed swords: at least one champion can attack now. Grey crossed swords: champions can reach the target, but their hands still recover; a click then does nothing, also not the original click of the viewport. Any other pointer: no champion can reach the creature, and the click keeps its original meaning.
+
+A click with bright swords runs the action of each ready champion, from the first champion to the last. Each action has its normal stamina cost, ammunition, charges, delay, experience, and hit roll. The volley stops when the creature is gone. The open action menu stays as it is; it closes only if its item left the hand.
+
+## Hit feedback over creatures
+
+A hit on a moving creature shows the damage star of the action area, with the damage in cyan digits, over the middle of the visible part of the creature. It shows for every melee hit of a champion and for every projectile that hits a creature, also without a party attack click. A projectile shows it on impact, also with zero damage. A melee action that fails shows nothing.
+
+- The star stays for 30 timer ticks (half a second). Hits on the same creature in the same game step add up. At most 8 creatures show a star at a time.
+- The star of a killing hit stays at the last place of the creature.
+- A step, a turn, or a change of the map ends all stars. They do not show while the party walks, in the inventory, or on an advanced screen.
+- The stars are drawn on the screen after the dungeon view; they change no game state and do not cover the target of a click.
+
 ## SETTINGS.TXT
 
 The rows SCREEN FILTER, 4:3 ASPECT and SCANLINES of Options/Help keep their values in `SETTINGS.TXT` in the folder of `QUICK.DAT` (`--saves DIR`, otherwise `<data>/DATA`). The file format is in [save.md](../formats/save.md#settingstxt).
