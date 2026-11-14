@@ -33,6 +33,7 @@ Game rules:
 - [rules/interface.md](rules/interface.md): the interface panels and the text.
 - [rules/rendering.md](rules/rendering.md): the blitters, the layout zones, the font, and the offscreen bitmaps.
 - [rules/champions.md](rules/champions.md): the champions, items, money, and shops.
+- [rules/combat.md](rules/combat.md): the attack, defense, and wound formulas.
 - [rules/creatures.md](rules/creatures.md): the creatures, projectiles, magic, and minions.
 - [rules/world.md](rules/world.md): the weather, day and night, light, and the Skullkeep machines.
 - [rules/advanced-mode.md](rules/advanced-mode.md): the exact rules of the advanced mode.

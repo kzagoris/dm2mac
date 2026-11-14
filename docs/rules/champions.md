@@ -10,6 +10,7 @@ The code for champions, items, money, shops, and the cursor is in `src/engine/ch
 
 ## Damage and time effects
 
+- The attack, defense, and wound formulas are in [combat.md](combat.md).
 - `champ_take_damage` adds the damage to `g_champ_pending_damage` and the wounds to `g_champ_pending_wounds`. `champ_apply_pending_damage` applies them at the end of the game step: health, the damage star (event `0x0c`), and death (`kill_champion`, bones in the champion cell).
 - `champ_apply_time_effects` runs every game step for each living champion: food, water, stamina, health and mana regeneration (mana: maximum mana / 40 + 1 per gain), the decay of raised stats to their base values, and poison.
 
