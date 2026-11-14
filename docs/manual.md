@@ -89,7 +89,7 @@ changes a few things:
 The automap, Options/Help, spell favorites, and cheat screen stop game time while open. The exact rules are in
 [Advanced mode rules](rules/advanced-mode.md).
 
-On the automap, yellow diamonds mark items on explored squares. Piles show a count (`+` for ten or more).
+On the automap, a single yellow plus marks each explored square containing items, regardless of quantity.
 Click a marked square to see item names and quantities; Left/Right or A/D and PREVIOUS/NEXT change pages.
 Click MAP, press Esc, or right-click to return to the map. Dragging still scrolls; Tab/M close the automap.
 Reveal map also shows items in unexplored areas. Markers update after pickup/drop, including items in alcoves;

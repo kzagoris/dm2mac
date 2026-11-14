@@ -141,13 +141,9 @@ def test_overlapping_maps_list_only_the_same_owner_as_the_map_picture(lib, item_
     assert buffer[0] == thing
 
 
-@pytest.mark.parametrize("count,mark", [
-    (1, "010111010000000"),
-    (2, "110001010100111"),
-    (9, "111101111001110"),
-    (10, "000010111010000"),
-])
-def test_pile_symbols_and_party_frame_remain_visible(lib, item_map, count, mark):
+@pytest.mark.parametrize("count", [1, 2, 9, 10, 15])
+def test_plus_symbol_and_party_frame_remain_visible(lib, item_map, count):
+    mark = "000010111010000"
     for _ in range(count):
         drop(lib, item_map)
     lib.seen_mark(item_map, C.DIR_NORTH)

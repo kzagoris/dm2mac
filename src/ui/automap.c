@@ -29,10 +29,9 @@
 /* The squares around a map that the view draws as its edge walls (dungeon_square_edge). */
 #define MAP_MARGIN 1
 
-/* A small item symbol or pile count in the upper right of a square; ten or more items show a plus. */
+/* A plus in the upper right of any square containing loose items. */
 #define ITEM_MARK_W     3
 #define ITEM_MARK_H     5
-#define ITEM_MARK_LIMIT 10
 #define ITEM_MARK_LEFT  (MAP_ICON_W - ITEM_MARK_W)
 
 /* The item list: a count/page subtitle, eight names, then mouse paging controls. */
@@ -74,10 +73,8 @@ static struct {
     int page;
 } inspection;
 
-/* Three pixels per row: a diamond for one item, digits for piles, then a plus for larger piles. */
-static const char *const item_marks[] = {"000000000000000", "010111010000000", "110001010100111", "110001010001110",
-                                         "101101111001001", "111100110001110", "011100111101111", "111001010010010",
-                                         "111101111101111", "111101111001110", "000010111010000"};
+/* Three pixels per row: the same plus for any number of items. */
+static const char item_mark[] = "000010111010000";
 
 /* The maps of the party level, ended by LEVEL_LIST_END. */
 static const uint8_t *party_level_maps(void)
@@ -294,18 +291,17 @@ static void checker_overlay(Offscreen *o, const int16_t *clip, int16_t icon_x, i
                 fill_clipped(o, clip, (int16_t[RECT_SIZE]){(int16_t)px, (int16_t)py, 1, 1}, g_ui_colors[UI_LIGHT_GRAY]);
 }
 
-/* Draws every loose item, even one without map graphics, as a clipped yellow symbol or pile count. */
+/* Marks loose items, even those without map graphics, with a clipped yellow plus. */
 static void show_item_mark(Offscreen *o, const int16_t *clip, Location level_at, int16_t icon_x, int16_t icon_y)
 {
     int count = automap_items(level_at, NULL, 0);
     if (!count)
         return;
-    const char *mark = item_marks[min_int(count, ITEM_MARK_LIMIT)];
     for (int y = 0; y < ITEM_MARK_H; y++)
         for (int x = 0; x < ITEM_MARK_W; x++)
             fill_clipped(o, clip,
                          (int16_t[RECT_SIZE]){(int16_t)(icon_x + ITEM_MARK_LEFT + x), (int16_t)(icon_y + y), 1, 1},
-                         g_ui_colors[mark[y * ITEM_MARK_W + x] == '1' ? UI_YELLOW : UI_BLACK]);
+                         g_ui_colors[item_mark[y * ITEM_MARK_W + x] == '1' ? UI_YELLOW : UI_BLACK]);
 }
 
 /* The white frame just outside the level rect, whose level position (0, 0) icon is at (left, top). */

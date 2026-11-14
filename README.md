@@ -61,21 +61,21 @@ The improvements include automap item inspection, spell favorites, in-game help,
 
 Press **Tab** or **M** in the dungeon view to open the automap. Game time stops while you inspect it. The map normally shows explored squares; drag with the left mouse button to look around, then reopen it to center on the party again. The position readout gives the level, coordinates, and facing direction.
 
-![Automap with yellow item markers and pile counts](docs/images/advanced-automap-items.png)
+![Automap with a single yellow plus per tile containing items](docs/images/advanced-automap-items.png)
 
-*Yellow markers identify loose items. Counts distinguish small piles, while a plus sign represents ten or more items. This demonstration uses Reveal map, so it includes squares beyond normal exploration.*
+*A single yellow plus identifies each tile containing loose items, regardless of quantity. This demonstration uses Reveal map, so it includes squares beyond normal exploration.*
 
 The markers answer a practical question: where did I leave that pile? They reflect the current dungeon state, including alcove items and items without map graphics. Containers count as one item; their contents, champion and creature inventories, missiles, and effects are excluded. Moving creatures and merchants are not shown as map creatures.
 
-A single item has a yellow diamond; piles of two through nine display a count, and larger piles display `+`. Exploration remains meaningful: without Reveal map, items appear only on explored squares. Turning Reveal map on does not permanently mark those squares as explored.
+Every tile containing items has one yellow `+`. Click the tile to see item names and quantities. Exploration remains meaningful: without Reveal map, items appear only on explored squares. Turning Reveal map on does not permanently mark those squares as explored.
 
 #### Inspect a pile without walking to it
 
 Short-click a square containing items to open its list. Matching names are grouped with quantities, and the subtitle reports the exact total. Large collections span multiple pages.
 
-![Item inspection showing twelve items over two pages](docs/images/advanced-item-list.png)
+![Item inspection showing ten items over two pages](docs/images/advanced-item-list.png)
 
-*The selected square contains twelve items. Page 1 of 2 lists eight groups, including a compass, copper coin, and small plank. NEXT opens the remaining groups.*
+*The selected square contains ten items. Page 1 of 2 lists eight groups, including a compass, copper coin, and small plank. NEXT opens the remaining groups.*
 
 Use **Left/Right**, **A/D**, or **PREVIOUS/NEXT** to change pages. Click **MAP**, press **Esc**, or right-click to return to the map; **Tab/M** close the automap from either view. Inspection reads the current items whenever drawn, so collecting or dropping items changes the next view without a separate saved item history.
 
