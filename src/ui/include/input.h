@@ -89,7 +89,8 @@
 #define CMD_PIN_STATS            0xf9 /* the advanced mode: a click on the food and water panel of the inventory */
 #define CMD_FAVORITE_FIRST       0xfa /* the advanced mode: Alt+C with Alt+1 to Alt+4 sets or casts a favorite */
 #define CMD_FAVORITE_LAST        0xfd
-#define CMD_QUIT_GAME            0xfe /* the advanced mode: Ctrl+Q, the QUIT button of the save menu */
+#define CMD_QUIT_GAME            0xfe          /* the advanced mode: Ctrl+Q, the QUIT button of the save menu */
+#define CMD_ADVANCED_LAST        CMD_QUIT_GAME /* the last command of the advanced mode: a higher one is no command */
 
 /* The cursor images of input_cursor_at. */
 enum CursorKind { CURSOR_ARROW, CURSOR_HAND, CURSOR_OBJECT, CURSOR_CHAMPION, CURSOR_ATTACK, CURSOR_ATTACK_WAITING };

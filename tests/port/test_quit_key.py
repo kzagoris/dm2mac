@@ -24,3 +24,12 @@ def test_quit_key_follows_disk_icon_availability(lib):
     finally:
         set_mode(lib, VANILLA)
     assert lib.input_key_command(C.INPUT_MODE_MOVE, C.KEY_QUIT_GAME, rect) != C.CMD_QUIT_GAME
+
+
+def test_quit_command_reaches_execution(lib):
+    """The input loop drops a command without a click feedback script: Ctrl+Q must have one."""
+    from dm2test.scenario import Command
+
+    event = Command()
+    event.command = C.CMD_QUIT_GAME
+    assert lib.input_click_feedback_script(ctypes.byref(event))
