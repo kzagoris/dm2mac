@@ -112,7 +112,6 @@ def test_movie_plays_to_its_end_on_time(lib, movies):
 
 @pytest.mark.parametrize("case, files, first", [
     ("missing", {"FTL": None}, INTRO),
-    ("vga", {"FTL": "FTL.VGA"}, INTRO),
     ("junk", {"FTL": b"MZ" + bytes(5000)}, INTRO),
     ("truncated", {"FTL": "truncated"}, INTRO),
     ("no splash", {"INTRPLAY.PCX": None}, FTL),
@@ -129,6 +128,34 @@ def test_failed_steps_are_skipped(lib, movies, game_dir, case, files, first):
         assert lib.movie_current_step() == FTL
         lib.movie_update(20 * SECOND)  # the movie plays up to the cut, then the next step starts
     assert lib.movie_current_step() == first
+
+
+def vga_movie(lib, game_dir):
+    """A VGA movie of game/: FTL.VGA of the SVGA release, or FTL of a release with VGA movies only; skips without."""
+    if (game_dir / "FTL.VGA").exists():
+        return game_dir / "FTL.VGA"
+    if lib.gamefile_find_bad(lib.gamefile_table(), str(game_dir).encode()):
+        return game_dir / "FTL"
+    pytest.skip("game/ has no VGA movie")
+
+
+@pytest.mark.parametrize("step", [FTL, INTRO])
+def test_vga_movie_plays_on_its_own_mode(lib, game_dir, tmp_path, step):
+    """A VGA movie plays at 320 × 200 without the 640x350 and wide arguments of the SVGA script."""
+    name = "FTL" if step == FTL else "INTRO"
+    (tmp_path / name).symlink_to(vga_movie(lib, game_dir))
+    mode = ctypes.c_int.in_dll(lib, "g_game_mode")
+    mode.value = ADVANCED
+    try:
+        assert lib.movie_start(SCRIPT_START, str(tmp_path).encode(), 0)
+        assert lib.movie_current_step() == step
+        p = picture(lib)
+        assert (p.width, p.height, p.shown_width, p.screen_width, p.screen_height) == (320, 200, 320, 320, 200)
+        lib.movie_update(60 * SECOND)  # longer than the movie: it plays to its end
+        assert lib.movie_current_step() == STEP_NONE
+    finally:
+        lib.movie_stop()
+        mode.value = VANILLA
 
 
 def test_no_playable_step_starts_nothing(lib, movies):

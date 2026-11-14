@@ -50,11 +50,11 @@ The launcher `IBMIOP.EXE` runs the game's movies from a script: Interplay movie 
 
 ## Deviations from the original
 
-- The VGA movies and `CREDITS.PCX` of the VGA script are not played.
+- The port runs the SVGA script for both kinds of movie file. A VGA movie (opcode `0x0a` mode 320 × 200, as in `FTL.VGA` or in a release with VGA movies only) plays on its own 320 × 200 screen, stretched to the 4:3 area, without the `640x350` and `wide` arguments of the SVGA script. `CREDITS.PCX` of the VGA script is not shown.
 - The movie screen is the largest 4:3 rectangle of the window with black borders and linear filtering. The scale is not an integer, and no scale filter applies.
 - A click skips; a key does not skip. In advanced mode, a click skips each step. In vanilla mode, a click does not stop the splash picture or `FTL` because the script gives the splash a fixed 3 seconds and `FTL` the argument `noabort`.
 - The movie sound plays at full volume through the port's sound output at 44100 Hz. Each sample repeats twice. A movie with a different audio format plays without sound.
-- A missing file, damaged data, a splash picture of a size different from 320 × 200, or a movie whose opcode `0x0a` mode is not 640 × 480 is a failed step. The script continues with the next step. Damage in the middle of a movie stops it there.
+- A missing file, damaged data, a splash picture of a size different from 320 × 200, or a movie whose opcode `0x0a` mode is neither 640 × 480 nor 320 × 200 is a failed step. The script continues with the next step. Damage in the middle of a movie stops it there.
 - A block whose source is outside the frame, or with encoding 6, stays unchanged.
 - `--save PATH` skips the start movies; the end movies play after a game that started with `--save`. After a RESTART, the start movies do not play ([game-flow.md](../rules/game-flow.md#deviations-from-the-original)).
 - A closed window or a control `quit` ends the program without the end movies. QUIT GAME after the party's death plays `CREDITS`; QUIT in the save menu plays nothing.

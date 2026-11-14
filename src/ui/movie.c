@@ -20,6 +20,8 @@
 #define WIDE_DENOMINATOR   3
 #define SVGA_MODE_WIDTH    640 /* the SVGA movies set 640 × 480; the VGA movies 320 × 200 */
 #define SVGA_MODE_HEIGHT   480
+#define VGA_MODE_WIDTH     320
+#define VGA_MODE_HEIGHT    200
 
 /* The palette and audio sizes of the movies, and the length of a script. */
 #define PCX_TO_VGA_SHIFT  2      /* 8-bit palette values to the 6 bits of the VGA */
@@ -140,7 +142,14 @@ static bool start_splash(void)
     return ok;
 }
 
-/* Loads the movie of step and decodes its first picture; false when it is missing, damaged, or not an SVGA movie. */
+/* True when the movie sets the 320 × 200 mode of a VGA movie. */
+static bool is_vga_movie(void)
+{
+    return mv.mve.mode_width == VGA_MODE_WIDTH && mv.mve.mode_height == VGA_MODE_HEIGHT;
+}
+
+/* Loads the movie of step and decodes its first picture; false when it is missing, damaged, or neither an SVGA nor a
+   VGA movie. */
 static bool start_movie(enum MovieStep step)
 {
     size_t size;
@@ -149,7 +158,7 @@ static bool start_movie(enum MovieStep step)
         return false;
     if (next_picture() != MVE_SHOW || !mv.mve.frame_us)
         return false;
-    return mv.mve.mode_width == SVGA_MODE_WIDTH && mv.mve.mode_height == SVGA_MODE_HEIGHT;
+    return is_vga_movie() || (mv.mve.mode_width == SVGA_MODE_WIDTH && mv.mve.mode_height == SVGA_MODE_HEIGHT);
 }
 
 /* Ends the current step and starts the next step of the script that can play; after the last step the script stops. */
@@ -233,7 +242,10 @@ void movie_picture(MoviePicture *p)
         *p = (MoviePicture){0};
         return;
     }
-    const Step *s = &steps[mv.step];
+    /* fix: a VGA movie plays on its own 320 × 200 mode without the screen and wide arguments of the SVGA script
+       (port only). */
+    static const Step vga_step = {0};
+    const Step *s = is_vga_movie() ? &vga_step : &steps[mv.step];
     p->pixels = mve_pixels(&mv.mve);
     p->width = mv.mve.width;
     p->height = mv.mve.height;
