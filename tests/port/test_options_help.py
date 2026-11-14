@@ -117,8 +117,8 @@ def test_disk_and_rest_shortcuts_follow_icon_availability(lib):
 
 
 def test_map_legend_page_draws_the_automap_marks_and_goes_back(lib, panel):
-    """The second row opens MAP LEGEND: a swatch per automap mark, 2x enlarged, at x 18 and 24 pixels apart
-    (the swatch tops at 49, 73, 97, 121); Return goes back to the options."""
+    """The second row opens MAP LEGEND: a swatch per automap mark, 2x enlarged, at x 18 and 20 pixels apart
+    (the swatch tops at 49, 69, 89, 109, 129); Return goes back to the options."""
     pixels = (ctypes.c_uint8 * (C.SCREEN_W * C.SCREEN_H)).in_dll(lib, 'g_video_fb')
     colors = ctypes.POINTER(ctypes.c_uint8).in_dll(lib, 'g_ui_colors')
     lib.advanced_open_options()
@@ -128,13 +128,14 @@ def test_map_legend_page_draws_the_automap_marks_and_goes_back(lib, panel):
     assert screen.value == C.ADVANCED_SCREEN_OPTIONS
 
     def swatch(row):
-        top = 49 + row * 24
+        top = 49 + row * 20
         return {pixels[(top + y) * C.SCREEN_W + 18 + x] for y in range(16) for x in range(16)}
 
     assert colors[C.UI_LIGHT_GRAY] in swatch(0)
     assert colors[C.UI_GRAY] in swatch(1)
     assert colors[C.UI_YELLOW] in swatch(2)
     assert colors[C.UI_WHITE] in swatch(3) and colors[C.UI_WHITE] not in swatch(2)
+    assert colors[C.UI_CYAN] in swatch(4) and colors[C.UI_CYAN] not in swatch(3)
     lib.advanced_screen_event(C.INPUT_KEY, C.KEY_ENTER, 0)  # back to the options, still open
     assert screen.value == C.ADVANCED_SCREEN_OPTIONS
     lib.advanced_screen_event(C.INPUT_KEY, C.SCAN_ESCAPE, 0)

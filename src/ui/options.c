@@ -47,7 +47,7 @@
 
 /* The automap legend page: one swatch and its line per mark, the swatch centered on the text line. */
 #define LEGEND_FIRST_Y      60
-#define LEGEND_ROW_HEIGHT   24
+#define LEGEND_ROW_HEIGHT   20
 #define LEGEND_SCALE        2
 #define LEGEND_SWATCH_SIZE  (AUTOMAP_LEGEND_SIZE * LEGEND_SCALE)
 #define LEGEND_SWATCH_RAISE ((LEGEND_SWATCH_SIZE + FONT_GLYPH_HEIGHT) / 2)
@@ -78,7 +78,8 @@ static void show_legend(void)
 {
     static const char *const marks[AUTOMAP_MARK_COUNT] = {
         "CHECKERED WALL: A FAKE WALL TO WALK THROUGH", "GRAY SQUARE: A PRESSURE PLATE",
-        "YELLOW PLUS: ITEMS; CLICK TO LIST THEM", "WHITE LINE: THE EDGE OF THE LEVEL"};
+        "YELLOW PLUS: ITEMS; CLICK TO LIST THEM", "WHITE LINE: THE EDGE OF THE LEVEL",
+        "CYAN PIN: A NOTE; DOUBLE-CLICK TO WRITE IT"};
     panel_text(PANEL_LEFT, HELP_HEADING_Y, UI_CYAN, "AUTOMAP (TAB / M)");
     for (int i = 0; i < AUTOMAP_MARK_COUNT; i++) {
         int16_t row_y = (int16_t)(LEGEND_FIRST_Y + i * LEGEND_ROW_HEIGHT);

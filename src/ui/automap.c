@@ -605,6 +605,8 @@ void automap_draw_legend_mark(AutomapMark mark, int16_t x, int16_t y, int scale)
                 color = UI_GRAY;
             else if (mark == AUTOMAP_MARK_ITEMS && px >= ITEM_MARK_LEFT && py < ITEM_MARK_H)
                 color = item_mark[py * ITEM_MARK_W + px - ITEM_MARK_LEFT] == '1' ? UI_YELLOW : UI_BLACK;
+            else if (mark == AUTOMAP_MARK_NOTE && px < NOTE_MARK_W && py < NOTE_MARK_H)
+                color = note_mark[py * NOTE_MARK_W + px] == '1' ? UI_CYAN : UI_BLACK;
             if (color >= 0)
                 legend_pixel((int16_t)(x + (px + 1) * scale), (int16_t)(y + (py + 1) * scale), scale, color);
         }

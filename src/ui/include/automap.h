@@ -17,6 +17,7 @@ typedef enum {
     AUTOMAP_MARK_PRESSURE_PAD,   /* gray square in the middle of a floor icon */
     AUTOMAP_MARK_ITEMS,          /* yellow plus in the upper right */
     AUTOMAP_MARK_LEVEL_EDGE,     /* white frame just outside the level */
+    AUTOMAP_MARK_NOTE,           /* cyan pin in the upper left */
     AUTOMAP_MARK_COUNT
 } AutomapMark;
 
