@@ -92,10 +92,12 @@ The AMAP block:
 | Bytes | Content |
 | --- | --- |
 | 4 | `AMAP` |
-| 1 | Version: 1 |
+| 1 | Version: 2 (version 1 ends after the squares) |
 | 1 | Map count |
 | 2 per map | Width and height of the map |
 | 1 per square | 1: seen, 0: not seen. The maps one after another, each map column by column (x, then y). |
+| 2 | Note count, little-endian, at most 256 (version 2 only) |
+| 4 + length per note | Map, x, y, length (1 to 28), then the characters of the note without an end mark: capital letters, digits, spaces and `,.;:-()'?!` (version 2 only) |
 
 The CHTS block:
 
@@ -107,7 +109,7 @@ The CHTS block:
 
 A load reads the blocks if they are present.
 
-- AMAP: a missing block, a block with different map sizes, or a value other than 0 or 1 gives an empty automap. Only the end of the file or a valid CHTS block (optionally followed by valid FAVS) may follow the block; other bytes give an empty automap.
+- AMAP: a missing block, a block with different map sizes, or a value other than 0 or 1 gives an empty automap. A version 1 block gives the seen squares without notes. A note count above 256, a note outside the maps, an empty or longer note, another character, or a second note on one square gives an empty automap without notes. Only the end of the file or a valid CHTS block (optionally followed by valid FAVS) may follow the block; other bytes give an empty automap.
 - CHTS: in advanced mode, the cheats come from the block. A missing block, a wrong version, an unknown bit, unrecognized or malformed trailing data, or a damaged AMAP block give no cheats. Vanilla and turn-based modes ignore the block and use no cheats.
 - The game loads in all these cases. A save with only the original data (vanilla) loads with an empty automap and no cheats.
 

@@ -38,6 +38,10 @@
 #define ITEM_MARK_H    5
 #define ITEM_MARK_LEFT (MAP_ICON_W - ITEM_MARK_W)
 
+/* A pin in the upper left of any square with a note of the player. */
+#define NOTE_MARK_W 3
+#define NOTE_MARK_H 5
+
 /* The item list: a count/page subtitle, eight names, then mouse paging controls. */
 #define ITEM_ROW_SUMMARY  0
 #define ITEM_ROW_FIRST    1
@@ -83,6 +87,9 @@ static struct {
 
 /* Three pixels per row: the same plus for any number of items. */
 static const char item_mark[] = "000010111010000";
+
+/* Three pixels per row: the head and the needle of a pin. */
+static const char note_mark[] = "111111010010000";
 
 int automap_zoom_factor(void)
 {
@@ -298,6 +305,12 @@ int automap_items(Location level_at, uint16_t *items, int capacity)
     return count;
 }
 
+bool automap_note_square(Location level_at, Position *at)
+{
+    return g_game.party_map < dungeon_map_count() && (game_has_cheat(CHEAT_MAP) || automap_level_seen(level_at)) &&
+           automap_level_square(level_at, at) && covers(at->map, level_at, at);
+}
+
 bool automap_items_open(void)
 {
     return inspection.open;
@@ -363,6 +376,15 @@ static void show_item_mark(Offscreen *o, const int16_t *clip, Location level_at,
                          g_ui_colors[item_mark[y * ITEM_MARK_W + x] == '1' ? UI_YELLOW : UI_BLACK]);
 }
 
+/* Marks a square with a note of the player with a clipped cyan pin. */
+static void show_note_mark(Offscreen *o, const int16_t *clip, int16_t icon_x, int16_t icon_y)
+{
+    for (int y = 0; y < NOTE_MARK_H; y++)
+        for (int x = 0; x < NOTE_MARK_W; x++)
+            fill_clipped(o, clip, (int16_t[RECT_SIZE]){(int16_t)(icon_x + x), (int16_t)(icon_y + y), 1, 1},
+                         g_ui_colors[note_mark[y * NOTE_MARK_W + x] == '1' ? UI_CYAN : UI_BLACK]);
+}
+
 /* The white frame just outside the level rect, whose level position (0, 0) icon is at (left, top). */
 static void map_frame(Offscreen *o, const int16_t *clip, int left, int top, const int16_t *rect)
 {
@@ -421,6 +443,8 @@ static void show_level_square(Offscreen *o, const int16_t *clip, Location level_
                                           PAD_MARK_SIZE, PAD_MARK_SIZE},
                      g_ui_colors[UI_GRAY]);
     show_item_mark(o, clip, level_at, icon_x, icon_y);
+    if (seen_note(position))
+        show_note_mark(o, clip, icon_x, icon_y);
 }
 
 /* Draws a complete native cell, then enlarges its pixels without blending. */
@@ -595,16 +619,22 @@ static int cell_offset(int offset)
     return offset / cell - (offset % cell < 0);
 }
 
-bool automap_select(int16_t x, int16_t y)
+bool automap_square_at(int16_t x, int16_t y, Location *level_at)
 {
     int16_t rect[RECT_SIZE];
     if (!zone_get_viewport_rect(rect) || x < rect[RECT_X] || x >= rect[RECT_X] + rect[RECT_W] || y < rect[RECT_Y] ||
         y >= rect[RECT_Y] + rect[RECT_H])
         return false;
     Location middle = middle_square();
-    Location square = {middle.x + cell_offset(x - middle_origin(rect[RECT_X], rect[RECT_W], zoom_pan_x)),
-                       middle.y + cell_offset(y - middle_origin(rect[RECT_Y], rect[RECT_H], zoom_pan_y))};
-    if (!automap_items(square, NULL, 0))
+    *level_at = (Location){middle.x + cell_offset(x - middle_origin(rect[RECT_X], rect[RECT_W], zoom_pan_x)),
+                           middle.y + cell_offset(y - middle_origin(rect[RECT_Y], rect[RECT_H], zoom_pan_y))};
+    return true;
+}
+
+bool automap_select(int16_t x, int16_t y)
+{
+    Location square;
+    if (!automap_square_at(x, y, &square) || !automap_items(square, NULL, 0))
         return false;
     inspection.square = square;
     inspection.page = 0;

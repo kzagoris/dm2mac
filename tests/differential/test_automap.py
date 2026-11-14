@@ -28,6 +28,7 @@ FAKE_WALL_OPEN, DOOR_STATE, DOOR_CLOSED = C.SQUARE_FAKE_WALL_OPEN, C.SQUARE_DOOR
 ROW_HALF_WIDTH = (1, 1, 2, 2, 3)  # the side squares of each row of the dungeon view
 KEY_TAB, KEY_M, KEY_ESC, KEY_I, KEY_F, KEY_L = C.KEY_AUTOMAP, C.KEY_AUTOMAP_M, 0x01, 0x17, 0x21, 0x26
 CHTS_SIZE = 6  # the CHTS block after the AMAP block of an advanced save
+NOTE_COUNT_SIZE = 2  # the note count at the end of an AMAP block without notes
 INPUT_BUTTON_LEFT, INPUT_LEFT_RELEASED = C.INPUT_BUTTON_LEFT, C.INPUT_LEFT_RELEASED
 ZONE_VIEWPORT, UI_RED, CELL = C.ZONE_VIEWPORT, C.UI_RED, C.MAP_CELL_SIZE
 SCREEN_H, FILLER = C.SCREEN_H, 0xEE
@@ -191,8 +192,14 @@ def write(lib, gdat, path, mode):
 
 
 def block_size(lib):
+    """The AMAP block up to its last seen square."""
     count = lib.dungeon_map_count()
     return 6 + 2 * count + sum(lib.dungeon_map_width(m) * lib.dungeon_map_height(m) for m in range(count))
+
+
+def amap_size(lib):
+    """The AMAP block without notes: the squares and the note count 0."""
+    return block_size(lib) + NOTE_COUNT_SIZE
 
 
 @pytest.fixture
@@ -217,9 +224,11 @@ def load(lib, gdat, path, data):
 def test_advanced_save_appends_the_amap_block(lib, saves):
     game, seen, vanilla, mine = saves
     assert seen and mine[:len(vanilla)] == vanilla
-    block = mine[len(vanilla):-CHTS_SIZE]
-    assert block[:6] == b"AMAP\x01" + bytes([lib.dungeon_map_count()]) and len(block) == block_size(lib)
-    assert mine[-CHTS_SIZE:-1] == b"CHTS\x01"
+    block = mine[len(vanilla):len(vanilla) + amap_size(lib)]
+    assert block[:6] == b"AMAP\x02" + bytes([lib.dungeon_map_count()])
+    assert block[-NOTE_COUNT_SIZE:] == bytes(NOTE_COUNT_SIZE), "no notes"
+    chts = len(vanilla) + amap_size(lib)
+    assert mine[chts:chts + CHTS_SIZE - 1] == b"CHTS\x01"
     assert block[6:8] == bytes([lib.dungeon_map_width(0), lib.dungeon_map_height(0)])
 
 
@@ -237,12 +246,13 @@ def test_damaged_amap_block_gives_an_empty_map(lib, gdat, saves, tmp_path, damag
     game, seen, vanilla, mine = saves
     n = len(vanilla)
     data = bytearray(mine)
+    end = n + amap_size(lib)
     if damage == "short":
-        del data[-CHTS_SIZE - 1]
+        del data[end - 1]
     elif damage == "long":
-        data.insert(len(data) - CHTS_SIZE, 0)
+        data.insert(end, 0)
     elif damage == "chts":
-        data[-2] += 1  # the version of the CHTS block
+        data[end + CHTS_SIZE - 2] += 1  # the version of the CHTS block
     else:
         offset = {"magic": 0, "version": 4, "map_count": 5, "map_size": 6, "value": block_size(lib) - 1}[damage]
         data[n + offset] = 2 if damage == "value" else data[n + offset] + 1
@@ -269,7 +279,7 @@ def test_quick_save_keeps_the_automap(lib, automap):
     press(lib, C.KEYPAD_TURN_RIGHT)
     seen = seen_squares(lib, game.party_map)
     press(lib, KEY_F5)
-    assert (data / "QUICK.DAT").read_bytes()[-block_size(lib) - CHTS_SIZE:][:4] == b"AMAP"
+    assert b"AMAP\x02" in (data / "QUICK.DAT").read_bytes()
     lib.seen_reset()
     press(lib, KEY_F9)
     assert seen_squares(lib, game.party_map) >= seen

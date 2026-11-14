@@ -73,6 +73,8 @@ The automap shows the seen squares of all maps of one level, each at its place o
 - The squares use the icons of the minion map: walls, floors, pits, stairs, doors, wall and floor ornaments, teleporter fields, and the level digits. The automap shows the static creatures that have a map icon (trees and other creatures that do not move); moving creatures and merchants do not show. A red frame and the champion icons mark the party square. The side of the frame that faces the party's direction is white.
 - Current loose items on explored squares have a single yellow plus in the upper right of their square, regardless of quantity. The marker also covers alcove items and items without map graphics. Containers count once; their contents, champion/creature inventories, missiles, and effects are excluded. Reveal map also exposes items on unexplored squares without marking them explored.
 - A short left click on a square with items opens its item list. Matching names are grouped with quantities, and the subtitle shows the exact total. Use Left/Right or A/D, or click PREVIOUS/NEXT, to page through every item group. Click anywhere else in the list (MAP included), press Esc, or right-click to return to the map. Tab/M close the automap from either view. The list and markers read the current dungeon state whenever drawn; no separate item history is saved.
+- A double click (the second press within 24 timer ticks, 0.4 seconds, of a short click, at most 3 pixels away) on a shown square of a map types its note: one line of at most 28 capital letters, digits, spaces and `,.;:-()'?!`. A typed small letter becomes a capital. The readout shows `NOTE: ` with the text and a yellow cursor. Return keeps the note without its spaces at the start and the end; an empty note removes it. Backspace deletes the last character; Esc and a right click cancel. While the player types, every other key types or does nothing: the letters that scroll, browse and close the map type. A double click on a square with items closes the item list that the first click opened. An unseen square and an edge wall outside the maps take no note. A game holds at most 256 notes; a new note beyond them shows `NO ROOM FOR MORE NOTES`.
+- A square with a note has a cyan pin in its upper left. A short left click on it shows `NOTE: ` with its text in the third row of the readout; the note stays there until a click on another square or the automap closes; a level notice covers it until the next key. A save keeps the notes with the seen squares ([save.md](../formats/save.md#amap-and-chts-blocks)).
 - A wall that the dungeon view shows at the edge of a map shows as a wall ([view.md](view.md#automap)).
 - A 1-pixel white frame surrounds the level with its maps' margins, just outside its last squares. It marks the end of the level, even where squares are not seen.
 - An imaginary wall (a closed fake wall that the party can walk through) shows as the wall icon with a light gray checkerboard.
@@ -89,7 +91,7 @@ The automap shows the seen squares of all maps of one level, each at its place o
 
 Each game step marks the squares that the dungeon view shows as seen. In low light the party sees fewer rows. The light cheat shows all rows. The rule is in [view.md](view.md#seen-squares).
 
-A new game starts with an empty automap.
+A new game starts with an empty automap without notes.
 
 ## Cheats
 

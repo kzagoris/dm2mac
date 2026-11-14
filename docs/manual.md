@@ -93,7 +93,7 @@ changes a few things:
 - An object held on the eye in the inventory is compared with the item that the champion wears in that slot or holds
   in the hand: the gauge shows in green what the object has more and in red what it has less. Below the gauges stand
   the exact numbers and, in cyan, what a magic item adds (mana, statistics, skills).
-- A save keeps the automap and the cheats.
+- A save keeps the automap, its notes, and the cheats.
 
 The automap, Options/Help, spell favorites, and cheat screen stop game time while open. The exact rules are in
 [Advanced mode rules](rules/advanced-mode.md).
@@ -181,6 +181,11 @@ not move. A fake wall that you can walk through has a gray checkerboard. A white
 MAP LEGEND in Options/Help (`F1`) shows these marks: the checkered wall, the gray square of a pressure plate, the
 yellow plus of items, and the white line of the level edge.
 In low light the party sees fewer squares, so fewer squares appear on the map.
+
+Double-click a square to write a one-line note on it, such as `NEEDS GOLD KEY` or `SHOP: ARMOUR` (up to 28
+letters, digits, spaces and `,.;:-()'?!`). `Return` keeps the note, `Esc` cancels, and an empty note removes it. A
+cyan pin marks a square with a note; click the square to read the note in the top lines of the map. A save keeps the
+notes with the map.
 
 ### Cheats
 

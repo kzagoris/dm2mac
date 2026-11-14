@@ -3,6 +3,7 @@
 #include "advanced.h"
 #include <stdbool.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #include "action_area.h"
 #include "automap.h"
@@ -19,6 +20,7 @@
 #include "os.h"
 #include "recovery.h"
 #include "save.h"
+#include "seen.h"
 #include "session.h"
 #include "sound.h"
 #include "spellbook.h"
@@ -40,6 +42,9 @@
 /* A click tolerates small mouse jitter; a larger movement is a drag even below one whole map square. */
 #define MAP_CLICK_SLOP 3
 
+/* The readout of a note of the player before its text. */
+#define NOTE_PREFIX "NOTE: "
+
 enum AdvancedScreen g_advanced_screen;
 
 /* Options may cover an inventory, sleep or pause picture that will not redraw on its own. */
@@ -53,6 +58,17 @@ static struct {
         int x, y;             /* the mouse position that matches the current scroll */
         int start_x, start_y; /* the press position, before any scrolling */
     } drag;
+    struct {
+        bool valid;     /* a click on the map waits for a second click */
+        uint32_t ticks; /* the timer tick of the click */
+        int16_t x, y;   /* its screen place */
+    } click;
+    struct {
+        bool editing;              /* the player types the note of square */
+        bool shown;                /* the readout shows the note of square */
+        Position square;           /* the map square of the note */
+        char text[SEEN_NOTE_SIZE]; /* the typed text */
+    } note;
     const char *map_notice; /* the readout line after a level key that found no level, NULL for none */
     bool lost;              /* a quick load lost the game: there is no running game to keep */
     uint16_t pending_key;   /* the key that the closed screen leaves for the game (F9 of QUICK LOAD), 0 for none */
@@ -68,6 +84,9 @@ static void close_screen(void)
     g_advanced_screen = ADVANCED_SCREEN_NONE;
     advanced.drag.active = false;
     advanced.map_notice = NULL;
+    advanced.click.valid = false;
+    advanced.note.editing = false;
+    advanced.note.shown = false;
     automap_scroll_reset();
 }
 
@@ -203,6 +222,25 @@ static void render_readout_line(Offscreen *o, int row, const char *text)
                            (TextColors){g_ui_colors[UI_WHITE], g_ui_colors[UI_BLACK]}, text);
 }
 
+/* The note row of the readout: the typed note with a yellow cursor after it, or the note that a click shows. */
+static void render_note(Offscreen *o)
+{
+    const char *text = advanced.note.editing ? advanced.note.text
+                       : advanced.note.shown ? seen_note(advanced.note.square)
+                                             : NULL;
+    if (!text)
+        return;
+    char line[TEXT_SIZE];
+    snprintf(line, sizeof line, NOTE_PREFIX "%s", text);
+    render_readout_line(o, READOUT_NOTICE, line);
+    if (!advanced.note.editing)
+        return;
+    int16_t cursor[RECT_SIZE] = {(int16_t)(o->rect[RECT_X] + READOUT_MARGIN + (int)strlen(line) * FONT_ADVANCE),
+                                 (int16_t)(o->rect[RECT_Y] + READOUT_MARGIN + READOUT_NOTICE * TEXT_LINE_HEIGHT),
+                                 FONT_GLYPH_WIDTH, FONT_GLYPH_HEIGHT};
+    offscreen_fill_rect(o, cursor, g_ui_colors[UI_YELLOW]);
+}
+
 void advanced_draw_automap(void)
 {
     if (automap_items_open()) {
@@ -227,6 +265,8 @@ void advanced_draw_automap(void)
     render_readout_line(&o, READOUT_DIRECTION, direction_names[g_game.party_dir & DIR_MASK]);
     if (advanced.map_notice)
         render_readout_line(&o, READOUT_NOTICE, advanced.map_notice);
+    else
+        render_note(&o);
     offscreen_flush(&o, true);
     draw_free_temp();
 }
@@ -297,12 +337,97 @@ static bool map_key(int16_t key)
     return false;
 }
 
+/* A key or a click while the player types a note: Return keeps the note (an empty text removes it), Esc and a right
+   click cancel, Backspace deletes the last character, and the key of a note character adds it. */
+static void note_event(int type, int16_t key)
+{
+    if (type == INPUT_BUTTON_RIGHT || (type == INPUT_KEY && key == SCAN_ESCAPE)) {
+        advanced.note.editing = false;
+        return;
+    }
+    if (type != INPUT_KEY)
+        return;
+    size_t length = strlen(advanced.note.text);
+    if (key == KEY_ENTER) {
+        advanced.note.editing = false;
+        if (!seen_set_note(advanced.note.square, advanced.note.text))
+            advanced.map_notice = "NO ROOM FOR MORE NOTES";
+        advanced.note.shown = seen_note(advanced.note.square) != NULL;
+    } else if (key == KEY_BACKSPACE) {
+        if (length > 0)
+            advanced.note.text[length - 1] = '\0';
+    } else if (!(key & (KEY_CONTROL | KEY_ALT)) && length < SEEN_NOTE_MAX) {
+        char c = kbd_key_to_ascii((uint16_t)key);
+        if (c >= 'a' && c <= 'z')
+            c = (char)(c - 'a' + 'A');
+        if (seen_is_note_char(c)) {
+            advanced.note.text[length] = c;
+            advanced.note.text[length + 1] = '\0';
+        }
+    }
+}
+
+/* True when a left press at (x, y) is the second click of a double click on the map. */
+static bool is_double_click(int16_t x, int16_t y)
+{
+    return advanced.click.valid && g_main_loop.timer_ticks - advanced.click.ticks <= DOUBLE_CLICK_TICKS &&
+           abs(x - advanced.click.x) <= MAP_CLICK_SLOP && abs(y - advanced.click.y) <= MAP_CLICK_SLOP;
+}
+
+/* Starts the note of the map square at the screen place (x, y), with its old text, and closes the item list that the
+   first click of the double click opened; false where the automap shows no square that can hold a note. */
+static bool start_note(int16_t x, int16_t y)
+{
+    Location level_at;
+    Position square;
+    if (!automap_square_at(x, y, &level_at) || !automap_note_square(level_at, &square))
+        return false;
+    if (automap_items_open())
+        automap_items_event(INPUT_BUTTON_RIGHT, x, y);
+    const char *text = seen_note(square);
+    snprintf(advanced.note.text, sizeof advanced.note.text, "%s", text ? text : "");
+    advanced.note.square = square;
+    advanced.note.editing = true;
+    advanced.note.shown = false;
+    advanced.map_notice = NULL;
+    return true;
+}
+
+/* A short left click at (x, y) of the map: waits for a second click, shows the note of the square in the readout,
+   and lists the square's items. */
+static void click_map(int16_t x, int16_t y)
+{
+    advanced.click.valid = true;
+    advanced.click.ticks = g_main_loop.timer_ticks;
+    advanced.click.x = x;
+    advanced.click.y = y;
+    Location level_at;
+    Position square;
+    advanced.note.shown =
+        automap_square_at(x, y, &level_at) && automap_note_square(level_at, &square) && seen_note(square);
+    if (advanced.note.shown)
+        advanced.note.square = square;
+    automap_select(x, y);
+    advanced_draw_automap();
+}
+
 /* An input event on the open automap. */
 static void map_event(int type, int16_t x, int16_t y)
 {
     int16_t r[RECT_SIZE];
+    if (advanced.note.editing) {
+        note_event(type, x);
+        advanced_draw_automap();
+        return;
+    }
     if (type == INPUT_KEY && (x == KEY_AUTOMAP || x == KEY_AUTOMAP_M)) {
         close_screen();
+        return;
+    }
+    if (type == INPUT_BUTTON_LEFT && is_double_click(x, y) && start_note(advanced.click.x, advanced.click.y)) {
+        advanced.click.valid = false;
+        advanced.drag.active = false;
+        advanced_draw_automap();
         return;
     }
     if (automap_items_event(type, x, y)) {
@@ -322,10 +447,10 @@ static void map_event(int type, int16_t x, int16_t y)
         close_screen();
     } else if (type == INPUT_LEFT_RELEASED) {
         advanced_automap_drag(x, y);
-        bool select = advanced.drag.active && !advanced.drag.moved;
+        bool click = advanced.drag.active && !advanced.drag.moved;
         advanced.drag.active = false;
-        if (select && automap_select(x, y))
-            advanced_draw_automap();
+        if (click)
+            click_map(x, y);
     } else if (type & INPUT_BUTTON_LEFT && zone_get_viewport_rect(r) && x >= r[RECT_X] && x < r[RECT_X] + r[RECT_W] &&
                y >= r[RECT_Y] && y < r[RECT_Y] + r[RECT_H]) {
         advanced.drag.active = true;

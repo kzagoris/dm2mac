@@ -45,6 +45,9 @@
 #define SCAN_SPACE  0x39
 #define SCAN_ESCAPE 0x01
 
+/* The timer ticks (60 Hz) from a click on the automap to the press of a second click that makes a double click. */
+#define DOUBLE_CLICK_TICKS 24
+
 /* The results of a quick load. */
 enum QuickLoadResult { QUICK_LOADED, QUICK_MISSING, QUICK_DAMAGED, QUICK_BLOCKED, QUICK_LOST };
 
@@ -93,7 +96,9 @@ void advanced_open_spellbook(void);
 /* Opens ordinary options and Help. */
 void advanced_open_options(void);
 /* An input event while a viewport screen is open (type INPUT_KEY with the key in x, a mouse button,
-   INPUT_LEFT_RELEASED). On the automap Tab and M close it, a short left click lists the square's items, a left drag,
+   INPUT_LEFT_RELEASED). On the automap Tab and M close it, a short left click lists the square's items and shows its
+   note in the readout, a double click types the square's note (Return keeps it, an empty note removes it, Esc and a
+   right click cancel; every other key types), a left drag,
    the arrows, and W, A, S, D scroll the map, Q and E show the visited level above and below, and Space shows the
    party again. Escape/right click return from the item list to the map, then close the map. Left/right
    or A/D and the PREVIOUS/NEXT rows page the items; the MAP title item returns to the map. On the

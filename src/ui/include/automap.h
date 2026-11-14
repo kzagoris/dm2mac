@@ -42,6 +42,9 @@ bool automap_level_seen(Location level_at);
    returns the total count. Unseen squares require Reveal map; edge walls and container contents have no items;
    exported for the tests. */
 int automap_items(Location level_at, uint16_t *items, int capacity);
+/* The map square of the shown level at the level position level_at that can hold a note of the player: a square of a
+   map (not an edge wall in the margin) that the automap shows; false for none. */
+bool automap_note_square(Location level_at, Position *at);
 /* True while a selected square's item list covers the map picture. */
 bool automap_items_open(void);
 /* The level that the automap shows: the party level until automap_browse_level moves away from it. */
@@ -61,6 +64,8 @@ void automap_draw_items(void);
 void automap_draw_legend_mark(AutomapMark mark, int16_t x, int16_t y, int scale);
 
 /* Inspection */
+/* The level position of the map square at the screen point (x, y) of the scrolled viewport; false outside it. */
+bool automap_square_at(int16_t x, int16_t y, Location *level_at);
 /* Opens the items at the screen point (x, y) of the scrolled viewport; false outside it or without visible items. */
 bool automap_select(int16_t x, int16_t y);
 /* Handles an event on the item list; true when the list consumed it. Escape/right click return to the map. */

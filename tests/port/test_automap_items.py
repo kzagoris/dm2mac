@@ -7,7 +7,7 @@ import pytest
 from dm2test import constants as C
 from dm2test.interface import c_screen
 from dm2test.scenario import square_things
-from dm2test.structs import Game, Location, Position, Session
+from dm2test.structs import Game, Location, MainLoop, Position, Session
 
 
 @pytest.fixture
@@ -157,8 +157,10 @@ def test_plus_symbol_and_party_frame_remain_visible(lib, item_map, count):
 
 
 def click(lib, x, y):
+    """A single click: the time of a double click passes after it, so the next click is a click of its own."""
     lib.advanced_screen_event(C.INPUT_BUTTON_LEFT, x, y)
     lib.advanced_screen_event(C.INPUT_LEFT_RELEASED, x, y)
+    MainLoop.in_dll(lib, "g_main_loop").timer_ticks += C.DOUBLE_CLICK_TICKS + 1
 
 
 def assert_item_row(lib, row, text):
