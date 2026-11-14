@@ -1,5 +1,5 @@
 """The cheat screen of the advanced mode (src/ui/cheats.c, advanced.c) and the cheat cast (src/engine/magic.c): the
-spell lines, the pages and rows, the C key, and the cast without the failure roll and experience."""
+spell lines, the pages and rows, the X key, and the cast without the failure roll and experience."""
 
 import ctypes
 

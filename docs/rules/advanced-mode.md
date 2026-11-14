@@ -16,11 +16,11 @@ The advanced mode adds these keys:
 | `F9` | Quick load | Dungeon view and cheat screen |
 | `Tab` or `M` | Open the automap | Dungeon view only |
 | `Tab`, `M`, or `Esc` | Close the automap | Open automap |
-| `C` | Open the cheat screen | Dungeon view only |
-| `B` | Recorded spell favorites | Dungeon view only |
+| `X` | Open the cheat screen | Dungeon view only |
+| `C` | Recorded spell favorites | Dungeon view only |
 | `F1` | Options/Help | Dungeon, inventory, sleep, pause |
 | `Esc` | Options/Help | Dungeon view only |
-| `C` or `Esc` | Close the cheat screen | Open cheat screen |
+| `X` or `Esc` | Close the cheat screen | Open cheat screen |
 | `Tab` or `Esc` | Close the inventory | Open inventory; not in the name editor or the recruit dialog |
 | `Esc` | Send the candidate back to its mirror | Recruit dialog |
 
@@ -31,7 +31,7 @@ A letter key moves the party only if the letter has no command of its own. In th
 The dungeon view is the screen where the party moves, with at least one champion and no inventory, dialog, menu, pause, sleep, or recruit.
 
 - In the dungeon view the advanced keys work only without a recruit candidate and with an idle party: no held eye or mouth, no champion drag, and no push mode. Otherwise they do nothing.
-- In other places `F5`, `F9`, `Tab`, `M`, and `C` do nothing.
+- In other places `F5`, `F9`, `Tab`, `M`, and `X` do nothing.
 - `Esc` closes the inventory, like `Tab`; the original pauses there. With a recruit candidate it is the cancel button: the candidate goes back to its mirror and the dungeon view returns. In the pause it keeps its original use and ends the pause. In the dungeon view it opens Options/Help, which also stops game time; on the open automap, the open cheat screen and Options/Help it closes the screen.
 - Only one Advanced overlay is open at a time.
 
@@ -86,7 +86,7 @@ A new game starts with an empty automap.
 
 ## Cheats
 
-The advanced mode has six cheats. The cheat screen (`C`) switches each cheat on and off. A slot save and the quick save keep them. A load and a quick load take them from the file. A new game turns them all off. The vanilla and turn-based modes use no cheats.
+The advanced mode has six cheats. The cheat screen (`X`) switches each cheat on and off. A slot save and the quick save keep them. A load and a quick load take them from the file. A new game turns them all off. The vanilla and turn-based modes use no cheats.
 
 - Full light: the dungeon view draws in full light. The creatures and the fight rules keep the real light.
 - Immortal: damage that brings a champion to 0 health or less leaves 1 health. The champion does not die.
@@ -97,7 +97,7 @@ The advanced mode has six cheats. The cheat screen (`C`) switches each cheat on 
 
 ## Cheat screen
 
-`C` in the dungeon view opens CHEATS, with CLOSE on the title line, six cheat switches, and SPELLS - FREE CAST CHEAT. Up/Down (`W`, `S`), Return, and clicks select actions; Esc, C, and right click close. Ordinary filter/save actions live in Options/Help (`F1`).
+`X` in the dungeon view opens CHEATS, with CLOSE on the title line, six cheat switches, and SPELLS - FREE CAST CHEAT. Up/Down (`W`, `S`), Return, and clicks select actions; Esc, X, and right click close. Ordinary filter/save actions live in Options/Help (`F1`).
 
 - FULL LIGHT, IMMORTAL, ENDLESS FOOD AND WATER, ONE-HIT KILL, WALK THROUGH WALLS, REVEAL MAP: each row shows `ON` or `OFF` and switches its cheat (see [Cheats](#cheats)).
 - F5 and F9 remain shortcuts on the cheat screen; ordinary clickable save/filter rows are in Options/Help.
@@ -110,7 +110,7 @@ A click on a spell line (or Return) casts the spell and closes the screen. The c
 
 ## Recorded spell favorites
 
-`B` opens four favorites and the last attempted combination per champion. Players record only runes they have
+`C` opens four favorites and the last attempted combination per champion. Players record only runes they have
 entered, including unknown combinations. The selected power controls the mana preview and replay. Replay
 requires a living, ready caster with enough mana and no entered runes, opens that champion's normal spell panel,
 and calls `magic_add_rune` for every rune followed by `magic_cast_entered_runes_failed` once. Thus no rune-entry

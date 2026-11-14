@@ -91,7 +91,7 @@ F1 also opens help from inventory, sleep, and pause. Save and cast actions requi
 
 ![Controls page with movement and spell instructions](docs/images/advanced-controls.png)
 
-*Controls, enlarged 3Ã— with increased text brightness. This earlier capture labels B as favorites; the current B screen opens the spell list with favorites available inside it.*
+*Controls, enlarged 3Ã— with increased text brightness. This earlier capture labels B as favorites; the current C screen opens the spell list with favorites available inside it.*
 
 | Key | Action in the dungeon view |
 | --- | --- |
@@ -100,15 +100,15 @@ F1 also opens help from inventory, sleep, and pause. Save and cast actions requi
 | Arrow keys | Original movement controls |
 | Tab / M | Open the automap |
 | F5 / F9 | Quick save / quick load |
-| B | Open recorded spell favorites |
+| C | Open recorded spell favorites |
 | F1 / Esc | Open Options/Help |
-| C | Open optional cheats |
+| X | Open optional cheats |
 
 Tab or Esc closes an open inventory, except while editing a name or recruiting. Advanced shortcuts require an idle party: inspection holds, champion dragging, and push mode prevent dungeon shortcuts from firing.
 
 ### Spells: cast by name, learn runes, and save combinations
 
-Press **B** in the dungeon view, or choose **SPELL LIST (B)** in Options/Help. The list pauses game time while you browse. Each spell shows its name and the rune names after the power rune; the caster and power are separate choices at the top.
+Press **C** in the dungeon view, or choose **SPELL LIST (C)** in Options/Help. The list pauses game time while you browse. Each spell shows its name and the rune names after the power rune; the caster and power are separate choices at the top.
 
 #### Known spells or the full spell catalog
 
@@ -137,7 +137,7 @@ The list displays six spells per page. **Left/Right** or **A/D** change pages, a
 
 The list uses normal rune entry and casting: mana costs, skill checks, failures, experience, flask requirements, and action delays apply. Merely showing **All spells** does not grant free casting. The game reports why an attempt cannot start, such as **CHOOSE A LIVING CASTER**, **CASTER BUSY - WAIT AND TRY AGAIN**, or **NOT ENOUGH MANA - LOWER SPELL POWER**. If runes are already entered, close the list and cast or remove them first.
 
-Press **B** to close the list. **Esc** or right-click closes the main spell list; from favorites, either returns to the list.
+Press **C** to close the list. **Esc** or right-click closes the main spell list; from favorites, either returns to the list.
 
 #### Rune hints while casting manually
 
@@ -153,7 +153,7 @@ Choose **FAVORITES AND LAST ATTEMPT** from the list. Each champion has four save
 
 *Empty favorites show the next step: enter runes in the normal spell panel before saving a combination. This capture demonstrates the initial state, not a successful recorded cast.*
 
-To record a favorite, close the overlay, enter the desired runes in the champion's normal spell panel, then press B and open favorites. Select **FAVORITE 1–4** and activate **SAVE ENTERED RUNES TO FAVORITE …**. Recording leaves both the entered runes and mana alone. Close the overlay to cast the runes already entered.
+To record a favorite, close the overlay, enter the desired runes in the champion's normal spell panel, then press C and open favorites. Select **FAVORITE 1–4** and activate **SAVE ENTERED RUNES TO FAVORITE …**. Recording leaves both the entered runes and mana alone. Close the overlay to cast the runes already entered.
 
 To replay later, begin with an empty rune tray, choose the champion and power, select the saved favorite, and activate **CAST SELECTED SPELL**. The mana preview and flask status help check readiness. Replay uses the normal casting path; it cannot bypass mana costs, cooldowns, failure rolls, or potion-flask requirements. An empty slot reports **EMPTY SLOT - SAVE A SPELL FIRST**.
 
@@ -161,7 +161,7 @@ To replay later, begin with an empty rune tray, choose the champion and power, s
 
 #### Free casting is a separate cheat
 
-The **C → SPELLS - FREE CAST CHEAT** catalog casts at maximum power without mana cost or a failure roll and grants no experience. Flask requirements and action delays still apply. Use the ordinary B list or favorites when you want normal casting rules.
+The **X → SPELLS - FREE CAST CHEAT** catalog casts at maximum power without mana cost or a failure roll and grants no experience. Flask requirements and action delays still apply. Use the ordinary C list or favorites when you want normal casting rules.
 
 ### Recover quickly and pause when focus changes
 
