@@ -66,6 +66,9 @@ void play_present_viewport(void)
             dst[x] = src[g_zone_walk_view_rect[RECT_X] + x * g_zone_walk_view_rect[RECT_W] / VIEWPORT_WIDTH];
     }
     combat_draw_feedback();
+    if (!steps && g_party.new_map == -1 && !g_main_loop.view_hidden && !g_ui.inventory && !g_ui.candidate &&
+        !g_party_sleeping && !g_dialog.screen_mode && !g_advanced_screen && view_shows_party())
+        sndreq_hold_deferred(false);
 }
 
 /* The sleep message on a black viewport. */
@@ -207,6 +210,7 @@ static void step_after_input(void)
 
 void play_start_session(void)
 {
+    sndreq_clear_deferred();
     combat_reset_feedback();
     game_start_play();
     input_set_mode(INPUT_MODE_MOVE);

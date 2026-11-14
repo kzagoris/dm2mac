@@ -885,6 +885,8 @@ Transition move_follow_square_transitions(uint16_t thing, MovePath route, bool c
     }
     MoveDest dest = transit_finish(&t);
     dungeon_set_current_map(t.start_map);
+    if (thing == THING_NONE && g_game_mode == GAME_MODE_ADVANCED && classic_steps)
+        sndreq_hold_deferred(true);
     sndreq_flush_requests(true);
     return (Transition){dest, t.flying};
 }
