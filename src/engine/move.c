@@ -189,7 +189,7 @@ int16_t move_nearest_champion_at(Location at, int16_t cell)
 /* A champion (-1 none) who bumps into (x, y) takes 1 damage; the push sound plays when it hurts. */
 static void bump_champion(int16_t champion_index, int16_t x, int16_t y)
 {
-    if (champion_index < 0)
+    if (champion_index < 0 || game_has_cheat(CHEAT_NO_BUMP))
         return;
     if (champ_take_damage(champion_index, 1, BUMP_WOUNDS, ATTACK_TYPE_SELF))
         sndreq_request_with_fallback((SoundCue){CAT_CHAMPION, champion(champion_index)->portrait, SOUND_ENTRY_PUSHED,

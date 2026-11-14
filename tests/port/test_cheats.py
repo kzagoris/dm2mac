@@ -12,7 +12,7 @@ from dm2test.modes import ADVANCED, VANILLA, set_mode
 from dm2test.structs import CurrentMap, Location, Party, Position, Timeline, TimelineEvent
 
 DIRS = ((0, -1), (1, 0), (0, 1), (-1, 0))
-CHEATS = (C.CHEAT_LIGHT, C.CHEAT_IMMORTAL, C.CHEAT_FOOD, C.CHEAT_KILL, C.CHEAT_WALLS, C.CHEAT_MAP)
+CHEATS = (C.CHEAT_LIGHT, C.CHEAT_IMMORTAL, C.CHEAT_FOOD, C.CHEAT_KILL, C.CHEAT_WALLS, C.CHEAT_MAP, C.CHEAT_NO_BUMP)
 HEALTH = 1000  # far more health than the test hits take
 FLAGS, DEFENSE, PUSH_RESISTANCE = 0, 2, 0x1D  # byte offsets in a creature info record
 UNPUSHABLE = 0xFE  # push resistance 0xfe and 0xff: the party cannot push the creature
@@ -216,12 +216,12 @@ def load(lib, gdat, path, mode, data):
 
 def test_advanced_save_appends_the_chts_block(lib, gdat, game, tmp_path):
     turnbased = save(lib, gdat, tmp_path / "T.DAT", C.GAME_MODE_TURNBASED, C.CHEAT_FOOD)
-    mine = save(lib, gdat, tmp_path / "A.DAT", ADVANCED, C.CHEAT_FOOD | C.CHEAT_MAP)
+    mine = save(lib, gdat, tmp_path / "A.DAT", ADVANCED, C.CHEAT_FOOD | C.CHEAT_MAP | C.CHEAT_NO_BUMP)
     tail = mine[len(turnbased):]
-    assert tail[:6] == b"CHTS\x01" + bytes([C.CHEAT_FOOD | C.CHEAT_MAP])
+    assert tail[:6] == b"CHTS\x01" + bytes([C.CHEAT_FOOD | C.CHEAT_MAP | C.CHEAT_NO_BUMP])
     assert tail[6:11] == b"FAVS\x01"
     assert len(tail) == 6 + FAVS_SIZE + KNOWN_SIZE  # CHTS, then FAVS with the KNOW block of the known spells
-    assert load(lib, gdat, tmp_path / "L.DAT", ADVANCED, mine) == C.CHEAT_FOOD | C.CHEAT_MAP
+    assert load(lib, gdat, tmp_path / "L.DAT", ADVANCED, mine) == C.CHEAT_FOOD | C.CHEAT_MAP | C.CHEAT_NO_BUMP
     for mode in (VANILLA, C.GAME_MODE_TURNBASED):
         assert load(lib, gdat, tmp_path / "L.DAT", mode, mine) == 0, "only the advanced mode uses the cheats"
     assert load(lib, gdat, tmp_path / "L.DAT", ADVANCED, turnbased) == 0, "a save without the block"
@@ -281,3 +281,15 @@ def test_no_drop_inside_a_wall(lib, game, wanted):
     lib.input_mouse_click(view[0] + cell[0] + cell[2] // 2, view[1] + cell[1] + cell[3] // 2, C.INPUT_BUTTON_LEFT)
     run_ticks(lib, 10)
     assert (leader_hand(lib) == thing) == bool(wanted)
+
+
+@pytest.mark.parametrize("cheat", [False, True])
+def test_no_bump_damage(lib, game, cheat):
+    place = find_place(lib, game, lambda m, x, y: is_wall(lib, m, x, y))
+    enter(lib, game, *place)
+    lib.game_set_cheats(C.CHEAT_NO_BUMP if cheat else 0)
+    damage = (ctypes.c_int16 * C.CHAMPION_MAX).in_dll(lib, "g_champ_pending_damage")
+    ctypes.memset(damage, 0, ctypes.sizeof(damage))
+    lib.move_party(C.CMD_MOVE_FORWARD)
+    assert (game.party_x, game.party_y) == place[1:3]
+    assert (sum(damage) > 0) != cheat

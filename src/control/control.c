@@ -393,6 +393,7 @@ static void put_state(Json *reply)
     json_key_int(reply, "cheat_kill", game_has_cheat(CHEAT_KILL));
     json_key_int(reply, "cheat_walls", game_has_cheat(CHEAT_WALLS));
     json_key_int(reply, "cheat_map", game_has_cheat(CHEAT_MAP));
+    json_key_int(reply, "cheat_no_bump", game_has_cheat(CHEAT_NO_BUMP));
     json_close(reply, '}');
 }
 

@@ -117,7 +117,7 @@ Reads the game state.
 ```
 
 ```json
-{"ok":true,"time":33,"ticks":61,"mode":"move","dialog":null,"party":{"map":0,"x":1,"y":8,"dir":0},"champion_count":1,"leader":0,"champions":[{"name":"TORHAM","health":[83,83],"stamina":[770,770],"mana":[14,14],"load":67}],"inventory":-1,"candidate":-1,"hand":null,"sound_volume":7,"music_volume":7,"end":0,"quit":0,"game_mode":"advanced","automap":0,"cheat_immortal":0,"cheat_food":0,"cheat_light":0,"cheat_kill":0,"cheat_walls":0,"cheat_map":0}
+{"ok":true,"time":33,"ticks":61,"mode":"move","dialog":null,"party":{"map":0,"x":1,"y":8,"dir":0},"champion_count":1,"leader":0,"champions":[{"name":"TORHAM","health":[83,83],"stamina":[770,770],"mana":[14,14],"load":67}],"inventory":-1,"candidate":-1,"hand":null,"sound_volume":7,"music_volume":7,"end":0,"quit":0,"game_mode":"advanced","automap":0,"cheat_immortal":0,"cheat_food":0,"cheat_light":0,"cheat_kill":0,"cheat_walls":0,"cheat_map":0,"cheat_no_bump":0}
 ```
 
 | Field | Meaning |
@@ -135,7 +135,7 @@ Reads the game state.
 | `end`, `quit` | The game's end flag (party dead or quit) and the program's end flag. |
 | `game_mode` | The game mode: `vanilla`, `advanced`, or `turnbased` ([manual.md](../manual.md#modes), [Turn-based mode](turn-based.md)). |
 | `automap` | 1 while the automap is open, otherwise 0. |
-| `cheat_immortal`, `cheat_food`, `cheat_light`, `cheat_kill`, `cheat_walls`, `cheat_map` | 1 while the cheat is on, otherwise 0 ([manual.md](../manual.md#cheats)). |
+| `cheat_immortal`, `cheat_food`, `cheat_light`, `cheat_kill`, `cheat_walls`, `cheat_map`, `cheat_no_bump` | 1 while the cheat is on, otherwise 0 ([manual.md](../manual.md#cheats)). |
 
 The message area text is not in the state. Use a screenshot to read it.
 
@@ -227,7 +227,7 @@ A game step takes 8 ticks. A step forward needs about 40 ticks before the party 
 
 ### screenshot
 
-Writes a PNG file of 320 × 200 pixels: the screen with the palette and the cursor at the pointer. The cursor is the original cursor image that the window shows there: the arrow, the hand, the held object with its shadow, or the dragged champion. The pointer is the window pointer until a click or move request moves it. In `build/dm2` the pointer starts at (0, 0), so the first screenshot has the cursor in the top left corner. The reply gives the absolute path.
+Writes a PNG file of 320 Ã— 200 pixels: the screen with the palette and the cursor at the pointer. The cursor is the original cursor image that the window shows there: the arrow, the hand, the held object with its shadow, or the dragged champion. The pointer is the window pointer until a click or move request moves it. In `build/dm2` the pointer starts at (0, 0), so the first screenshot has the cursor in the top left corner. The reply gives the absolute path.
 
 ```json
 {"cmd": "screenshot", "path": "/tmp/shot.png"}

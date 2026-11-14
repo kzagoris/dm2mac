@@ -66,7 +66,8 @@ extern const char *const g_game_mode_names[GAME_MODE_COUNT];
 #define CHEAT_KILL     0x08 /* a damage above 0 kills a creature that can be hurt */
 #define CHEAT_WALLS    0x10 /* the party walks into walls, closed fake walls, and closed doors inside the map */
 #define CHEAT_MAP      0x20 /* the automap shows every square of the map */
-#define CHEAT_ALL      0x3f
+#define CHEAT_NO_BUMP  0x40 /* collisions do not hurt the champions */
+#define CHEAT_ALL      0x7f
 
 /* The operations of a set-global sensor on a script variable. */
 #define GLOBAL_VAR_SET      0

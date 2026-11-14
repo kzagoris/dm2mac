@@ -13,7 +13,7 @@ from dm2test.modes import (ADVANCED, INPUT_MODE_INVENTORY, INPUT_MODE_MOVE, VANI
 SPELL_COUNT, SPELLS_PER_PAGE = 34, 8
 PAGE_COUNT = (SPELL_COUNT + SPELLS_PER_PAGE - 1) // SPELLS_PER_PAGE
 ROW_LIGHT, ROW_FOOD, ROW_MAP = 0, 2, 5
-ROW_SPELLS, ROW_CLOSE = 6, 7  # CLOSE: the title item
+ROW_SPELLS, ROW_CLOSE = 7, 8  # CLOSE: the title item
 STAY, CLOSE, QUICK_SAVE, QUICK_LOAD = C.CHEATS_STAY, C.CHEATS_CLOSE, C.CHEATS_QUICK_SAVE, C.CHEATS_QUICK_LOAD
 SCAN_ESCAPE, SCAN_RETURN, SCAN_S = 0x01, 0x1C, 0x1F
 FIREBALL_EFFECT = 0x5402  # a missile spell of type 0 (fireball)
@@ -95,17 +95,20 @@ def test_rows_and_pages(lib, screen):
     assert cursor(lib) == (C.CHEATS_PAGE, ROW_CLOSE), "the selection stops at the last row, CLOSE"
     lib.cheats_move_selection(-1)
     assert cursor(lib) == (C.CHEATS_PAGE, ROW_SPELLS)
-    select(lib, ROW_MAP)
+    select(lib, ROW_MAP + 1)
     lib.cheats_move_selection(1)
     assert cursor(lib) == (C.CHEATS_PAGE, ROW_SPELLS)
     lib.cheats_move_selection(-1)
-    assert cursor(lib) == (C.CHEATS_PAGE, ROW_MAP)
+    assert cursor(lib) == (C.CHEATS_PAGE, ROW_MAP + 1)
     for row, result in ((ROW_CLOSE, CLOSE),):
         select(lib, row)
         assert lib.cheats_run_selected_row() == result
     select(lib, ROW_FOOD)
     assert lib.cheats_run_selected_row() == STAY and lib.game_has_cheat(C.CHEAT_FOOD)
     assert lib.cheats_run_selected_row() == STAY and not lib.game_has_cheat(C.CHEAT_FOOD)
+    select(lib, 6)
+    assert lib.cheats_run_selected_row() == STAY and lib.game_has_cheat(C.CHEAT_NO_BUMP)
+    assert lib.cheats_run_selected_row() == STAY and not lib.game_has_cheat(C.CHEAT_NO_BUMP)
     # SPELLS opens page 1 on NEXT; NEXT goes through the pages and wraps; BACK from page 1 is the SPELLS row.
     select(lib, ROW_SPELLS)
     assert lib.cheats_run_selected_row() == STAY and cursor(lib) == (1, SPELLS_PER_PAGE)
