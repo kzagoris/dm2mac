@@ -455,7 +455,7 @@ SpellbookResult spellbook_event(int type, int16_t x, int16_t y)
             flip_page(-1);
         else if (x == KEYPAD_RIGHT || x == SCAN_D)
             flip_page(1);
-        else if (x == KEY_ENTER)
+        else if (x == KEY_ENTER || x == SCAN_SPACE)
             return run_row();
     } else if (type == INPUT_BUTTON_LEFT) {
         RowsScreen layout = find_layout();

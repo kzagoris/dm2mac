@@ -39,6 +39,7 @@
 #define SCAN_A      0x1e
 #define SCAN_S      0x1f
 #define SCAN_D      0x20
+#define SCAN_SPACE  0x39
 #define SCAN_ESCAPE 0x01
 
 /* The results of a quick load. */
