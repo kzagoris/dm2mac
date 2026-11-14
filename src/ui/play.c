@@ -232,6 +232,22 @@ void play_start_session(void)
     step_before_input();
 }
 
+/* A classic step or turn shows its destination on the input tick. Map entry and the game clocks keep their
+   game-step timing; the extra drawing does not consume game random numbers. */
+static void show_classic_step(void)
+{
+    if (g_game_mode != GAME_MODE_ADVANCED || !move_has_classic_steps() || !g_main_loop.running || g_main_loop.end ||
+        g_main_loop.quit || g_advanced_screen || g_main_loop.view_hidden || g_ui.inventory || g_ui.candidate ||
+        g_dialog.screen_mode || g_party_sleeping || g_party.move_steps || g_party.new_map != -1 ||
+        g_current_map.map != g_game.party_map || view_shows_party())
+        return;
+    uint32_t seed = g_random_seed;
+    view_draw_dungeon((Location){g_game.party_x, g_game.party_y}, g_game.party_dir);
+    play_present_viewport();
+    seen_mark((Position){g_game.party_map, g_game.party_x, g_game.party_y}, g_game.party_dir);
+    rand_set_seed(seed);
+}
+
 /* Whether the advanced mode draws the flight of the projectiles: a running game shows the dungeon view of the
    standing party with no redraw due, no screen over it, and a moving projectile in it. */
 static bool flight_view_shows(void)
@@ -265,11 +281,10 @@ void play_tick(void)
         tick_elapsed = true;
     command_process_queue();
     /* a viewport screen stops the game time; a quit (a lost game) ends all game work */
-    if (!tick_elapsed || !g_main_loop.running || g_advanced_screen || g_main_loop.quit) {
-        show_projectile_flight();
-        return;
+    if (tick_elapsed && g_main_loop.running && !g_advanced_screen && !g_main_loop.quit) {
+        step_after_input();
+        step_before_input();
     }
-    step_after_input();
-    step_before_input();
+    show_classic_step();
     show_projectile_flight();
 }

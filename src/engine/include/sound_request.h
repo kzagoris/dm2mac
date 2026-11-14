@@ -104,6 +104,9 @@ SoundLevel sndreq_volume_pan(uint8_t volume, int lateral, int forward);
 SoundCue sndreq_cue_with_fallback(SoundCue cue, int fallback);
 
 /* Requests */
+/* Collects step-end sounds of an interface command separately while on; turning off plays that batch now.
+   Other queued sounds and explicit timeline delays keep their timing. Batches do not nest. */
+void sndreq_set_immediate(bool on);
 /* Asks for the sound of cue at (x, y) of the current map at when. A sound at the end of the game step plays only
    when the party sees the current map. */
 void sndreq_request(SoundCue cue, int16_t x, int16_t y, enum SoundWhen when);

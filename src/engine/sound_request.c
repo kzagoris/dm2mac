@@ -70,6 +70,9 @@ int g_sound_started_count;
 static struct {
     Pending requests[REQUESTS_MAX];
     int request_count;
+    Pending immediate[REQUESTS_MAX];
+    int immediate_count;
+    bool collecting_immediate;
     Pending deferred[DEFERRED_MAX];
     int deferred_count;
     Delayed delayed[DELAYED_MAX];
@@ -80,6 +83,8 @@ static struct {
 void sndreq_reset_requests(void)
 {
     queues.request_count = 0;
+    queues.immediate_count = 0;
+    queues.collecting_immediate = false;
     queues.deferred_count = 0;
     memset(queues.delayed, 0, sizeof queues.delayed);
 }
@@ -87,6 +92,7 @@ void sndreq_reset_requests(void)
 void sndreq_clear_requests(void)
 {
     queues.request_count = 0;
+    queues.immediate_count = 0;
 }
 
 /* Queries */
@@ -251,10 +257,11 @@ static bool party_sees_current_map(void)
     return g_current_map.map == g_current_map.square_map || g_current_map.map == g_current_map.alt_view_map;
 }
 
-/* Loads the sound of cue while the queue of the game step has room; a sleeping party hears half the volume. */
-static bool load_request(SoundCue *cue, Sound *sound)
+/* Loads the sound of cue while its request queue has room; a sleeping party hears half the volume. */
+static bool load_request(SoundCue *cue, Sound *sound, enum SoundWhen when)
 {
-    if (queues.request_count == REQUESTS_MAX)
+    int count = when == SOUND_STEP_END && queues.collecting_immediate ? queues.immediate_count : queues.request_count;
+    if (count == REQUESTS_MAX)
         return false;
     if (sndreq_load(gdat_current(), cue->category, cue->index, cue->entry, sound) != GDAT_OK)
         return false;
@@ -263,12 +270,22 @@ static bool load_request(SoundCue *cue, Sound *sound)
     return true;
 }
 
+void sndreq_set_immediate(bool on)
+{
+    queues.collecting_immediate = on;
+    if (!on) {
+        if (queues.immediate_count > 0)
+            start_requests(queues.immediate, queues.immediate_count);
+        queues.immediate_count = 0;
+    }
+}
+
 void sndreq_request(SoundCue cue, int16_t x, int16_t y, enum SoundWhen when)
 {
     if (when == SOUND_STEP_END && !party_sees_current_map())
         return;
     Sound sound;
-    if (!load_request(&cue, &sound))
+    if (!load_request(&cue, &sound, when))
         return;
     int map_x = x;
     int map_y = y;
@@ -282,6 +299,10 @@ void sndreq_request(SoundCue cue, int16_t x, int16_t y, enum SoundWhen when)
     sndreq_party_offset(dx, dy, g_game.party_dir, 0, &offset);
     Pending *queue = queues.requests;
     int *count = &queues.request_count;
+    if (when == SOUND_STEP_END && queues.collecting_immediate) {
+        queue = queues.immediate;
+        count = &queues.immediate_count;
+    }
     if (when == SOUND_DEFERRED) {
         if (queues.deferred_count == DEFERRED_MAX)
             return;
@@ -323,7 +344,7 @@ void sndreq_request_after(SoundCue cue, int16_t x, int16_t y, uint16_t ticks)
     if (!party_sees_current_map())
         return;
     Sound sound;
-    if (load_request(&cue, &sound))
+    if (load_request(&cue, &sound, SOUND_NOW))
         request_later(&cue, x, y, ticks);
 }
 

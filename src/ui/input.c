@@ -731,6 +731,20 @@ static void execute_inventory_command(int16_t champion_index)
         ui_toggle_inventory(champion_index);
 }
 
+/* Classic movement sounds accompany the immediate view without releasing unrelated step-end sounds. */
+static void execute_movement_command(int command)
+{
+    bool immediate = g_game_mode == GAME_MODE_ADVANCED && move_has_classic_steps();
+    if (immediate)
+        sndreq_set_immediate(true);
+    if (command == CMD_TURN_LEFT || command == CMD_TURN_RIGHT)
+        move_party_turn(command);
+    else
+        move_party(command);
+    if (immediate)
+        sndreq_set_immediate(false);
+}
+
 /* The commands of the movement, the leader, the inventory, the spells, and the pause and the sleep; true when
    command is one of them. */
 static bool execute_party_command(const Command *c, bool idle)
@@ -740,10 +754,8 @@ static bool execute_party_command(const Command *c, bool idle)
         game_release_eye_and_mouth();
     } else if (command == CMD_CANCEL_PUSH) {
         input_cancel_push_mode();
-    } else if (command == CMD_TURN_LEFT || command == CMD_TURN_RIGHT) {
-        move_party_turn(command);
-    } else if (command >= CMD_MOVE_FORWARD && command <= CMD_MOVE_LEFT) {
-        move_party(command);
+    } else if (command >= CMD_TURN_LEFT && command <= CMD_MOVE_LEFT) {
+        execute_movement_command(command);
     } else if (command == CMD_ROTATE_LEFT || command == CMD_ROTATE_RIGHT) {
         if (g_action.champion) {
             int16_t champion_index = g_action.champion - 1;

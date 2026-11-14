@@ -74,6 +74,7 @@ typedef struct {
     bool feedback_waiting; /* the script waits for the next queue run */
     bool arrow_pressed;
     int arrow_zone, arrow_entry;
+    int classic_arrow_ticks;                /* visual feedback only: it never holds the command queue */
     bool zone_active[INPUT_ZONE_COUNT];     /* the input zones of the input tree of the mode */
     uint8_t cursor_list[CURSOR_ZONE_COUNT]; /* the shown cursor zones (from 1), by priority */
     int cursor_count;
