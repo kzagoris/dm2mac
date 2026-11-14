@@ -543,6 +543,8 @@ static bool melee_attack_front(const ActionRun *a, int mode, int kind)
     bool pierces = field_of(a->action, FIELD_PIERCES) != 0 || attack & MELEE_ATTACK_PIERCES;
     attack &= (uint16_t)~MELEE_ATTACK_PIERCES;
     g_action.result = (int16_t)melee_attack_group(a, attack, wounds, kind, pierces);
+    if (g_game_mode == GAME_MODE_ADVANCED && g_hooks.creature_hit)
+        g_hooks.creature_hit(a->target, a->front, g_action.result);
     return true;
 }
 
@@ -1033,9 +1035,8 @@ static bool is_weapon_attack(int command)
 }
 
 /* The caller saves/restores the shared action list. No rolls or combat side effects here. */
-static int party_attack_index(int16_t index, uint16_t group, Location at, bool require_ready)
+static int party_attack_index(int16_t index, uint16_t group, Location at, bool require_ready, const PartyAttack *p)
 {
-    const PartyAttack *p = &party_attacks[index];
     Champion *c = champion(index);
     if (!p->valid || !c->health || c->dir != g_game.party_dir || c->slots[p->hand] != p->thing ||
         (require_ready && (c->action_delay[p->hand] || g_action_repeats[index][p->hand].left)))
@@ -1076,6 +1077,43 @@ static int party_attack_index(int16_t index, uint16_t group, Location at, bool r
     return action_index;
 }
 
+/* Keeps a manual choice, or picks the first legal basic action in the action hand, then the ready hand. */
+static int select_party_attack(int16_t index, uint16_t group, Location at, bool require_ready, PartyAttack *picked)
+{
+    if (party_attacks[index].valid) {
+        *picked = party_attacks[index];
+        return party_attack_index(index, group, at, require_ready, picked);
+    }
+    PartyAttack waiting = {0};
+    for (int16_t hand = SLOT_ACTION_HAND; hand >= SLOT_READY_HAND; hand--) {
+        uint16_t thing = champion(index)->slots[hand];
+        if (thing != THING_NONE && (item_is_chest(thing) || item_is_moneybox(thing)))
+            continue;
+        champ_list_actions(index, thing, hand);
+        ChampActionList candidates;
+        champ_action_list_save(&candidates);
+        for (int i = 0; i < candidates.count; i++) {
+            ChampionAction action = candidates.actions[i];
+            if (!is_weapon_attack(field_of(action, FIELD_COMMAND)))
+                continue;
+            *picked = (PartyAttack){true, hand, thing, action};
+            int found = party_attack_index(index, group, at, false, picked);
+            if (found < 0)
+                continue;
+            if (!champion(index)->action_delay[hand] && !g_action_repeats[index][hand].left)
+                return found;
+            if (!waiting.valid)
+                waiting = *picked;
+            break; /* later moves in the same hand share its cooldown */
+        }
+    }
+    if (waiting.valid && !require_ready) {
+        *picked = waiting;
+        return party_attack_index(index, group, at, false, picked);
+    }
+    return -1;
+}
+
 /* Rejects stale sprite targets, static interaction creatures and non-Advanced modes. */
 static bool party_attack_target_exists(uint16_t group, Location at)
 {
@@ -1097,9 +1135,10 @@ enum PartyAttackState champ_party_attack_state(uint16_t group, Location at)
     champ_action_list_save(&saved);
     enum PartyAttackState state = PARTY_ATTACK_NONE;
     for (int16_t i = 0; i < g_game.champion_count && state != PARTY_ATTACK_READY; i++) {
-        if (party_attack_index(i, group, at, false) < 0)
+        PartyAttack picked;
+        if (select_party_attack(i, group, at, false, &picked) < 0)
             continue;
-        int hand = party_attacks[i].hand;
+        int hand = picked.hand;
         state = champion(i)->action_delay[hand] || g_action_repeats[i][hand].left ? PARTY_ATTACK_WAITING
                                                                                   : PARTY_ATTACK_READY;
     }
@@ -1119,11 +1158,13 @@ bool champ_party_attack(uint16_t group, Location at)
     for (int16_t i = 0; i < g_game.champion_count; i++) {
         if (!party_attack_target_exists(group, at))
             break;
-        int action_index = party_attack_index(i, group, at, true);
+        PartyAttack picked;
+        int action_index = select_party_attack(i, group, at, true, &picked);
         if (action_index < 0)
             continue;
         g_action.champion = (int16_t)(i + 1);
-        g_action.hand = party_attacks[i].hand;
+        g_action.hand = picked.hand;
+        party_attacks[i] = picked;
         ChampionAction action = g_champ_actions[action_index];
         bool ran = champ_perform_action(i, action_index, false);
         if (ran) {

@@ -4,7 +4,9 @@
 #include "champion.h"
 #include "creature.h"
 #include "dungeon.h"
+#include "game.h"
 #include "gdat.h"
+#include "hooks.h"
 #include "item.h"
 #include "le.h"
 #include "move.h"
@@ -557,8 +559,9 @@ static bool hit_creature(Hit *h, int16_t cell)
     }
     HitAttack a = roll_attack(h->projectile, payload);
     h->damage = (uint16_t)((uint16_t)(a.attack << DEFENSE_SCALE_SHIFT) / info->defense);
+    uint16_t damage = 0;
     if (h->damage) {
-        uint16_t damage = (uint16_t)(creature_roll_armor_factor(g, a.extra_damage) + h->damage);
+        damage = (uint16_t)(creature_roll_armor_factor(g, a.extra_damage) + h->damage);
         if (info->door_flags & CREATURE_RESISTS_NON_FIRE && a.type != ATTACK_TYPE_FIRE)
             damage = (uint16_t)((int16_t)damage >> 2);
         creature_alert(g, near.at, ALERT_HIT, ALERT_ALWAYS, damage);
@@ -566,6 +569,8 @@ static bool hit_creature(Hit *h, int16_t cell)
             item_attr(payload, ATTR_FLAGS) & ITEM_FLAG_CAUGHT)
             h->holder = group_possessions(g);
     }
+    if (g_game_mode == GAME_MODE_ADVANCED && g_hooks.creature_hit)
+        g_hooks.creature_hit(g, near.at, damage);
     if (h->potion_bomb || h->payload_type == THING_WEAPON ||
         (h->payload_type == THING_EXPLOSION && payload != SPELL_DOOR_TOGGLE &&
          (payload < SPELL_PUSH || payload > SPELL_MISSILE_WALL)))

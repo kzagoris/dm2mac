@@ -8,6 +8,7 @@
 #include "advanced.h"
 #include "ai.h"
 #include "champion.h"
+#include "combat_feedback.h"
 #include "creature.h"
 #include "dialog.h"
 #include "draw.h"
@@ -64,6 +65,7 @@ void play_present_viewport(void)
         for (int x = 0; x < VIEWPORT_WIDTH; x++)
             dst[x] = src[g_zone_walk_view_rect[RECT_X] + x * g_zone_walk_view_rect[RECT_W] / VIEWPORT_WIDTH];
     }
+    combat_draw_feedback();
 }
 
 /* The sleep message on a black viewport. */
@@ -205,6 +207,7 @@ static void step_after_input(void)
 
 void play_start_session(void)
 {
+    combat_reset_feedback();
     game_start_play();
     input_set_mode(INPUT_MODE_MOVE);
     game_enter_map((Position){g_game.party_map, g_game.party_x, g_game.party_y}, false);

@@ -644,7 +644,8 @@ static void click_in_viewport(int16_t x, int16_t y)
     uint8_t front = dungeon_square_at(v.front);
     uint16_t hand = g_game.leader_hand;
     if (target != THING_NONE) {
-        champ_party_attack(target, target_at);
+        if (champ_party_attack(target, target_at))
+            play_present_viewport();
         return;
     }
     if (click_zones_hit(&v, x, y, hand))

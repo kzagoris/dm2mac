@@ -31,8 +31,12 @@ Advanced mode only; preserve object, push, trade and Vanilla interactions. No ne
 - Windows executable rebuilt as build/dm2.exe; prior binary preserved as build/dm2-before-party-attack.exe. Rendered game scene and cursor inspected in build/party-attack-cursor.png.
 - Broad testing is not green: tool-test collection requires Homebrew, standards have existing options/spellbook/movement findings, and options/help crashes also reproduce on unchanged HEAD. Broad parallel runs were interrupted after reproducing the crash and stalled checks; they are not a complete suite result.
 
-No commit or push is requested.
+The user requested committing and pushing after manual testing.
 
 ## Approved detection refinement
 
 User approved the Fable review recommendations: fill holes inside each sprite row, retain ownership beneath transient projectiles/explosions, and show grey swords during cooldown while consuming waiting clicks. Implement through the existing rendering and combat paths without altering action costs or readiness. Add regression coverage of row spans, effects versus solid occluders, and a real waiting click with unchanged champion state/RNG. Then rebuild and launch Advanced mode for manual testing.
+
+## Basic attack and feedback follow-up
+
+After committing the first implementation, the user requested automatic basic attacks without a prior manual choice and damage feedback over the monster. Select a pure fallback from normal hand actions, keep remembered choices authoritative, and retain normal target/readiness checks. Add a small combat_feedback UI module, fed by resolved melee and projectile hit hooks, using the original damage artwork over visible target bounds. Test pure fallback discovery, blocked champions, noncombat items, feedback lifetime and impact timing. The follow-up passed 41 focused checks with 7 missing-fixture skips, was built for Windows, and was launched for manual testing. The user then requested committing and pushing it.

@@ -49,6 +49,7 @@ typedef struct {
                                 int transparent);   /* a picture in a zone of the view */
     void (*complete_game)(void);                    /* the party finished the game */
     void (*draw_dungeon)(Location at, int16_t dir); /* draws the view of the party on the square at facing dir */
+    void (*creature_hit)(uint16_t group, Location at, int damage); /* feedback for a resolved creature hit */
 } Hooks;
 
 extern Hooks g_hooks;

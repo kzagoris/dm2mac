@@ -134,6 +134,8 @@ bool view_shows_floor_ornament(int pos, int ornament);
 bool view_shows_party(void);
 /* Creature under a visible viewport pixel, THING_NONE for background or an occluding picture. */
 uint16_t view_attack_target(int16_t x, int16_t y, Location *at);
+/* Bounding rectangle of a currently visible creature's target pixels, in viewport coordinates. */
+bool view_attack_target_rect(uint16_t group, int16_t *rect);
 /* Draws into g_view_viewport the view of the party on the square at of the party map, looking to dir. */
 void view_draw_dungeon(Location at, int16_t dir);
 

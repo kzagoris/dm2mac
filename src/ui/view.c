@@ -1068,6 +1068,34 @@ uint16_t view_attack_target(int16_t x, int16_t y, Location *at)
     return attack_targets[tag - 1].group;
 }
 
+bool view_attack_target_rect(uint16_t group, int16_t *rect)
+{
+    if (!view_shows_party())
+        return false;
+    int left = VIEWPORT_WIDTH;
+    int top = VIEWPORT_HEIGHT;
+    int right = -1;
+    int bottom = -1;
+    for (int y = 0; y < VIEWPORT_HEIGHT; y++)
+        for (int x = 0; x < VIEWPORT_WIDTH; x++) {
+            int tag = attack_pixels[y * VIEWPORT_WIDTH + x];
+            if (!tag || tag > attack_target_count ||
+                (attack_targets[tag - 1].group & THING_ID_MASK) != (group & THING_ID_MASK))
+                continue;
+            left = min_int(left, x);
+            top = min_int(top, y);
+            right = max_int(right, x);
+            bottom = max_int(bottom, y);
+        }
+    if (right < left)
+        return false;
+    rect[RECT_X] = (int16_t)left;
+    rect[RECT_Y] = (int16_t)top;
+    rect[RECT_W] = (int16_t)(right - left + 1);
+    rect[RECT_H] = (int16_t)(bottom - top + 1);
+    return true;
+}
+
 /* A view of a game step starts new projectile tracks; the tracks of the view of the game step just before stay when the
    party view is the same. Another view in the same game step keeps them. */
 static void start_tracks(int16_t dir, int16_t x, int16_t y)

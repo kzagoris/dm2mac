@@ -2,6 +2,7 @@
 /* The user interface functions that the game rules call (engine/hooks.h). */
 #include "ui.h"
 #include "action_area.h"
+#include "combat_feedback.h"
 #include "hooks.h"
 #include "input.h"
 #include "play.h"
@@ -43,4 +44,5 @@ Hooks g_hooks = {
     .draw_viewport_image = ui_draw_viewport_image,
     .complete_game = session_complete,
     .draw_dungeon = view_draw_dungeon,
+    .creature_hit = combat_show_hit,
 };
