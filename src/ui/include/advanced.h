@@ -93,8 +93,9 @@ void advanced_open_spellbook(void);
 /* Opens ordinary options and Help. */
 void advanced_open_options(void);
 /* An input event while a viewport screen is open (type INPUT_KEY with the key in x, a mouse button,
-   INPUT_LEFT_RELEASED). On the automap Tab and M close it, a short left click lists the square's items, and a left
-   drag scrolls the map. Escape/right click return from the item list to the map, then close the map. Left/right
+   INPUT_LEFT_RELEASED). On the automap Tab and M close it, a short left click lists the square's items, a left drag,
+   the arrows, and W, A, S, D scroll the map, Q and E show the visited level above and below, and Space shows the
+   party again. Escape/right click return from the item list to the map, then close the map. Left/right
    or A/D and the PREVIOUS/NEXT rows page the items; the MAP title item returns to the map. On the
    cheat screen C and Esc close it, Up, Down, W, and S select a row, Return and a left click run a row, F5 and F9
    quick save and quick load (a quick load closes the screen, then runs as the F9 key of the game); a right click

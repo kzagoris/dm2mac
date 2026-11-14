@@ -19,9 +19,11 @@ int automap_cell_size(void);
 bool automap_is_imaginary_wall(uint8_t square);
 /* True for a floor square with a sensor that the party, a creature, or an item triggers and that the view draws with a floor ornament; the automap marks it; exported for the tests. */
 bool automap_is_pressure_pad(Position at);
-/* The map square of the party level that the automap draws at the level position level_at; false when no map covers it; exported for the tests. */
+/* The map square of the shown level that the automap draws at the level position level_at; false when no map
+   covers it; exported for the tests. */
 bool automap_level_square(Location level_at, Position *position);
-/* True when a map of the party level that covers the level position level_at has seen its square there; exported for the tests. */
+/* True when a map of the shown level that covers the level position level_at has seen its square there;
+   exported for the tests. */
 bool automap_level_seen(Location level_at);
 /* The current loose items on a visible level square: fills at most capacity references (NULL: count only) and
    returns the total count. Unseen squares require Reveal map; edge walls and container contents have no items;
@@ -29,9 +31,14 @@ bool automap_level_seen(Location level_at);
 int automap_items(Location level_at, uint16_t *items, int capacity);
 /* True while a selected square's item list covers the map picture. */
 bool automap_items_open(void);
+/* The level that the automap shows: the party level until automap_browse_level moves away from it. */
+int automap_level(void);
+/* True when the automap can show level: the party level, a level with a seen square, or with Reveal map any level
+   that has maps; exported for the tests. */
+bool automap_level_visited(int level);
 
 /* Drawing */
-/* Draws the seen squares of the maps of the party level into the screen rect clip of o, with the party square at the
+/* Draws the seen squares of the maps of the shown level into the screen rect clip of o, with the party square at the
    middle, moved by the scroll. */
 void automap_draw(Offscreen *o, const int16_t *clip);
 /* Draws the selected square's current item names and quantities, with previous/next pages and a MAP title item. */
@@ -43,12 +50,17 @@ bool automap_select(int16_t x, int16_t y);
 /* Handles an event on the item list; true when the list consumed it. Escape/right click return to the map. */
 bool automap_items_event(int type, int16_t x, int16_t y);
 
-/* Scrolling */
+/* Scrolling and levels */
 /* Changes one zoom level around the pointer; false outside the viewport, on the list, or at a limit. */
 bool automap_zoom(int16_t x, int16_t y, int steps);
 /* Moves the middle of the drawn map by (dx, dy) squares; the middle stays inside the level rectangle. */
 void automap_scroll(int dx, int dy);
-/* Moves the middle of the drawn map back to the party square. */
+/* Shows the nearest visited level in the direction of step (-1 the level above, +1 the level below); the middle keeps
+   its level position inside the rectangle of the new level; false when there is no such level or the list is open. */
+bool automap_browse_level(int step);
+/* Shows the party level again with the party square at the middle; keeps the zoom. */
+void automap_center_party(void);
+/* Moves the middle of the drawn map back to the party square of the party level at zoom 1 and closes the list. */
 void automap_scroll_reset(void);
 
 #endif /* DM2_UI_AUTOMAP_H */

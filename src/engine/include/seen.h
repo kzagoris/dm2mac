@@ -36,6 +36,8 @@ void seen_free(void);
 int seen_visible(Position at, int16_t dir, SeenSquare squares[SEEN_VISIBLE_MAX]);
 /* True when the dungeon view has shown the square at. */
 bool seen_is_seen(Position at);
+/* True when the dungeon view has shown any square of map. */
+bool seen_map_has_seen(int16_t map);
 
 /* ---- Commands ---- */
 

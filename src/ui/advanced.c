@@ -35,6 +35,7 @@
 #define READOUT_MARGIN    2 /* pixels between the viewport edge and the readout */
 #define READOUT_POSITION  0
 #define READOUT_DIRECTION 1
+#define READOUT_NOTICE    2
 
 /* A click tolerates small mouse jitter; a larger movement is a drag even below one whole map square. */
 #define MAP_CLICK_SLOP 3
@@ -52,8 +53,9 @@ static struct {
         int x, y;             /* the mouse position that matches the current scroll */
         int start_x, start_y; /* the press position, before any scrolling */
     } drag;
-    bool lost;            /* a quick load lost the game: there is no running game to keep */
-    uint16_t pending_key; /* the key that the closed screen leaves for the game (F9 of QUICK LOAD), 0 for none */
+    const char *map_notice; /* the readout line after a level key that found no level, NULL for none */
+    bool lost;              /* a quick load lost the game: there is no running game to keep */
+    uint16_t pending_key;   /* the key that the closed screen leaves for the game (F9 of QUICK LOAD), 0 for none */
 } advanced;
 
 static const char *const direction_names[DIR_COUNT] = {"NORTH", "EAST", "SOUTH", "WEST"};
@@ -65,6 +67,7 @@ static void close_screen(void)
         memcpy(g_video_fb, options_picture, sizeof options_picture);
     g_advanced_screen = ADVANCED_SCREEN_NONE;
     advanced.drag.active = false;
+    advanced.map_notice = NULL;
     automap_scroll_reset();
 }
 
@@ -215,10 +218,15 @@ void advanced_draw_automap(void)
     if (!o.bitmap)
         return;
     automap_draw(&o, o.rect);
-    snprintf(line, sizeof line, "LEVEL %d  X %d  Y %d", dungeon_map_level(g_game.party_map), g_game.party_x,
-             g_game.party_y);
+    int party_level = dungeon_map_level(g_game.party_map);
+    if (automap_level() == party_level)
+        snprintf(line, sizeof line, "LEVEL %d  X %d  Y %d", party_level, g_game.party_x, g_game.party_y);
+    else
+        snprintf(line, sizeof line, "LEVEL %d  PARTY ON %d", automap_level(), party_level);
     render_readout_line(&o, READOUT_POSITION, line);
     render_readout_line(&o, READOUT_DIRECTION, direction_names[g_game.party_dir & DIR_MASK]);
+    if (advanced.map_notice)
+        render_readout_line(&o, READOUT_NOTICE, advanced.map_notice);
     offscreen_flush(&o, true);
     draw_free_temp();
 }
@@ -250,6 +258,45 @@ void advanced_automap_wheel(int16_t x, int16_t y, int steps)
 
 /* Viewport screens */
 
+/* Pans, changes the level, or centers the open automap for key; false for any other key. The arrows and W, A, S, D
+   pan one square, Q and E show the visited level above and below (or a notice that there is none), Space shows the
+   party. */
+static bool map_key(int16_t key)
+{
+    switch (key) {
+    case KEYPAD_FORWARD:
+    case SCAN_W:
+        automap_scroll(0, -1);
+        return true;
+    case KEYPAD_BACK:
+    case SCAN_S:
+        automap_scroll(0, 1);
+        return true;
+    case KEYPAD_TURN_LEFT:
+    case KEYPAD_LEFT:
+    case SCAN_A:
+        automap_scroll(-1, 0);
+        return true;
+    case KEYPAD_TURN_RIGHT:
+    case KEYPAD_RIGHT:
+    case SCAN_D:
+        automap_scroll(1, 0);
+        return true;
+    case SCAN_Q:
+        if (!automap_browse_level(-1))
+            advanced.map_notice = "NO VISITED LEVEL ABOVE";
+        return true;
+    case SCAN_E:
+        if (!automap_browse_level(1))
+            advanced.map_notice = "NO VISITED LEVEL BELOW";
+        return true;
+    case SCAN_SPACE:
+        automap_center_party();
+        return true;
+    }
+    return false;
+}
+
 /* An input event on the open automap. */
 static void map_event(int type, int16_t x, int16_t y)
 {
@@ -265,6 +312,12 @@ static void map_event(int type, int16_t x, int16_t y)
     if (type == INPUT_KEY) {
         if (x == SCAN_ESCAPE)
             close_screen();
+        else {
+            const char *notice = advanced.map_notice;
+            advanced.map_notice = NULL;
+            if (map_key(x) || notice)
+                advanced_draw_automap();
+        }
     } else if (type == INPUT_BUTTON_RIGHT) {
         close_screen();
     } else if (type == INPUT_LEFT_RELEASED) {

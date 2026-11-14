@@ -16,6 +16,9 @@ The advanced mode adds these keys:
 | `F9` | Quick load | Dungeon view and cheat screen |
 | `Tab` or `M` | Open the automap | Dungeon view only |
 | `Tab`, `M`, or `Esc` | Close the automap | Open automap |
+| Arrows, `W`, `A`, `S`, `D` | Scroll the map one square | Open automap |
+| `Q`, `E` | Show the visited level above, below | Open automap |
+| `Space` | Show the party level and square | Open automap |
 | `X` | Open the cheat screen | Dungeon view only |
 | `C` | Recorded spell favorites | Dungeon view only |
 | `Alt+C`, then `Alt+1` to `Alt+4` | Set or cast favorite 1 to 4 | Dungeon view only |
@@ -65,7 +68,7 @@ The automap and the cheat screen open in the viewport and stop the game time. Th
 
 ## Automap
 
-The automap shows the seen squares of all maps of the party level, each at its place on the level. It covers the viewport. The party square is in the middle of the viewport, north is up. The mouse wheel over the map switches between 1×, 2×, and 3× zoom, anchored at the pointer. Dragging and item selection use the scaled cells; the readout and item list keep their normal size. Reopening the map resets zoom to 1×.
+The automap shows the seen squares of all maps of one level, each at its place on the level; it opens on the party level. It covers the viewport. The party square is in the middle of the viewport, north is up. The mouse wheel over the map switches between 1×, 2×, and 3× zoom, anchored at the pointer. Dragging and item selection use the scaled cells; the readout and item list keep their normal size. Reopening the map resets zoom to 1×.
 
 - The squares use the icons of the minion map: walls, floors, pits, stairs, doors, wall and floor ornaments, teleporter fields, and the level digits. The automap shows the static creatures that have a map icon (trees and other creatures that do not move); moving creatures and merchants do not show. A red frame and the champion icons mark the party square. The side of the frame that faces the party's direction is white.
 - Current loose items on explored squares have a single yellow plus in the upper right of their square, regardless of quantity. The marker also covers alcove items and items without map graphics. Containers count once; their contents, champion/creature inventories, missiles, and effects are excluded. Reveal map also exposes items on unexplored squares without marking them explored.
@@ -75,9 +78,12 @@ The automap shows the seen squares of all maps of the party level, each at its p
 - An imaginary wall (a closed fake wall that the party can walk through) shows as the wall icon with a light gray checkerboard.
 - A pressure pad (a floor plate that the dungeon view shows) shows as a small gray square in the middle of its square. A hidden floor trigger does not show.
 - Unseen squares stay black. With the reveal map cheat, all squares of the level show.
-- The readout at the top left shows `LEVEL n  X x  Y y` and the party's direction (`NORTH`, `EAST`, `SOUTH`, `WEST`).
-- Keys other than the automap keys do nothing.
-- A drag with the left mouse button moves the map. The map moves in whole squares. The middle of the map stays inside the level. The next automap opens on the party again.
+- The readout at the top left shows `LEVEL n  X x  Y y` and the party's direction (`NORTH`, `EAST`, `SOUTH`, `WEST`). On another level its first line is `LEVEL n  PARTY ON p`.
+- A drag with the left mouse button moves the map. The map moves in whole squares. The middle of the map stays inside the level. The next automap opens on the party level with the party in the middle again.
+- The arrow keys (also with Shift) and `W`, `A`, `S`, `D` move the middle of the map one square, with the same limit as a drag. A held key repeats.
+- `Q` shows the nearest visited level above (a lower level number), `E` the nearest visited level below. A visited level has a seen square on one of its maps; with the reveal map cheat every level with maps counts. The party level always counts. The middle of the map keeps its level position, moved inside the new level. Without such a level the readout shows `NO VISITED LEVEL ABOVE` (or `BELOW`) until the next key. Only the squares seen in the advanced mode count: a level explored before (in the vanilla mode, or in an older save without the AMAP block) is not visited.
+- `Space` shows the party level with the party in the middle; the zoom stays.
+- Other keys do nothing. On the item list the keys keep their list meaning.
 
 ## Seen squares
 

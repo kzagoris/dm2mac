@@ -6,6 +6,7 @@ All notable changes to this project are in this file. The format follows [Keep a
 
 ### Added
 
+- Automap: `Q` and `E` show the other visited levels, the arrow keys and `W`, `A`, `S`, `D` scroll the map, `Space` shows the party again.
 - Advanced startup and death recovery offer QUICK.DAT separately from slot saves, with safe retry after a missing or corrupt quick save.
 - Per-champion recorded spell favorites and repeat-last casting (`B`), with power choice, mana/flask feedback and normal game rules; optional FAVS save extension.
 - Advanced focus-loss/minimize pause with cleared input and deliberate Return resume.

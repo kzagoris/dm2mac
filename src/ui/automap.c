@@ -71,6 +71,8 @@ static int zoom = 1, zoom_pan_x, zoom_pan_y;
 
 static int scroll_x, scroll_y; /* squares between the party and the middle of the drawn map */
 
+static int browsed_level = -1; /* the level that the automap shows, -1 for the party level */
+
 /* Selection is a level position, so it follows the same owner and visibility rules as the map picture. */
 static struct {
     bool open;
@@ -97,10 +99,23 @@ static int middle_origin(int start, int length, int pan)
     return start + (length - automap_cell_size()) / 2 + pan;
 }
 
-/* The maps of the party level, ended by LEVEL_LIST_END. */
-static const uint8_t *party_level_maps(void)
+/* True when the automap shows the level of the party. */
+static bool shows_party_level(void)
 {
-    return dungeon_level_maps(dungeon_map_level(g_game.party_map));
+    return automap_level() == dungeon_map_level(g_game.party_map);
+}
+
+/* The maps of the shown level, ended by LEVEL_LIST_END. */
+static const uint8_t *shown_level_maps(void)
+{
+    return dungeon_level_maps(automap_level());
+}
+
+/* The map whose owner search finds the squares of the shown level: the party map on the party level, else the first
+   map of the level. */
+static int16_t home_map(void)
+{
+    return shows_party_level() ? g_game.party_map : shown_level_maps()[0];
 }
 
 /* The level position of the party square. */
@@ -117,16 +132,16 @@ static Location middle_square(void)
     return (Location){party.x + scroll_x, party.y + scroll_y};
 }
 
-/* The smallest rect of level positions (level x, y, width, height) that holds all maps of the party level with their
+/* The smallest rect of level positions (level x, y, width, height) that holds all maps of the shown level with their
    margins. */
 static void level_rect(int16_t *rect)
 {
-    int map = g_game.party_map;
-    int x0 = dungeon_map_offset_x(map) - MAP_MARGIN;
-    int y0 = dungeon_map_offset_y(map) - MAP_MARGIN;
-    int x1 = x0 + dungeon_map_width(map) + 2 * MAP_MARGIN;
-    int y1 = y0 + dungeon_map_height(map) + 2 * MAP_MARGIN;
-    for (const uint8_t *m = party_level_maps(); *m != LEVEL_LIST_END; m++) {
+    const uint8_t *maps = shown_level_maps();
+    int x0 = dungeon_map_offset_x(*maps) - MAP_MARGIN;
+    int y0 = dungeon_map_offset_y(*maps) - MAP_MARGIN;
+    int x1 = x0;
+    int y1 = y0;
+    for (const uint8_t *m = maps; *m != LEVEL_LIST_END; m++) {
         int left = dungeon_map_offset_x(*m) - MAP_MARGIN;
         int top = dungeon_map_offset_y(*m) - MAP_MARGIN;
         int right = left + dungeon_map_width(*m) + 2 * MAP_MARGIN;
@@ -199,11 +214,11 @@ static bool covers_known(int16_t map, Location level_at, Position *position)
            square_type(dungeon_square(map, position->x, position->y)) != SQUARE_UNKNOWN;
 }
 
-/* True when a map of the party level covers the level position level_at with a square that is not SQUARE_UNKNOWN. */
+/* True when a map of the shown level covers the level position level_at with a square that is not SQUARE_UNKNOWN. */
 static bool covered(Location level_at)
 {
     Position position;
-    for (const uint8_t *m = party_level_maps(); *m != LEVEL_LIST_END; m++)
+    for (const uint8_t *m = shown_level_maps(); *m != LEVEL_LIST_END; m++)
         if (covers_known(*m, level_at, &position))
             return true;
     return false;
@@ -211,29 +226,29 @@ static bool covered(Location level_at)
 
 bool automap_level_square(Location level_at, Position *position)
 {
-    int16_t party_map = g_game.party_map;
     Location party = party_position();
-    if (level_at.x == party.x && level_at.y == party.y) {
-        *position = (Position){party_map, g_game.party_x, g_game.party_y};
+    if (shows_party_level() && level_at.x == party.x && level_at.y == party.y) {
+        *position = (Position){g_game.party_map, g_game.party_x, g_game.party_y};
         return true;
     }
+    int16_t home = home_map();
     int next = 0;
     do {
-        int16_t x = level_at.x - dungeon_map_offset_x(party_map);
-        int16_t y = level_at.y - dungeon_map_offset_y(party_map);
-        int map = dungeon_location_on_map_from((Position){party_map, x, y}, 0, &next).map;
+        int16_t x = level_at.x - dungeon_map_offset_x(home);
+        int16_t y = level_at.y - dungeon_map_offset_y(home);
+        int map = dungeon_location_on_map_from((Position){home, x, y}, 0, &next).map;
         if (map >= 0 && covers(map, level_at, position))
             return true; /* a found square in the margin of its map does not count */
     } while (next != 0);
-    for (const uint8_t *m = party_level_maps(); *m != LEVEL_LIST_END; m++)
+    for (const uint8_t *m = shown_level_maps(); *m != LEVEL_LIST_END; m++)
         if (covers_known(*m, level_at, position))
             return true;
     /* no map has a square there: the edge wall that the view draws in the margin of a map */
-    for (const uint8_t *m = party_level_maps(); *m != LEVEL_LIST_END; m++)
+    for (const uint8_t *m = shown_level_maps(); *m != LEVEL_LIST_END; m++)
         if (in_margin(*m, level_at, position) &&
             square_type(dungeon_square_edge(*m, position->x, position->y)) == SQUARE_WALL)
             return true;
-    for (const uint8_t *m = party_level_maps(); *m != LEVEL_LIST_END; m++)
+    for (const uint8_t *m = shown_level_maps(); *m != LEVEL_LIST_END; m++)
         if (covers(*m, level_at, position))
             return true;
     return false;
@@ -252,13 +267,13 @@ static bool margin_seen(const Position *position)
 bool automap_level_seen(Location level_at)
 {
     Position position;
-    for (const uint8_t *m = party_level_maps(); *m != LEVEL_LIST_END; m++)
+    for (const uint8_t *m = shown_level_maps(); *m != LEVEL_LIST_END; m++)
         if (covers(*m, level_at, &position) && seen_is_seen(position))
             return true;
     if (covered(level_at))
         return false;
     /* an edge wall counts as seen with a seen square next to it: the view shows it from there */
-    for (const uint8_t *m = party_level_maps(); *m != LEVEL_LIST_END; m++)
+    for (const uint8_t *m = shown_level_maps(); *m != LEVEL_LIST_END; m++)
         if (in_margin(*m, level_at, &position) && margin_seen(&position))
             return true;
     return false;
@@ -285,6 +300,28 @@ int automap_items(Location level_at, uint16_t *items, int capacity)
 bool automap_items_open(void)
 {
     return inspection.open;
+}
+
+int automap_level(void)
+{
+    return browsed_level >= 0 ? browsed_level : dungeon_map_level(g_game.party_map);
+}
+
+bool automap_level_visited(int level)
+{
+    if (level < 0 || level >= LEVEL_COUNT || g_game.party_map >= dungeon_map_count())
+        return false;
+    if (level == dungeon_map_level(g_game.party_map))
+        return true;
+    const uint8_t *maps = dungeon_level_maps(level);
+    if (*maps == LEVEL_LIST_END)
+        return false;
+    if (game_has_cheat(CHEAT_MAP))
+        return true;
+    for (const uint8_t *m = maps; *m != LEVEL_LIST_END; m++)
+        if (seen_map_has_seen(*m))
+            return true;
+    return false;
 }
 
 /* Drawing */
@@ -559,7 +596,7 @@ bool automap_items_event(int type, int16_t x, int16_t y)
     return true;
 }
 
-/* Scrolling */
+/* Scrolling and levels */
 
 bool automap_zoom(int16_t x, int16_t y, int steps)
 {
@@ -590,8 +627,32 @@ void automap_scroll(int dx, int dy)
     scroll_y += clamp_int(rect[RECT_Y], middle.y + dy, rect[RECT_Y] + rect[RECT_H] - 1) - middle.y;
 }
 
+bool automap_browse_level(int step)
+{
+    if (!step || inspection.open || g_game.party_map >= dungeon_map_count())
+        return false;
+    for (int level = automap_level() + step; level >= 0 && level < LEVEL_COUNT; level += step) {
+        if (!automap_level_visited(level))
+            continue;
+        browsed_level = level == dungeon_map_level(g_game.party_map) ? -1 : level;
+        automap_scroll(0, 0); /* the middle keeps its level position, inside the rectangle of the new level */
+        return true;
+    }
+    return false;
+}
+
+void automap_center_party(void)
+{
+    browsed_level = -1;
+    scroll_x = 0;
+    scroll_y = 0;
+    zoom_pan_x = 0;
+    zoom_pan_y = 0;
+}
+
 void automap_scroll_reset(void)
 {
+    browsed_level = -1;
     zoom = 1;
     zoom_pan_x = 0;
     zoom_pan_y = 0;

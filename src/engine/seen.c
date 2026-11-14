@@ -130,6 +130,20 @@ bool seen_is_seen(Position at)
     return square && *square;
 }
 
+bool seen_map_has_seen(int16_t map)
+{
+    if (!seen || map < 0 || map >= dungeon_map_count())
+        return false;
+    size_t first = map_first_square(map);
+    size_t last = first + (size_t)dungeon_map_width(map) * (size_t)dungeon_map_height(map);
+    if (last > seen_size)
+        last = seen_size;
+    for (size_t at = first; at < last; at++)
+        if (seen[at])
+            return true;
+    return false;
+}
+
 /* ---- Commands ---- */
 
 void seen_mark(Position at, int16_t dir)
