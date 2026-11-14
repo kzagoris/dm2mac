@@ -186,6 +186,18 @@ void champ_apply_item_effects(int16_t champion_index, uint16_t thing, int16_t sl
         champ_compute_load(champion_index);
 }
 
+int champ_item_bonus(uint16_t thing, enum ItemBonus kind, int index)
+{
+    if (thing == THING_NONE || !(item_attr(thing, ATTR_FLAGS) & ATTR_HAS_EFFECTS))
+        return 0;
+    int attr = ATTR_MANA_MAXIMUM;
+    if (kind == ITEM_BONUS_STAT)
+        attr = ATTR_STAT_FIRST + index;
+    else if (kind == ITEM_BONUS_SKILL)
+        attr = ATTR_SKILL_FIRST + index;
+    return stat_modifier(thing, attr, true, EFFECT_MODE_ADD);
+}
+
 /* The leader hand */
 
 uint16_t inv_cursor_object(void)

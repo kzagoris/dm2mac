@@ -371,6 +371,11 @@ bool champ_throw_leader_hand_object(bool right_side);
 void champ_compute_load(int16_t champion_index);
 /* Applies (or takes back) the effects of thing in slot of champion_index (slot -1: the leader hand). */
 void champ_apply_item_effects(int16_t champion_index, uint16_t thing, int16_t slot, enum EffectMode mode);
+/* What champ_item_bonus reads: the bonus to the maximum mana, to a statistic, or to a skill. */
+enum ItemBonus { ITEM_BONUS_MANA, ITEM_BONUS_STAT, ITEM_BONUS_SKILL };
+/* The bonus that thing gives to the champion who wears or holds it: to the maximum mana, to statistic index, or to
+   skill index. 0 for none, and for an effect that counts only when the item is consumed. */
+int champ_item_bonus(uint16_t thing, enum ItemBonus kind, int index);
 
 /* The leader hand */
 /* The object of the leader hand that the cursor shows, THING_NONE none. */

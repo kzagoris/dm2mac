@@ -179,6 +179,19 @@ A hit on a moving creature shows the damage star of the action area, with the da
 - A step, a turn, or a change of the map ends all stars. They do not show while the party walks, in the inventory, or on an advanced screen.
 - The stars are drawn on the screen after the dungeon view; they change no game state and do not cover the target of a click.
 
+## Item compare
+
+The object info of the inventory (an object held on the eye) compares the object with the item that the champion uses, and shows what a magic item gives (`show_object_gauges`, `show_object_lines` in `src/ui/ui.c`). The values and their use are in [combat.md](combat.md).
+
+- The compared item is the item of the champion with the open inventory in the body slot that the object fits (head, torso, legs, feet). An object that fits no body slot compares with a hand item: of the items in the two hands that have the value of the gauge, the one with the lowest value, which is the one that the object would replace. So with two swords in the hands the comparison is with the weaker sword, and after one sword is taken into the leader hand it is with the other sword. Without such a hand item the comparison is with the item in the action hand, else in the ready hand. An empty body slot and empty hands give no comparison.
+- The value gauge of a weapon (strength, or throw power for a weapon without strength) or of an armor (armor defense) colors the difference to the same value of the compared item: the part that the object has more is green, the part that it has less is red. The charges gauge and the gauge of a potion do not change.
+- Text lines at the bottom of the panel give the numbers (always shown in the advanced mode).
+- Bonus lines, in cyan: what the object adds to the maximum mana, the statistics, and the skills of the champion who wears or holds it, for example `MANA+19 WIS+5`. Effects of an eaten or drunk item do not show.
+- Number lines after the bonus lines, each only for a value that is not 0: `ARMOR` (the armor defense), `VS SHARP` (the armor defense against a sharp attack), `STRENGTH`, `THROW` (the throw power), `SHOOT` (the shoot attack of a launcher), `EXTRA` (the extra damage). After each value the difference to the compared item stands in brackets: green for a better value, red for a worse one, gray for the same. A last line, `WEIGHT`, gives the weight difference in kilograms; a lighter object is green.
+- The lines stand under the gauges. When the panel has too little room, the last lines are left out.
+- While the leader hand holds an object, the open inventory shows this object info without the eye (`shows_held_object`): the panel shows the object in place of the food and water gauges. The mouth still shows food and water, and the inventory of a recruit candidate keeps the panel of the original.
+- The gauge colors and the lines change no game state. The vanilla mode shows the panel of the original.
+
 ## SETTINGS.TXT
 
 The rows SCREEN FILTER, 4:3 ASPECT and SCANLINES of Options/Help keep their values in `SETTINGS.TXT` in the folder of `QUICK.DAT` (`--saves DIR`, otherwise `<data>/DATA`). The file format is in [save.md](../formats/save.md#settingstxt).
