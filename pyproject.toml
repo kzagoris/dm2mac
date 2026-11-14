@@ -39,6 +39,6 @@ timeout = 120
 # a timer thread ends a test that hangs inside a ctypes call, where a signal cannot reach it
 timeout_method = "thread"
 testpaths = ["tests"]
-addopts = "-m 'not network' --dist loadfile --import-mode=importlib"
+addopts = "-m 'not network' -n 1 --max-worker-restart 16 --dist loadfile --import-mode=importlib"
 pythonpath = ["tests"]
 markers = ["network: tests that need network access"]

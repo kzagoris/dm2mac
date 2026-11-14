@@ -77,6 +77,8 @@ uv run pytest -q tests/<folder>/test_x.py
 
 To run several files, add `-n auto`.
 
+The tests always run in a worker process (`-n 1` by default), because the library runs inside the test process. A test that crashes the library or reaches the timeout of 120 s ends its worker and fails alone; the log has the Python and the C stack, and the other tests still run. For a debugger or `-s`, add `-n 0`.
+
 | Folder or file | What it proves |
 |---|---|
 | `tests/differential/` | The same input through the port (`ctypes` on `build/libdm2.dylib`) and through the original in the emulator `dm2tools.emu` gives the same state. |
