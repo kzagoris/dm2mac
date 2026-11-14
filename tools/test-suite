@@ -1,15 +1,28 @@
 #!/bin/bash
 # Builds the port, then runs the full test suite unless a green full run of the same clean git tree is recorded.
+# Usage: tools/test-suite [label]. The log is build/logs/<time>-<label>.log with the JUnit report <same name>.xml;
+# build/test-suite.log is a copy of the last log. The folder keeps the last $KEEP runs.
+KEEP=10
 cd "$(dirname "$0")/.." || exit 1
+label=$(tr -c 'A-Za-z0-9._\n-' '-' <<<"${1:-suite}")
 tree=$(git rev-parse HEAD^{tree})
 if [ -z "$(git status --porcelain --untracked-files=no)" ] &&
    grep -qx "$tree" "$(git rev-parse --path-format=absolute --git-common-dir)/green-trees" 2>/dev/null; then
     echo "tree $tree already passed the full suite; not run again"
     exit 0
 fi
+case "$PWD" in
+    /mnt/[a-z]/*) echo "note: the tree is on a Windows drive ($PWD); the suite runs several times faster from the Linux file system of WSL" >&2 ;;
+esac
 # pytest does not build: a machine without SDL3 builds only the library, and the tests of build/dm2 are skipped
 sdl=$(pkg-config --variable=prefix sdl3 2>/dev/null || brew --prefix sdl3 2>/dev/null)
 if [ -n "$sdl" ] && [ -f "$sdl/include/SDL3/SDL.h" ]; then target=all; else target=lib; fi
 make "$target" || exit 2
-uv run pytest -n auto -q -p no:cacheprovider 2>&1 | tee build/test-suite.log
-exit "${PIPESTATUS[0]}"
+mkdir -p build/logs
+log=build/logs/$(date +%Y%m%d-%H%M%S)-$label
+uv run pytest -n auto -q -p no:cacheprovider --junitxml="$log.xml" 2>&1 | tee "$log.log"
+status=${PIPESTATUS[0]}
+cp "$log.log" build/test-suite.log
+ls -1t build/logs/*.log | tail -n +$((KEEP + 1)) | while read -r old; do rm -f "$old" "${old%.log}.xml"; done
+echo "log: $log.log"
+exit "$status"

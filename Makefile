@@ -131,7 +131,8 @@ $(SDL_MINGW):
 	@mkdir -p $(B)
 	cp -R $(DM_DIR)/build/sdl-mingw $(B)/
 
-test: ; tools/test-suite
+# LABEL names the log of the run: make test LABEL=before-refactor
+test: ; tools/test-suite $(LABEL)
 
 # Release zips: dist (macOS arm64), dist-win (Windows x64; DM_DIR names the dm folder).
 dist: ; tools/dist/make-dist.sh

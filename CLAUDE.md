@@ -13,7 +13,8 @@ Details: `docs/development.md`.
 - Never stop or restart a running game of the user; after a build, tell the user and let them restart it.
 - Turn-based mode: `build/dm2 --mode turnbased --saves DIR`; `uv run dm2-play --brief get_state` (`docs/llm/turn-based.md`).
 - One test file: `uv run pytest -q tests/<folder>/test_x.py`.
-- Full suite: `make test` runs `tools/test-suite` (parallel; skips a clean tree that already passed; log in `build/test-suite.log`).
+- Full suite: `make test` runs `tools/test-suite` (builds first; parallel; skips a clean tree that already passed; log in `build/test-suite.log`, the last 10 runs in `build/logs/`). Name a run with `make test LABEL=<label>`; do not write own log files into `build/`.
+- pytest does not build: after a change in `src/`, run `make lib` (or `make`) before `uv run pytest`.
 - After every change in `src/`: `make check-fast` (clang-format, ruff, the standard check; no build, under a minute).
 - Check: `make check` (ruff, the standard check, the full suite); `make format` (clang-format); `tools/standard-allowlist` (regenerates `tests/standard/allowlist.txt`); `tools/rename-symbol OLD NEW` (renames a public symbol in `src/`, `tests/`, the symbol table and the docs).
 

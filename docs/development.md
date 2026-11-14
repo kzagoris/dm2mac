@@ -67,7 +67,9 @@ WINEPREFIX=build/wineprefix "$WINE" build/dm2.exe
 make test
 ```
 
-`make test` runs `tools/test-suite`. The script builds the port (`make`, or `make lib` on a machine without SDL3), runs `uv run pytest -n auto -q` and writes the log to `build/test-suite.log`. It skips the run if the git tree is clean and a green full run of the same tree is recorded.
+`make test` runs `tools/test-suite`. The script builds the port (`make`, or `make lib` on a machine without SDL3), runs `uv run pytest -n auto -q` and writes the log to `build/logs/<time>-<label>.log` with the JUnit report `<time>-<label>.xml` next to it. The label is `suite`, or the one you give: `make test LABEL=before-refactor` or `tools/test-suite before-refactor`. `build/test-suite.log` is a copy of the last log, and the folder keeps the last 10 runs, so a session needs no log file names of its own. It skips the run if the git tree is clean and a green full run of the same tree is recorded.
+
+Under WSL, a tree on a Windows drive (`/mnt/c/...`) runs several times slower than one on the Linux file system; the script says so when it starts.
 
 pytest itself does not build. If `build/` is missing or older than `src/`, it stops before the first test and names the `make` target to run. Only `tests/standard` runs without a build. To run one file:
 
