@@ -120,10 +120,10 @@ Four-letter syllables wrap onto two lines to fit the button.
 | `Ctrl+S` | Open the disk menu (same as the disk icon) |
 | `Ctrl+R` | Rest (same as the Zzz icon) |
 | `Tab` or `M` | Automap |
-| `C` | Cheat screen |
+| `X` | Cheat screen |
 | `Esc` | Pause with Options/Help in the dungeon view; close to resume. In the inventory it closes the inventory (the original pauses) |
 | `F1` | Pause with Options/Help; close to resume (also in inventory, sleep, and pause) |
-| `B` | Recorded spell favorites |
+| `C` | Recorded spell favorites |
 | `Tab` or `Esc` | Close the inventory |
 | `Esc` | With a champion from a mirror on the screen: do not take it and return to the dungeon view |
 
@@ -139,7 +139,7 @@ the game does not load. Advanced startup and death recovery offer **LOAD QUICK.D
 
 ### Spell favorites
 
-Open a champion's spell panel, enter a power rune and the combination you want to remember, then press `B`.
+Open a champion's spell panel, enter a power rune and the combination you want to remember, then press `C`.
 Select one of four favorites and **RECORD ENTERED RUNES IN FAVORITE**. Recording keeps the entered runes and
 charges no extra mana. Cast those runes normally, or remove them before replaying a favorite; removing runes
 retains the original no-refund rule.
@@ -170,7 +170,7 @@ In low light the party sees fewer squares, so fewer squares appear on the map.
 
 ### Cheats
 
-The cheat screen (`C`) switches seven cheats on and off. A save keeps them, and a new game turns them off.
+The cheat screen (`X`) switches seven cheats on and off. A save keeps them, and a new game turns them off.
 
 - **Full light:** you see the dungeon as in full light. Creatures still see the real light.
 - **Immortal:** a champion keeps at least 1 health.
@@ -195,7 +195,7 @@ CHEATS                         CLOSE
  SPELLS - FREE CAST CHEAT
 ```
 
-Click a row, or choose it with the arrow keys (or `W`, `S`) and Return. CLOSE, `C`, `Esc`, or a right click closes
+Click a row, or choose it with the arrow keys (or `W`, `S`) and Return. CLOSE, `X`, `Esc`, or a right click closes
 the screen.
 
 - The seven cheat rows show `ON` or `OFF`.

@@ -252,7 +252,7 @@ static void show_favorites(void)
     snprintf(texts[BOOK_CAST], BOOK_TEXT_SIZE, "CAST SELECTED SPELL");
     snprintf(texts[BOOK_STATUS], BOOK_TEXT_SIZE, "%s",
              book.status ? book.status
-             : mana < 0  ? "CLOSE, ENTER RUNES, THEN PRESS B"
+             : mana < 0  ? "CLOSE, ENTER RUNES, THEN PRESS C"
                          : "SELECT SPELL, CHOOSE POWER, CAST");
     RowsScreen screen = find_layout();
     screen.title = "FAVORITES";
@@ -438,7 +438,7 @@ static SpellbookResult run_favorites_row(void)
     else if (book.row == BOOK_RECORD)
         book.status = book.slot == MAGIC_FAVORITE_LAST                ? "SELECT FAVORITE 1-4 TO SAVE"
                       : magic_record_favorite(book.caster, book.slot) ? "SAVED. CLOSE AND CAST ENTERED RUNES"
-                                                                      : "CLOSE, ENTER RUNES, THEN PRESS B";
+                                                                      : "CLOSE, ENTER RUNES, THEN PRESS C";
     else if (book.row == BOOK_CAST) {
         if (magic_prepare_favorite(book.caster, book.slot, book.power))
             return SPELLBOOK_CAST;

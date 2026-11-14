@@ -67,7 +67,7 @@ static void show_options(void)
     panel_text(PANEL_BACK_LEFT, PANEL_TITLE_Y, UI_YELLOW, help ? "BACK" : "CLOSE");
     if (help) {
         static const char *const keys[HELP_ROWS] = {"WASD", "Q / E", "ARROWS", "TAB / M", "1 - 4", "F5 / F9",
-                                                    "B",    "F1",    "ESC",    "CTRL+S",  "CTRL+R"};
+                                                    "C",    "F1",    "ESC",    "CTRL+S",  "CTRL+R"};
         static const char *const actions[HELP_ROWS] = {"MOVE",         "TURN LEFT / RIGHT",  "ORIGINAL MOVEMENT",
                                                        "EXPLORED MAP", "CHAMPION INVENTORY", "QUICK SAVE / LOAD",
                                                        "SPELL LIST",   "OPTIONS / HELP",     "OPTIONS / RESUME",
@@ -80,7 +80,7 @@ static void show_options(void)
         }
         panel_text(PANEL_LEFT, HELP_SPELLS_Y, UI_CYAN, "SPELLS");
         panel_text(PANEL_LEFT, HELP_SPELL_STEPS_Y, UI_WHITE, "CHAMPION ICON > POWER > RUNES > CAST");
-        panel_text(PANEL_LEFT, HELP_SPELL_LIST_Y, UI_WHITE, "B CASTS BY NAME; NORMAL MANA RULES APPLY");
+        panel_text(PANEL_LEFT, HELP_SPELL_LIST_Y, UI_WHITE, "C CASTS BY NAME; NORMAL MANA RULES APPLY");
     } else {
         char filter[OPTIONS_ROW_TEXT_SIZE];
         snprintf(filter, sizeof filter, "SCREEN FILTER: %s", settings_filter_name(upscale_get_filter()));
@@ -88,7 +88,7 @@ static void show_options(void)
             *ch = (char)toupper((unsigned char)*ch);
         const char *lines[OPTIONS_ROW_ROWS] = {
             "CONTROLS",
-            "SPELL LIST (B)",
+            "SPELL LIST (C)",
             upscale_has_all_spells() ? "SPELLS SHOWN: ALL SPELLS" : "SPELLS SHOWN: KNOWN SPELLS",
             filter,
             upscale_has_aspect() ? "4:3 ASPECT: ON" : "4:3 ASPECT: OFF",
