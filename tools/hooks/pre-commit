@@ -1,0 +1,9 @@
+#!/bin/bash
+# Stops a commit that breaks the lint or the coding standard. Enable it once: git config core.hooksPath tools/hooks
+# It checks the working tree and changes no file; a commit that touches no checked folder passes at once.
+git diff --cached --quiet -- src tests tools docs && exit 0
+cd "$(git rev-parse --show-toplevel)" || exit 1
+uv run ruff check -q tests tools/dm2tools && uv run pytest -q -n 0 tests/standard || {
+    echo "pre-commit: fix the findings (make check-fast formats the C files), or commit with --no-verify" >&2
+    exit 1
+}

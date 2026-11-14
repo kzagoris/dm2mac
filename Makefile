@@ -137,6 +137,11 @@ test: ; tools/test-suite
 dist: ; tools/dist/make-dist.sh
 dist-win: ; tools/dist/make-dist-win.sh
 
+# The quick check after an edit, without a build: formats the C files, then the lint and the coding standard check.
+check-fast: format
+	uv run ruff check tests tools/dm2tools
+	uv run pytest -q tests/standard
+
 # Lint, the coding standard check, then the full suite.
 check:
 	uv run ruff check tests tools/dm2tools
@@ -150,7 +155,7 @@ clean:
 
 FORCE:
 
-.PHONY: all lib windows dist dist-win test check clean format FORCE
+.PHONY: all lib windows dist dist-win test check check-fast clean format FORCE
 
 format:
 	uv run clang-format -i $(C_FILES)

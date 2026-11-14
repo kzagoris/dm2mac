@@ -93,6 +93,8 @@ The tests always run in a worker process (`-n 1` by default), because the librar
 | Command | Result |
 |---|---|
 | `make check` | `ruff`, `tests/standard`, then the full suite. |
+| `make check-fast` | `make format`, `ruff`, and `tests/standard`; it needs no build and takes under a minute. Run it after every change in `src/`, so that findings of the coding standard do not pile up. |
+| `git config core.hooksPath tools/hooks` | Turns on the pre-commit hook `tools/hooks/pre-commit`: `ruff` and `tests/standard` before each commit that touches `src/`, `tests/`, `tools/` or `docs/`. The hook changes no file. |
 | `make format` | `clang-format` over the C files ([coding-standard.md](coding-standard.md#format)). |
 | `tools/standard-allowlist` | Regenerates `tests/standard/allowlist.txt` from the violations that the standard check finds. |
 | `tools/rename-symbol OLD NEW` | Renames a public symbol in `src/`, `tests/`, the symbol table, and the docs. |
