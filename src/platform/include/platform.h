@@ -11,13 +11,22 @@
 #include "settings.h"
 
 /* Types of a platform event. */
-typedef enum { PLAT_QUIT, PLAT_KEY, PLAT_MOUSE, PLAT_MOUSE_UP, PLAT_FOCUS_LOST, PLAT_FOCUS_GAINED } PlatEventType;
+typedef enum {
+    PLAT_QUIT,
+    PLAT_KEY,
+    PLAT_MOUSE,
+    PLAT_MOUSE_UP,
+    PLAT_WHEEL,
+    PLAT_FOCUS_LOST,
+    PLAT_FOCUS_GAINED
+} PlatEventType;
 
 typedef struct {
     PlatEventType type;
     int scancode, mod; /* SDL scancode and modifier keys for PLAT_KEY */
     bool repeat;       /* PLAT_KEY: an autorepeat of a held key */
-    int button, x, y;  /* PLAT_MOUSE and PLAT_MOUSE_UP, x and y in game screen pixels */
+    int wheel;         /* PLAT_WHEEL: positive zooms in, negative zooms out */
+    int button, x, y;  /* PLAT_MOUSE and PLAT_MOUSE_UP, PLAT_WHEEL, x and y in game screen pixels */
 } PlatEvent;
 
 /* Mixes into frames of interleaved stereo at SOUND_OUTPUT_RATE; the music mixer fills the frames and runs first, the sound mixer adds. */

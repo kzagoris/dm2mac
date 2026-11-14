@@ -78,6 +78,8 @@ void advanced_open_automap(void);
 void advanced_draw_automap(void); /* exported for the tests */
 /* The mouse is at (x, y): during a drag the map follows it in whole squares. */
 void advanced_automap_drag(int16_t x, int16_t y);
+/* Zooms an open automap at the pointer; positive steps zoom in, negative steps zoom out. */
+void advanced_automap_wheel(int16_t x, int16_t y, int steps);
 
 /* Viewport screens */
 /* Opens the cheat screen in the viewport. */

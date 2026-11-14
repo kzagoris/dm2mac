@@ -230,13 +230,21 @@ void advanced_automap_drag(int16_t x, int16_t y)
     if (x - advanced.drag.start_x > MAP_CLICK_SLOP || advanced.drag.start_x - x > MAP_CLICK_SLOP ||
         y - advanced.drag.start_y > MAP_CLICK_SLOP || advanced.drag.start_y - y > MAP_CLICK_SLOP)
         advanced.drag.moved = true;
-    int dx = (x - advanced.drag.x) / MAP_CELL_SIZE;
-    int dy = (y - advanced.drag.y) / MAP_CELL_SIZE;
+    int dx = (x - advanced.drag.x) / automap_cell_size();
+    int dy = (y - advanced.drag.y) / automap_cell_size();
     if (!dx && !dy)
         return;
-    advanced.drag.x += dx * MAP_CELL_SIZE;
-    advanced.drag.y += dy * MAP_CELL_SIZE;
+    advanced.drag.x += dx * automap_cell_size();
+    advanced.drag.y += dy * automap_cell_size();
     automap_scroll(-dx, -dy);
+    advanced_draw_automap();
+}
+
+void advanced_automap_wheel(int16_t x, int16_t y, int steps)
+{
+    if (g_advanced_screen != ADVANCED_SCREEN_AUTOMAP || !automap_zoom(x, y, steps))
+        return;
+    advanced.drag.active = false;
     advanced_draw_automap();
 }
 

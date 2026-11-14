@@ -175,6 +175,8 @@ void input_draw_cursor(uint8_t *screen, int16_t x, int16_t y);
 
 /* A mouse button event at (x, y) of the screen (type: INPUT_BUTTON_* bits or INPUT_LEFT_RELEASED). */
 void input_mouse_click(int16_t x, int16_t y, int type); /* exported for the tests */
+/* Wheel input at a game-screen point; only an open automap consumes it. */
+void input_mouse_wheel(int16_t x, int16_t y, int steps);
 /* A mouse button (INPUT_BUTTON_*) goes down at (x, y) of the screen. */
 void input_mouse_down(int16_t x, int16_t y, int button);
 /* A mouse button (INPUT_BUTTON_*) goes up at (x, y) of the screen. The release of the left button ends the mouse

@@ -22,6 +22,9 @@
 /* The gap left of and above each square icon. */
 #define ICON_GAP 1
 
+/* Largest integer enlargement of the automap pixels. */
+#define ZOOM_MAX 3
+
 /* The pressure pad mark: a square this size in the middle of the icon. */
 #define PAD_MARK_SIZE   3
 #define PAD_MARK_OFFSET ((MAP_ICON_W - PAD_MARK_SIZE) / 2)
@@ -30,9 +33,9 @@
 #define MAP_MARGIN 1
 
 /* A plus in the upper right of any square containing loose items. */
-#define ITEM_MARK_W     3
-#define ITEM_MARK_H     5
-#define ITEM_MARK_LEFT  (MAP_ICON_W - ITEM_MARK_W)
+#define ITEM_MARK_W    3
+#define ITEM_MARK_H    5
+#define ITEM_MARK_LEFT (MAP_ICON_W - ITEM_MARK_W)
 
 /* The item list: a count/page subtitle, eight names, then mouse paging controls. */
 #define ITEM_ROW_SUMMARY  0
@@ -64,6 +67,8 @@ typedef struct {
     int page_count;
 } ItemPage;
 
+static int zoom = 1, zoom_pan_x, zoom_pan_y;
+
 static int scroll_x, scroll_y; /* squares between the party and the middle of the drawn map */
 
 /* Selection is a level position, so it follows the same owner and visibility rules as the map picture. */
@@ -75,6 +80,22 @@ static struct {
 
 /* Three pixels per row: the same plus for any number of items. */
 static const char item_mark[] = "000010111010000";
+
+int automap_cell_size(void)
+{
+    return MAP_CELL_SIZE * zoom;
+}
+
+int automap_zoom_factor(void)
+{
+    return zoom;
+}
+
+/* The screen boundary of the middle cell, shared by drawing, selection and zoom anchoring. */
+static int middle_origin(int start, int length, int pan)
+{
+    return start + (length - automap_cell_size()) / 2 + pan;
+}
 
 /* The maps of the party level, ended by LEVEL_LIST_END. */
 static const uint8_t *party_level_maps(void)
@@ -308,10 +329,10 @@ static void show_item_mark(Offscreen *o, const int16_t *clip, Location level_at,
 static void map_frame(Offscreen *o, const int16_t *clip, int left, int top, const int16_t *rect)
 {
     int color = g_ui_colors[UI_WHITE];
-    int x0 = left + rect[RECT_X] * MAP_CELL_SIZE - ICON_GAP;
-    int y0 = top + rect[RECT_Y] * MAP_CELL_SIZE - ICON_GAP;
-    int right = x0 + rect[RECT_W] * MAP_CELL_SIZE;
-    int bottom = y0 + rect[RECT_H] * MAP_CELL_SIZE;
+    int x0 = left + rect[RECT_X] * automap_cell_size() - ICON_GAP * zoom;
+    int y0 = top + rect[RECT_Y] * automap_cell_size() - ICON_GAP * zoom;
+    int right = x0 + rect[RECT_W] * automap_cell_size();
+    int bottom = y0 + rect[RECT_H] * automap_cell_size();
     int16_t w = (int16_t)(right - x0 + 1);
     int16_t h = (int16_t)(bottom - y0 + 1);
     fill_clipped(o, clip, (int16_t[RECT_SIZE]){(int16_t)x0, (int16_t)y0, w, 1}, color);
@@ -324,13 +345,13 @@ static void map_frame(Offscreen *o, const int16_t *clip, int left, int top, cons
    clip_len long; origin is the screen place of level column 0. */
 static Span visible_span(int origin, int start, int count, int clip_start, int clip_len)
 {
-    int from = clip_start - (origin + start * MAP_CELL_SIZE);
+    int from = clip_start - (origin + start * automap_cell_size());
     int to = from + clip_len - 1;
-    Span span = {start + (from > 0 ? from / MAP_CELL_SIZE : 0), start + count - 1};
+    Span span = {start + (from > 0 ? from / automap_cell_size() : 0), start + count - 1};
     if (to < 0)
         span.last = start - 1;
-    else if (to / MAP_CELL_SIZE < count)
-        span.last = start + to / MAP_CELL_SIZE;
+    else if (to / automap_cell_size() < count)
+        span.last = start + to / automap_cell_size();
     return span;
 }
 
@@ -364,6 +385,27 @@ static void show_level_square(Offscreen *o, const int16_t *clip, Location level_
     show_item_mark(o, clip, level_at, icon_x, icon_y);
 }
 
+/* Draws a complete native cell, then enlarges its pixels without blending. */
+static void show_scaled_square(Offscreen *o, const int16_t *clip, Location at, int left, int top)
+{
+    uint8_t pixels[MAP_CELL_SIZE * MAP_CELL_SIZE];
+    memset(pixels, g_ui_colors[UI_BLACK], sizeof pixels);
+    Bitmap bitmap = {.pixels = pixels, .width = MAP_CELL_SIZE, .height = MAP_CELL_SIZE, .bpp = IMAGE_8BPP};
+    Offscreen tile = {
+        .bitmap = &bitmap,
+        .rect = {0, 0, MAP_CELL_SIZE, MAP_CELL_SIZE},
+        .dirty_count = 1,
+        .dirty = {{0, 0, MAP_CELL_SIZE, MAP_CELL_SIZE}}
+    };
+    show_level_square(&tile, tile.rect, at, ICON_GAP, ICON_GAP);
+    for (int y = 0; y < MAP_CELL_SIZE; y++)
+        for (int x = 0; x < MAP_CELL_SIZE; x++)
+            fill_clipped(o, clip,
+                         (int16_t[RECT_SIZE]){(int16_t)(left + x * zoom), (int16_t)(top + y * zoom), (int16_t)zoom,
+                                              (int16_t)zoom},
+                         pixels[y * MAP_CELL_SIZE + x]);
+}
+
 void automap_draw(Offscreen *o, const int16_t *clip)
 {
     offscreen_fill_rect(o, clip, g_ui_colors[UI_BLACK]);
@@ -372,16 +414,21 @@ void automap_draw(Offscreen *o, const int16_t *clip)
     Location middle = middle_square();
     int16_t rect[RECT_SIZE];
     level_rect(rect);
-    int left = clip[RECT_X] + (clip[RECT_W] - MAP_CELL_SIZE) / 2 + ICON_GAP - middle.x * MAP_CELL_SIZE;
-    int top = clip[RECT_Y] + (clip[RECT_H] - MAP_CELL_SIZE) / 2 + ICON_GAP - middle.y * MAP_CELL_SIZE;
+    int cell = automap_cell_size();
+    int left = middle_origin(clip[RECT_X], clip[RECT_W], zoom_pan_x) - middle.x * cell;
+    int top = middle_origin(clip[RECT_Y], clip[RECT_H], zoom_pan_y) - middle.y * cell;
     Span xs = visible_span(left, rect[RECT_X], rect[RECT_W], clip[RECT_X], clip[RECT_W]);
     Span ys = visible_span(top, rect[RECT_Y], rect[RECT_H], clip[RECT_Y], clip[RECT_H]);
     int saved = g_current_map.map;
     for (int x = xs.first; x <= xs.last; x++)
-        for (int y = ys.first; y <= ys.last; y++)
-            show_level_square(o, clip, (Location){x, y}, (int16_t)(left + x * MAP_CELL_SIZE),
-                              (int16_t)(top + y * MAP_CELL_SIZE));
-    map_frame(o, clip, left, top, rect);
+        for (int y = ys.first; y <= ys.last; y++) {
+            if (zoom == 1)
+                show_level_square(o, clip, (Location){x, y}, (int16_t)(left + x * cell + ICON_GAP),
+                                  (int16_t)(top + y * cell + ICON_GAP));
+            else
+                show_scaled_square(o, clip, (Location){x, y}, left + x * cell, top + y * cell);
+        }
+    map_frame(o, clip, left + ICON_GAP * zoom, top + ICON_GAP * zoom, rect);
     dungeon_set_current_map(saved);
 }
 
@@ -465,7 +512,8 @@ void automap_draw_items(void)
 /* Divides a screen offset into whole map cells, rounding toward negative infinity on the left/top. */
 static int cell_offset(int offset)
 {
-    return offset / MAP_CELL_SIZE - (offset % MAP_CELL_SIZE < 0);
+    int cell = automap_cell_size();
+    return offset / cell - (offset % cell < 0);
 }
 
 bool automap_select(int16_t x, int16_t y)
@@ -475,8 +523,8 @@ bool automap_select(int16_t x, int16_t y)
         y >= rect[RECT_Y] + rect[RECT_H])
         return false;
     Location middle = middle_square();
-    Location square = {middle.x + cell_offset(x - rect[RECT_X] - (rect[RECT_W] - MAP_CELL_SIZE) / 2),
-                       middle.y + cell_offset(y - rect[RECT_Y] - (rect[RECT_H] - MAP_CELL_SIZE) / 2)};
+    Location square = {middle.x + cell_offset(x - middle_origin(rect[RECT_X], rect[RECT_W], zoom_pan_x)),
+                       middle.y + cell_offset(y - middle_origin(rect[RECT_Y], rect[RECT_H], zoom_pan_y))};
     if (!automap_items(square, NULL, 0))
         return false;
     inspection.square = square;
@@ -513,6 +561,24 @@ bool automap_items_event(int type, int16_t x, int16_t y)
 
 /* Scrolling */
 
+bool automap_zoom(int16_t x, int16_t y, int steps)
+{
+    int16_t rect[RECT_SIZE];
+    if (!steps || inspection.open || !zone_get_viewport_rect(rect) || x < rect[RECT_X] ||
+        x >= rect[RECT_X] + rect[RECT_W] || y < rect[RECT_Y] || y >= rect[RECT_Y] + rect[RECT_H])
+        return false;
+    int next = clamp_int(1, zoom + clamp_int(1 - ZOOM_MAX, steps, ZOOM_MAX - 1), ZOOM_MAX);
+    if (next == zoom)
+        return false;
+    int old = zoom;
+    int offset_x = x - middle_origin(rect[RECT_X], rect[RECT_W], zoom_pan_x);
+    int offset_y = y - middle_origin(rect[RECT_Y], rect[RECT_H], zoom_pan_y);
+    zoom = next;
+    zoom_pan_x = x - middle_origin(rect[RECT_X], rect[RECT_W], 0) - offset_x * zoom / old;
+    zoom_pan_y = y - middle_origin(rect[RECT_Y], rect[RECT_H], 0) - offset_y * zoom / old;
+    return true;
+}
+
 void automap_scroll(int dx, int dy)
 {
     if (g_game.party_map >= dungeon_map_count())
@@ -526,6 +592,9 @@ void automap_scroll(int dx, int dy)
 
 void automap_scroll_reset(void)
 {
+    zoom = 1;
+    zoom_pan_x = 0;
+    zoom_pan_y = 0;
     scroll_x = 0;
     scroll_y = 0;
     inspection.open = false;

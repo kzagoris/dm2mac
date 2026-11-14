@@ -211,6 +211,11 @@ void input_mouse_click(int16_t x, int16_t y, int type)
     }
 }
 
+void input_mouse_wheel(int16_t x, int16_t y, int steps)
+{
+    advanced_automap_wheel(x, y, steps);
+}
+
 void input_mouse_down(int16_t x, int16_t y, int button)
 {
     if (recovery_is_open()) {

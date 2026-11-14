@@ -46,6 +46,7 @@ static struct {
     SDL_Texture *tex;
     Uint64 next_tick;
     int mouse_x, mouse_y;
+    float wheel_remainder;
     enum SettingsFilter filter;
     bool aspect; /* the game screen is 4:3 instead of square pixels */
     bool scanlines;
@@ -321,6 +322,19 @@ bool plat_poll(PlatEvent *e)
             e->scancode = ev.key.scancode;
             e->mod = ev.key.mod;
             e->repeat = ev.key.repeat;
+            return true;
+        case SDL_EVENT_MOUSE_WHEEL:
+            SDL_ConvertEventToRenderCoordinates(platform.ren, &ev);
+            SDL_GetCurrentRenderOutputSize(platform.ren, &w, &h);
+            at = video_map_mouse(w, h, (int)ev.wheel.mouse_x, (int)ev.wheel.mouse_y, platform.aspect);
+            platform.wheel_remainder += ev.wheel.direction == SDL_MOUSEWHEEL_FLIPPED ? -ev.wheel.y : ev.wheel.y;
+            e->wheel = (int)platform.wheel_remainder;
+            platform.wheel_remainder -= (float)e->wheel;
+            if (!e->wheel)
+                break;
+            e->type = PLAT_WHEEL;
+            e->x = at.x;
+            e->y = at.y;
             return true;
         case SDL_EVENT_MOUSE_MOTION:
             SDL_ConvertEventToRenderCoordinates(platform.ren, &ev); /* window points -> output pixels */

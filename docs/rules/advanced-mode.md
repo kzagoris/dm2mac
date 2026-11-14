@@ -63,7 +63,7 @@ The automap and the cheat screen open in the viewport and stop the game time. Th
 
 ## Automap
 
-The automap shows the seen squares of all maps of the party level, each at its place on the level. It covers the viewport. The party square is in the middle of the viewport, north is up.
+The automap shows the seen squares of all maps of the party level, each at its place on the level. It covers the viewport. The party square is in the middle of the viewport, north is up. The mouse wheel over the map switches between 1×, 2×, and 3× zoom, anchored at the pointer. Dragging and item selection use the scaled cells; the readout and item list keep their normal size. Reopening the map resets zoom to 1×.
 
 - The squares use the icons of the minion map: walls, floors, pits, stairs, doors, wall and floor ornaments, teleporter fields, and the level digits. The automap shows the static creatures that have a map icon (trees and other creatures that do not move); moving creatures and merchants do not show. A red frame and the champion icons mark the party square. The side of the frame that faces the party's direction is white.
 - Current loose items on explored squares have a single yellow plus in the upper right of their square, regardless of quantity. The marker also covers alcove items and items without map graphics. Containers count once; their contents, champion/creature inventories, missiles, and effects are excluded. Reveal map also exposes items on unexplored squares without marking them explored.

@@ -273,3 +273,66 @@ def test_saved_items_and_exploration_reload_without_stale_inspection(lib, item_m
     assert lib.automap_items_open()
     assert lib.session_start_save(str(path).encode())
     assert not lib.automap_items_open()
+
+
+def test_wheel_zoom_limits_and_item_selection_stays_under_pointer(lib, item_map):
+    drop(lib, item_map)
+    lib.seen_mark(item_map, C.DIR_NORTH)
+    lib.advanced_open_automap()
+    x, y = party_icon(lib)
+    x += 5
+    y += 4
+    assert lib.automap_zoom_factor() == 1
+    for expected in [2, 3, 3]:
+        lib.input_mouse_wheel(x, y, 1)
+        assert lib.automap_zoom_factor() == expected
+        assert lib.automap_select(x, y)
+        lib.advanced_screen_event(C.INPUT_KEY, C.SCAN_ESCAPE, 0)
+    for expected in [2, 1, 1]:
+        lib.input_mouse_wheel(x, y, -1)
+        assert lib.automap_zoom_factor() == expected
+        assert lib.automap_select(x, y)
+        lib.advanced_screen_event(C.INPUT_KEY, C.SCAN_ESCAPE, 0)
+
+
+def test_wheel_ignores_other_screens_and_outside_viewport(lib, item_map):
+    drop(lib, item_map)
+    lib.seen_mark(item_map, C.DIR_NORTH)
+    x, y = party_icon(lib)
+    lib.input_mouse_wheel(x, y, 1)
+    assert lib.automap_zoom_factor() == 1
+    lib.advanced_open_automap()
+    lib.input_mouse_wheel(319, 199, 1)
+    assert lib.automap_zoom_factor() == 1
+    click(lib, x, y)
+    assert lib.automap_items_open()
+    before = c_screen(lib)
+    lib.input_mouse_wheel(x, y, 1)
+    assert lib.automap_zoom_factor() == 1
+    assert c_screen(lib) == before
+
+
+@pytest.mark.parametrize("factor", [2, 3])
+def test_zoom_scales_entire_cell_and_drag_selection(lib, item_map, factor):
+    drop(lib, item_map)
+    lib.seen_mark(item_map, C.DIR_NORTH)
+    lib.advanced_open_automap()
+    rx, ry, width, height = viewport(lib)
+    x = rx + (width - C.MAP_CELL_SIZE) // 2
+    y = ry + (height - C.MAP_CELL_SIZE) // 2
+    before = c_screen(lib)
+    for _ in range(factor - 1):
+        lib.input_mouse_wheel(x, y, 1)
+    screen = c_screen(lib)
+    for dy in range(C.MAP_CELL_SIZE * factor):
+        for dx in range(C.MAP_CELL_SIZE * factor):
+            assert screen[(y + dy) * C.SCREEN_W + x + dx] == before[
+                (y + dy // factor) * C.SCREEN_W + x + dx // factor]
+    cell = C.MAP_CELL_SIZE * factor
+    lib.advanced_screen_event(C.INPUT_BUTTON_LEFT, x + 2, y + 2)
+    lib.advanced_screen_event(C.INPUT_LEFT_RELEASED, x + 2 - cell, y + 2)
+    assert not lib.automap_items_open()
+    assert lib.automap_select(x + 2 - cell, y + 2)
+    lib.advanced_reset()
+    lib.advanced_open_automap()
+    assert lib.automap_zoom_factor() == 1

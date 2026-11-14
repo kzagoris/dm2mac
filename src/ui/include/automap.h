@@ -40,6 +40,12 @@ bool automap_select(int16_t x, int16_t y);
 bool automap_items_event(int type, int16_t x, int16_t y);
 
 /* Scrolling */
+/* The current integer zoom (1 to 3), and the corresponding cell size in screen pixels. */
+int automap_zoom_factor(void);
+/* Pixel size of a map cell at the current integer zoom. */
+int automap_cell_size(void);
+/* Changes one zoom level around the pointer; false outside the viewport, on the list, or at a limit. */
+bool automap_zoom(int16_t x, int16_t y, int steps);
 /* Moves the middle of the drawn map by (dx, dy) squares; the middle stays inside the level rectangle. */
 void automap_scroll(int dx, int dy);
 /* Moves the middle of the drawn map back to the party square. */

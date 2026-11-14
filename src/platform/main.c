@@ -295,6 +295,8 @@ static void pump_events(void)
                 input_key_repeat(key);
             else if (key)
                 input_key_down(key);
+        } else if (e.type == PLAT_WHEEL) {
+            input_mouse_wheel(e.x, e.y, e.wheel);
         } else if (e.type == PLAT_MOUSE) {
             input_mouse_down(e.x, e.y, e.button == SDL_BUTTON_RIGHT ? INPUT_BUTTON_RIGHT : INPUT_BUTTON_LEFT);
         } else if (e.type == PLAT_MOUSE_UP) {

@@ -146,7 +146,7 @@ movement does not remain stuck when you return.
 
 `Tab` or `M` shows the squares of the current level that the party has seen, with north up and the party in the
 middle (the red frame; its white side shows where the party faces). The top line gives the level, the position,
-and the direction. Drag the map with the mouse to scroll it.
+and the direction. Drag the map with the mouse to scroll it. Use the mouse wheel over the map to zoom in or out (1×, 2×, or 3×), centered on the pointer. Reopening the map restores 1×.
 
 The map shows walls, floors, pits, stairs, doors, ornaments, teleporters, pressure plates, and the creatures that do
 not move. A fake wall that you can walk through has a gray checkerboard. A white line marks the edge of the level.

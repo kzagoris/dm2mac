@@ -59,7 +59,7 @@ The improvements include automap item inspection, spell favorites, in-game help,
 
 ### Find items on the automap
 
-Press **Tab** or **M** in the dungeon view to open the automap. Game time stops while you inspect it. The map normally shows explored squares; drag with the left mouse button to look around, then reopen it to center on the party again. The position readout gives the level, coordinates, and facing direction.
+Press **Tab** or **M** in the dungeon view to open the automap. Game time stops while you inspect it. The map normally shows explored squares; drag with the left mouse button to look around, then reopen it to center on the party again. The position readout gives the level, coordinates, and facing direction. Scroll the mouse wheel over the map to zoom between 1×, 2×, and 3× around the pointer. Reopening the map restores 1×; the readout and item list keep their normal text size.
 
 ![Automap with a single yellow plus per tile containing items](docs/images/advanced-automap-items.png)
 
