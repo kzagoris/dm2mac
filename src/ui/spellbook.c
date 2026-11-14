@@ -38,9 +38,9 @@ _Static_assert(LIST_ROWS <= ROWS_MAX_COUNT, "the spell list fits below the title
 
 /* The texts of a row. */
 #define BOOK_TEXT_SIZE  48
-#define RUNE_NAMES_SIZE 16 /* three rune names, the spaces between them, and the end */
-#define NAME_COLUMNS    17 /* the longest spell name */
-#define SLOT_LABEL_SIZE 24 /* LAST ATTEMPT or FAVORITE and its number */
+#define RUNE_NAMES_SIZE 16   /* three rune names, the spaces between them, and the end */
+#define NAME_COLUMNS    17   /* the longest spell name */
+#define SLOT_LABEL_SIZE 24   /* LAST ATTEMPT or FAVORITE and its number */
 #define SCAN_1          0x02 /* the keys 1 to 4 follow each other: the favorite slots */
 
 /* Compact capitals keep even NETA inside a rune button. */
@@ -83,14 +83,14 @@ static const char label_letters[][LABEL_WIDTH * LABEL_HEIGHT + 1] = {
 };
 
 static struct {
-    bool favorites;     /* the favorites page shows, else the spell list */
-    int16_t caster;     /* the champion who casts, -1 for none */
-    int16_t power;      /* the spell power 1 to 6 */
-    int16_t row;        /* the selected row of the shown page; its row count for the title item */
-    int16_t page;       /* the shown page of the spell list, from 0 */
-    int16_t spell;      /* the marked spell: its place among the listed spells, -1 for none */
-    int16_t slot;       /* the marked favorite */
-    const char *status; /* the message of the last action, NULL for the costs of the marked spell */
+    bool favorites;                   /* the favorites page shows, else the spell list */
+    int16_t caster;                   /* the champion who casts, -1 for none */
+    int16_t power;                    /* the spell power 1 to 6 */
+    int16_t row;                      /* the selected row of the shown page; its row count for the title item */
+    int16_t page;                     /* the shown page of the spell list, from 0 */
+    int16_t spell;                    /* the marked spell: its place among the listed spells, -1 for none */
+    int16_t slot;                     /* the marked favorite */
+    const char *status;               /* the message of the last action, NULL for the costs of the marked spell */
     char status_text[BOOK_TEXT_SIZE]; /* a status that names a spell or a slot */
 } book;
 

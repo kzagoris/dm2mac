@@ -15,16 +15,16 @@
 #define KEY_QUICK_LOAD 0x43 /* F9 */
 
 /* PC scan codes of the keys that open the automap and the cheat screen. */
-#define KEY_AUTOMAP   KEY_TAB
-#define KEY_AUTOMAP_M 0x32 /* M */
-#define KEY_OPTIONS   0x3b /* F1 */
-#define KEY_SPELLBOOK 0x2e /* C */
-#define KEY_CHEATS    0x2d /* X */
+#define KEY_AUTOMAP        KEY_TAB
+#define KEY_AUTOMAP_M      0x32 /* M */
+#define KEY_OPTIONS        0x3b /* F1 */
+#define KEY_SPELLBOOK      0x2e /* C */
+#define KEY_CHEATS         0x2d /* X */
 /* Alt+C, then Alt+1 to Alt+4, sets or casts a favorite. */
 #define KEY_FAVORITE       (KEY_ALT | KEY_SPELLBOOK)
 #define KEY_FAVORITE_FIRST (KEY_ALT | 0x02) /* Alt+1 */
-#define KEY_DISK_MENU (KEY_CONTROL | SCAN_S)
-#define KEY_REST      (KEY_CONTROL | SCAN_R)
+#define KEY_DISK_MENU      (KEY_CONTROL | SCAN_S)
+#define KEY_REST           (KEY_CONTROL | SCAN_R)
 
 /* PC scan codes of the numeric keypad keys that move and turn the party. */
 #define KEYPAD_TURN_LEFT  0x4b
