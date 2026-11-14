@@ -59,4 +59,4 @@ The SOS structure field names are unverified, because the binary has no HMI SOS 
 - Voices: 64, as in the original. A new sound takes the first free voice. If all voices play, the new sound is dropped.
 - The port keeps the samples signed and skips the XOR `0x80` of `FUN_000104ea`.
 - `sndreq_party_offset` takes the party direction 0 to 3. For other values the original keeps stale locals; the port treats them as north.
-- The audio output (`src/platform/platform.c`) fills the SDL audio stream from `plat_wait_tick` on the main thread, up to 2048 frames ahead. `plat_audio_music` adds a music source, which is mixed before the sound effects.
+- The audio output (`src/platform/platform.c`) fills the SDL audio stream from `plat_wait_tick` on the main thread, up to 512 frames ahead (about 12 ms at 44100 Hz). It tops up on each 240 Hz PIT tick. `plat_audio_music` adds a music source, which is mixed before the sound effects.

@@ -32,7 +32,7 @@ _Static_assert(MUSIC_SAMPLE_RATE == SOUND_OUTPUT_RATE, "the audio stream plays t
 
 /* The audio stream. */
 #define AUDIO_CHANNELS     2
-#define AUDIO_QUEUE_FRAMES 2048 /* about 46 ms at 44100 Hz */
+#define AUDIO_QUEUE_FRAMES 512 /* about 12 ms at 44100 Hz; topped up on each 240 Hz PIT tick */
 
 /* The channels of a movie palette color. */
 #define CHANNEL_RED   0
