@@ -55,7 +55,7 @@ are in the [advanced mode section of the Player manual](docs/manual.md#advanced-
 
 Advanced mode keeps the real-time dungeon game and adds tools for navigation, repeated actions, recovery, and learning the controls. Choose **Advanced** on startup (the default), or start with `--mode advanced`. Optional cheats start off in a new game.
 
-The improvements include automap item inspection, spell favorites, in-game help, and safer recovery and input handling. For exact rules and edge cases, see [Advanced mode rules](docs/rules/advanced-mode.md) and the [Player manual](docs/manual.md#advanced-mode).
+The improvements include automap item inspection, spell favorites, in-game help, inventory comparison, and safer recovery and input handling. For exact rules and edge cases, see [Advanced mode rules](docs/rules/advanced-mode.md) and the [Player manual](docs/manual.md#advanced-mode).
 
 ### Find items on the automap
 
@@ -100,11 +100,12 @@ F1 also opens help from inventory, sleep, and pause. Save and cast actions requi
 | Arrow keys | Original movement controls |
 | Tab / M | Open the automap |
 | F5 / F9 | Quick save / quick load |
-| C | Open recorded spell favorites |
+| C | Open the spell list (favorites inside it) |
+| Alt+C, then 1–4 | Record entered runes as a favorite, or cast a favorite |
 | F1 / Esc | Open Options/Help |
 | X | Open optional cheats |
 
-Tab or Esc closes an open inventory, except while editing a name or recruiting. Advanced shortcuts require an idle party: inspection holds, champion dragging, and push mode prevent dungeon shortcuts from firing.
+Tab or Esc closes an open inventory, except while editing a name; while recruiting, Esc cancels and sends the candidate back to the mirror. Advanced shortcuts require an idle party: inspection holds, champion dragging, and push mode prevent dungeon shortcuts from firing.
 
 ### Spells: cast by name, learn runes, and save combinations
 
@@ -140,6 +141,8 @@ The list uses normal rune entry and casting: mana costs, skill checks, failures,
 Press **C** to close the list. **Esc** or right-click closes the main spell list; from favorites, either returns to the list.
 
 #### Rune hints while casting manually
+
+Hovering over a grey rune button replaces its symbol with a compact syllable label (for example `FUL`); moving away restores the symbol.
 
 The original spell panel remains available: select a champion's spell hand, enter a power rune, then enter the spell runes. In Advanced mode, the spellbook identifies possible next runes for the current prefix. When the entered combination completes a visible spell, a cyan message names its runes and spell.
 
@@ -178,7 +181,7 @@ Losing focus or minimizing automatically latches an Advanced pause and clears qu
 - **On** (the default): retain the intermediate walking frames for an animated transition between squares.
 - **Off**: skip the intermediate walking frames for a quicker, direct step, similar to Dungeon Master I or Eye of the Beholder.
 
-Collision checks and champion movement cooldowns still apply in either setting. This changes the presentation of walking rather than removing movement restrictions. The choice persists in `SETTINGS.TXT`, so you do not need to reset it each session. Walking animation is separate from the smooth projectile flight described below.
+With smooth stepping off, movement is more responsive: the destination is drawn at once, step sounds play with it, and transition sounds are synchronized with the arrival view. Collision checks and champion movement cooldowns still apply in either setting. This changes the presentation of walking rather than removing movement restrictions. The choice persists in `SETTINGS.TXT`, so you do not need to reset it each session. Walking animation is separate from the smooth projectile flight described below.
 
 ### More comfortable movement and presentation
 
@@ -190,9 +193,13 @@ Advanced mode also extends the display of a successful damage star by one game s
 
 Screen filters, 4:3 aspect correction, and scanlines provide presentation choices. Their settings persist in `SETTINGS.TXT` beside `QUICK.DAT`. Startup filter overrides from `--filter` or `DM2_FILTER` take precedence over the stored filter. Advanced mode also makes antidotes reliably cure poison.
 
+### Inventory at a glance
+
+An object held on the eye, or in the leader hand, shows its details in the open inventory. In Advanced mode the gauges compare it with the item the champion wears in that slot or holds: green for more, red for less. Lines below list bonuses (mana, statistics, skills) and the exact armor, strength, throw, shoot, extra and weight values, each with the difference. Clicking the food/skills panel pins the skills panel in place of the food and water gauges. See [Item compare](docs/rules/advanced-mode.md#item-compare).
+
 ### Optional cheats remain explicit
 
-**C** opens six independent switches: full light, immortality, endless food and water, one-hit kills, walking through walls, and Reveal map. New games start with all six off; saves restore their stored values. The cheat screen also contains the free spell catalog, which bypasses mana cost and the failure roll and grants no experience, but still requires a flask for potion spells and retains action delay.
+**X** opens seven independent switches: full light, immortality, endless food and water, one-hit kills, walking through walls, Reveal map, and no bump damage (collisions with walls, doors, and objects cost no health). New games start with all seven off; saves restore their stored values. The cheat screen also contains the free spell catalog, which bypasses mana cost and the failure roll and grants no experience, but still requires a flask for potion spells and retains action delay.
 
 These additions belong to Advanced mode. Vanilla retains the original behavior, and turn-based mode has its own documented control model.
 
