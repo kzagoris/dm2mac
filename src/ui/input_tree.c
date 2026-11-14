@@ -934,8 +934,20 @@ uint16_t input_click_command(enum InputMode mode, int16_t x, int16_t y, int butt
     return command;
 }
 
+/* Alt+C was the last key of the dungeon view in the advanced mode: Alt+1 to Alt+4 now choose a favorite. */
+static bool favorite_chord;
+
 uint16_t input_key_command(enum InputMode mode, uint16_t key, int16_t *rect)
 {
+    if (g_game_mode == GAME_MODE_ADVANCED) {
+        bool chord = favorite_chord;
+        favorite_chord = mode == INPUT_MODE_MOVE && key == KEY_FAVORITE;
+        if (favorite_chord)
+            return 0;
+        if (chord && mode == INPUT_MODE_MOVE && key >= KEY_FAVORITE_FIRST &&
+            key <= KEY_FAVORITE_FIRST + CMD_FAVORITE_LAST - CMD_FAVORITE_FIRST)
+            return (uint16_t)(CMD_FAVORITE_FIRST + key - KEY_FAVORITE_FIRST);
+    }
     if (g_game_mode == GAME_MODE_ADVANCED && !g_ui.candidate &&
         ((key == KEY_OPTIONS && (mode == INPUT_MODE_MOVE || mode == INPUT_MODE_INVENTORY || mode == INPUT_MODE_PAUSE ||
                                  mode == INPUT_MODE_SLEEP)) ||

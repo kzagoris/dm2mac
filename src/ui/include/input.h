@@ -87,6 +87,8 @@
 #define CMD_AUTOMAP              0xf5
 #define CMD_CHEATS               0xf6 /* the advanced mode: no original command has these numbers */
 #define CMD_PIN_STATS            0xf9 /* the advanced mode: a click on the food and water panel of the inventory */
+#define CMD_FAVORITE_FIRST       0xfa /* the advanced mode: Alt+C with Alt+1 to Alt+4 sets or casts a favorite */
+#define CMD_FAVORITE_LAST        0xfd
 
 /* The cursor images of input_cursor_at. */
 enum CursorKind { CURSOR_ARROW, CURSOR_HAND, CURSOR_OBJECT, CURSOR_CHAMPION, CURSOR_ATTACK, CURSOR_ATTACK_WAITING };

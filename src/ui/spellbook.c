@@ -31,8 +31,7 @@ _Static_assert(LIST_ROWS <= ROWS_MAX_COUNT, "the spell list fits below the title
 #define BOOK_POWER     1
 #define BOOK_FIRST     2
 #define BOOK_MANA      (BOOK_FIRST + MAGIC_RECORD_COUNT)
-#define BOOK_RECORD    (BOOK_MANA + 1)
-#define BOOK_CAST      (BOOK_RECORD + 1)
+#define BOOK_CAST      (BOOK_MANA + 1)
 #define BOOK_STATUS    (BOOK_CAST + 1)
 #define BOOK_ROWS      (BOOK_STATUS + 1)
 #define BOOK_SUBTITLES ((1u << BOOK_MANA) | (1u << BOOK_STATUS))
@@ -42,6 +41,7 @@ _Static_assert(LIST_ROWS <= ROWS_MAX_COUNT, "the spell list fits below the title
 #define RUNE_NAMES_SIZE 16 /* three rune names, the spaces between them, and the end */
 #define NAME_COLUMNS    17 /* the longest spell name */
 #define SLOT_LABEL_SIZE 24 /* LAST ATTEMPT or FAVORITE and its number */
+#define SCAN_1          0x02 /* the keys 1 to 4 follow each other: the favorite slots */
 
 /* Compact capitals keep even NETA inside a rune button. */
 #define LABEL_WIDTH       3
@@ -91,6 +91,7 @@ static struct {
     int16_t spell;      /* the marked spell: its place among the listed spells, -1 for none */
     int16_t slot;       /* the marked favorite */
     const char *status; /* the message of the last action, NULL for the costs of the marked spell */
+    char status_text[BOOK_TEXT_SIZE]; /* a status that names a spell or a slot */
 } book;
 
 /* Whether the spell list and the rune hints show spell: every spell, or only the known spells. */
@@ -146,12 +147,12 @@ static RowsScreen find_layout(void)
     return (RowsScreen){.title_item = "CLOSE", .row_count = LIST_ROWS, .subtitles = subtitles};
 }
 
-/* Writes the rune names of spell after its power rune in upper case, for example FUL IR. */
-static void get_rune_names(const Spell *spell, char *text, size_t size)
+/* Writes the names of the rune glyphs after the power rune in upper case, for example FUL IR. */
+static void get_glyph_names(const uint8_t *runes, char *text, size_t size)
 {
     size_t length = 0;
     for (int step = 1; step < CHAMPION_RUNES_SIZE; step++) {
-        const char *name = magic_get_rune_name(magic_get_spell_rune(spell, step) - SPELL_RUNE_GLYPH_FIRST);
+        const char *name = magic_get_rune_name(runes[step] - SPELL_RUNE_GLYPH_FIRST);
         if (!name)
             break; /* the spell has fewer runes */
         if (length && length + 1 < size)
@@ -160,6 +161,41 @@ static void get_rune_names(const Spell *spell, char *text, size_t size)
             text[length++] = (char)toupper((unsigned char)*name);
     }
     text[length] = '\0';
+}
+
+/* Writes the rune names of spell after its power rune in upper case. */
+static void get_rune_names(const Spell *spell, char *text, size_t size)
+{
+    uint8_t runes[CHAMPION_RUNES_SIZE];
+    for (int step = 0; step < CHAMPION_RUNES_SIZE; step++)
+        runes[step] = magic_get_spell_rune(spell, step);
+    get_glyph_names(runes, text, size);
+}
+
+/* Writes the name of the listed spell of a favorite of the caster, else the names of its runes. */
+static void get_favorite_name(int16_t slot, char *text, size_t size)
+{
+    uint8_t runes[CHAMPION_RUNES_SIZE + 1] = {0};
+    for (int step = 0; step < CHAMPION_RUNES_SIZE; step++)
+        runes[step] = magic_favorite_rune(book.caster, slot, step);
+    const Spell *spell = magic_find_spell(runes);
+    if (spell && is_listed(spell))
+        snprintf(text, size, "%s", magic_get_spell_name(spell));
+    else
+        get_glyph_names(runes, text, size);
+}
+
+/* The favorite 1 to 4 of the caster that has the runes of spell at any power, 0 for none. */
+static int find_spell_favorite(const Spell *spell)
+{
+    for (int16_t slot = 0; slot < MAGIC_FAVORITE_COUNT; slot++) {
+        bool same = true;
+        for (int step = 1; step < CHAMPION_RUNES_SIZE; step++)
+            same = same && magic_favorite_rune(book.caster, slot, step) == magic_get_spell_rune(spell, step);
+        if (same)
+            return slot + 1;
+    }
+    return 0;
 }
 
 /* Writes the mana of a cast and of the caster, and what the cast still needs. */
@@ -195,16 +231,17 @@ static void show_list(void)
         if (spell)
             get_rune_names(spell, runes, sizeof runes);
         bool marked = book.spell == book.page * LIST_SPELLS + row - LIST_FIRST;
-        snprintf(texts[row], BOOK_TEXT_SIZE, "%s%-*s %s",
-                 !spell   ? ""
-                 : marked ? "> "
-                          : "  ",
-                 NAME_COLUMNS, spell ? magic_get_spell_name(spell) : "", runes);
+        int favorite = spell ? find_spell_favorite(spell) : 0;
+        if (spell)
+            snprintf(texts[row], BOOK_TEXT_SIZE, "%c%c%-*s %s", favorite ? '0' + favorite : ' ', marked ? '>' : ' ',
+                     NAME_COLUMNS, magic_get_spell_name(spell), runes);
+        else
+            texts[row][0] = '\0';
     }
     snprintf(texts[LIST_NEXT], BOOK_TEXT_SIZE, "MORE SPELLS - PAGE %d/%d", book.page + 1, count_pages());
     if (count_pages() == 1)
         texts[LIST_NEXT][0] = '\0';
-    snprintf(texts[LIST_FAVORITES], BOOK_TEXT_SIZE, "FAVORITES AND LAST ATTEMPT");
+    snprintf(texts[LIST_FAVORITES], BOOK_TEXT_SIZE, "FAVORITES - KEYS 1-4 SET THE SPELL");
     const Spell *marked = find_listed_spell(book.spell);
     if (book.status)
         snprintf(texts[LIST_STATUS], BOOK_TEXT_SIZE, "%s", book.status);
@@ -227,33 +264,26 @@ static void show_favorites(void)
         lines[i] = texts[i];
     get_caster_rows(texts[BOOK_CASTER], texts[BOOK_POWER]);
     for (int16_t slot = 0; slot < MAGIC_RECORD_COUNT; slot++) {
-        char runes[CHAMPION_RUNES_SIZE] = "---";
-        for (int step = 1; step < CHAMPION_RUNES_SIZE; step++) {
-            uint8_t glyph = magic_favorite_rune(book.caster, slot, step);
-            runes[step - 1] = glyph ? (char)('1' + (glyph - SPELL_RUNE_GLYPH_FIRST) % SPELL_RUNES_PER_SET) : '-';
-        }
+        char runes[BOOK_TEXT_SIZE / 2];
+        get_favorite_name(slot, runes, sizeof runes);
         char label[SLOT_LABEL_SIZE];
         if (slot == MAGIC_FAVORITE_LAST)
             snprintf(label, sizeof(label), "LAST ATTEMPT");
         else
             snprintf(label, sizeof(label), "FAVORITE %d", slot + 1);
-        snprintf(texts[BOOK_FIRST + slot], BOOK_TEXT_SIZE, "%c %s: %s", book.slot == slot ? '>' : ' ', label,
+        snprintf(texts[BOOK_FIRST + slot], BOOK_TEXT_SIZE, "%c %.12s: %.23s", book.slot == slot ? '>' : ' ', label,
                  magic_favorite_rune(book.caster, slot, 1) ? runes : "EMPTY");
     }
     int mana = magic_favorite_mana(book.caster, book.slot, book.power);
     if (mana < 0)
-        snprintf(texts[BOOK_MANA], BOOK_TEXT_SIZE, "ENTER RUNES IN SPELL PANEL FIRST");
+        snprintf(texts[BOOK_MANA], BOOK_TEXT_SIZE, "EMPTY SLOT");
     else
         get_cost_text(texts[BOOK_MANA], mana, magic_favorite_needs_flask(book.caster, book.slot));
-    if (book.slot == MAGIC_FAVORITE_LAST)
-        snprintf(texts[BOOK_RECORD], BOOK_TEXT_SIZE, "TO SAVE: SELECT FAVORITE 1-4");
-    else
-        snprintf(texts[BOOK_RECORD], BOOK_TEXT_SIZE, "SAVE ENTERED RUNES TO FAVORITE %d", book.slot + 1);
     snprintf(texts[BOOK_CAST], BOOK_TEXT_SIZE, "CAST SELECTED SPELL");
     snprintf(texts[BOOK_STATUS], BOOK_TEXT_SIZE, "%s",
              book.status ? book.status
-             : mana < 0  ? "CLOSE, ENTER RUNES, THEN PRESS C"
-                         : "SELECT SPELL, CHOOSE POWER, CAST");
+             : mana < 0  ? "SET IT WITH 1-4 IN THE SPELL LIST"
+                         : "RETURN CASTS, BACKSPACE CLEARS");
     RowsScreen screen = find_layout();
     screen.title = "FAVORITES";
     screen.rows = lines;
@@ -402,7 +432,9 @@ void spellbook_add_rune(int rune)
         text_print_message(UI_CYAN, hint);
 }
 
-void spellbook_open(void)
+/* Makes the champion of the open spell panel the caster; a caster who cannot cast gives way to the first living
+   champion, -1 for none. */
+static void choose_caster(void)
 {
     if (g_action.champion > 0 && g_action.hand == ACTION_HAND_SPELL)
         book.caster = (int16_t)(g_action.champion - 1);
@@ -414,6 +446,11 @@ void spellbook_open(void)
                 break;
             }
     }
+}
+
+void spellbook_open(void)
+{
+    choose_caster();
     if (book.power < 1)
         book.power = 1;
     book.slot = 0;
@@ -430,19 +467,50 @@ static const char *find_refusal(void)
                                            : "NOT ENOUGH MANA - LOWER SPELL POWER";
 }
 
+void spellbook_run_favorite(int16_t slot)
+{
+    char text[BOOK_TEXT_SIZE];
+    char name[BOOK_TEXT_SIZE / 2];
+    choose_caster();
+    if (book.caster < 0)
+        return;
+    if (champion(book.caster)->rune_count) { /* entered runes: they become the favorite and stay entered */
+        if (magic_record_favorite(book.caster, slot)) {
+            get_favorite_name(slot, name, sizeof name);
+            snprintf(text, sizeof text, "\n%s SET AS FAVORITE %d", name, slot + 1);
+        } else {
+            snprintf(text, sizeof text, "\nENTER A SPELL RUNE TO SET FAVORITE %d", slot + 1);
+        }
+        text_print_message(UI_CYAN, text);
+        return;
+    }
+    int power = magic_favorite_rune(book.caster, slot, 0) - SPELL_RUNE_GLYPH_FIRST + 1;
+    if (!magic_prepare_favorite(book.caster, slot, power)) {
+        if (magic_favorite_mana(book.caster, slot, POWER_MON) < 0)
+            snprintf(text, sizeof text, "\nFAVORITE %d IS EMPTY", slot + 1);
+        else
+            snprintf(text, sizeof text, "\n%s", find_refusal());
+        text_print_message(UI_CYAN, text);
+        return;
+    }
+    get_favorite_name(slot, name, sizeof name);
+    snprintf(text, sizeof text, "\nCAST FAVORITE %d: %s", slot + 1, name);
+    text_print_message(UI_CYAN, text);
+    game_set_command_stop(magic_cast_entered_runes_failed());
+}
+
 /* Runs the selected row of the favorites page. Recording does not charge mana or remove entered runes. */
 static SpellbookResult run_favorites_row(void)
 {
-    if (book.row >= BOOK_FIRST && book.row < BOOK_MANA)
+    if (book.row >= BOOK_FIRST && book.row < BOOK_MANA) {
         book.slot = (int16_t)(book.row - BOOK_FIRST);
-    else if (book.row == BOOK_RECORD)
-        book.status = book.slot == MAGIC_FAVORITE_LAST                ? "SELECT FAVORITE 1-4 TO SAVE"
-                      : magic_record_favorite(book.caster, book.slot) ? "SAVED. CLOSE AND CAST ENTERED RUNES"
-                                                                      : "CLOSE, ENTER RUNES, THEN PRESS C";
-    else if (book.row == BOOK_CAST) {
+        uint8_t power_rune = magic_favorite_rune(book.caster, book.slot, 0);
+        if (power_rune) /* the slot shows and casts at its recorded power until the player changes it */
+            book.power = (int16_t)(power_rune - SPELL_RUNE_GLYPH_FIRST + 1);
+    } else if (book.row == BOOK_CAST) {
         if (magic_prepare_favorite(book.caster, book.slot, book.power))
             return SPELLBOOK_CAST;
-        book.status = magic_favorite_mana(book.caster, book.slot, book.power) < 0 ? "EMPTY SLOT - SAVE A SPELL FIRST"
+        book.status = magic_favorite_mana(book.caster, book.slot, book.power) < 0 ? "EMPTY SLOT - SET A SPELL FIRST"
                                                                                   : find_refusal();
     }
     return SPELLBOOK_STAY;
@@ -498,6 +566,32 @@ static void select_row(int16_t row)
     show_book();
 }
 
+/* The key 1 to 4 of the spell list: the marked spell at the shown power becomes favorite slot 0 to 3 of the caster. */
+static void set_marked_favorite(int16_t slot)
+{
+    const Spell *spell = find_listed_spell(book.spell);
+    if (!spell || book.caster < 0)
+        return;
+    if (magic_record_spell_favorite(book.caster, slot, spell, book.power))
+        snprintf(book.status_text, sizeof book.status_text, "%s SET AS FAVORITE %d", magic_get_spell_name(spell),
+                 slot + 1);
+    else
+        snprintf(book.status_text, sizeof book.status_text, "THIS SPELL NEEDS ITS OWN POWER");
+    book.status = book.status_text;
+    show_book();
+}
+
+/* Backspace on the favorites page empties the favorite of the selected row. */
+static void clear_selected_favorite(void)
+{
+    if (book.row < BOOK_FIRST || book.row >= BOOK_MANA)
+        return;
+    book.slot = (int16_t)(book.row - BOOK_FIRST);
+    magic_clear_favorite(book.caster, book.slot);
+    book.status = NULL;
+    show_book();
+}
+
 /* Moves the selection one selectable row up (step -1) or down (step 1); the title item is after the last row. */
 static void step_selection(int step)
 {
@@ -540,6 +634,10 @@ SpellbookResult spellbook_event(int type, int16_t x, int16_t y)
             flip_page(1);
         else if (x == KEY_ENTER || x == SCAN_SPACE)
             return run_row();
+        else if (!book.favorites && x >= SCAN_1 && x < SCAN_1 + MAGIC_FAVORITE_COUNT)
+            set_marked_favorite((int16_t)(x - SCAN_1));
+        else if (book.favorites && x == KEY_BACKSPACE)
+            clear_selected_favorite();
     } else if (type == INPUT_BUTTON_LEFT) {
         RowsScreen layout = find_layout();
         int16_t hit = rows_find_row(&layout, x, y);

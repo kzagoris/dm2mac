@@ -124,6 +124,7 @@ Four-letter syllables wrap onto two lines to fit the button.
 | `Esc` | Pause with Options/Help in the dungeon view; close to resume. In the inventory it closes the inventory (the original pauses) |
 | `F1` | Pause with Options/Help; close to resume (also in inventory, sleep, and pause) |
 | `C` | Recorded spell favorites |
+| `Alt+C`, then `Alt+1` to `Alt+4` | Set the entered runes as favorite 1 to 4, or cast that favorite when no runes are entered |
 | `Tab` or `Esc` | Close the inventory |
 | `Esc` | With a champion from a mirror on the screen: do not take it and return to the dungeon view |
 
@@ -139,17 +140,24 @@ the game does not load. Advanced startup and death recovery offer **LOAD QUICK.D
 
 ### Spell favorites
 
-Open a champion's spell panel, enter a power rune and the combination you want to remember, then press `C`.
-Select one of four favorites and **RECORD ENTERED RUNES IN FAVORITE**. Recording keeps the entered runes and
-charges no extra mana. Cast those runes normally, or remove them before replaying a favorite; removing runes
-retains the original no-refund rule.
+The quick way: hold `Alt`, press `C`, then `1` to `4`. With runes entered in the spell panel, they become that
+favorite and stay entered; the message area says, for example, `LIGHT SET AS FAVORITE 1`. With no runes entered,
+the champion casts that favorite at its recorded power by the normal rules, with `CAST FAVORITE 1: LIGHT`. The
+champion is the one of the open spell panel, otherwise the last caster of the spell list, otherwise the first
+living champion. A spell that is not in the spell list yet shows its rune names instead of its name.
+
+In the spell list (`C`), mark a spell and press `1` to `4`: the spell becomes that favorite of the shown caster at
+the shown power, and the last line says, for example, `FIREBALL SET AS FAVORITE 2`. The list shows the favorite
+number in front of the spell. This enters no runes and costs no mana. A combination that is not in the list is
+set with `Alt+C` from the spell panel, as above.
 
 In Favorites, choose the caster, power (1Ã¢â‚¬â€œ6), and recorded favorite or **LAST**. The screen shows the required
 mana and whether an empty flask is required and present. **CAST** enters the runes at the chosen power and casts
 once through the normal game rules: mana, skill checks, failures, experience, and action delays all apply.
 A dead or busy caster, insufficient mana, or existing entered runes prevents replay. A missing flask uses the
 normal failure behavior and retains the paid runes. The last attempted combination is remembered even after a
-failed cast. Favorites are private to each champion and persist with Advanced saves; old saves start empty.
+failed cast. Selecting a favorite shows its recorded power; Backspace on a favorite row empties it.
+Favorites are private to each champion and persist with Advanced saves; old saves start empty.
 The Favorites screen does not reveal the spell catalog. Use Up/Down and Return or click a row; Esc/right click closes.
 
 ### Switching windows

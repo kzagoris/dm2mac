@@ -27,6 +27,11 @@ bool spellbook_draw_rune_label(Offscreen *area, int zone, int rune, uint8_t colo
    mode the message area then names the listed spell that the entered runes are, for example FUL IR: FIREBALL, or
    says that no spell has them when every spell is listed and none begins with them. */
 void spellbook_add_rune(int rune);
+/* The favorite keys (Alt+C with Alt+1 to Alt+4) for favorite slot 0 to 3 of the champion of the open spell panel,
+   else of the last caster of the spell list, else of the first living champion. With entered runes it records them
+   as the favorite and leaves them entered; without entered runes it enters the favorite at its recorded power and
+   casts it by the normal rules. The message area says what happened. */
+void spellbook_run_favorite(int16_t slot);
 /* Opens the spell list of the current caster, or of the first living champion, with the last cast spell marked. */
 void spellbook_open(void);
 /* Handles keyboard and mouse navigation; CAST means run the normal entered-rune cast after closing the overlay. */

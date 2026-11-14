@@ -18,6 +18,7 @@ The advanced mode adds these keys:
 | `Tab`, `M`, or `Esc` | Close the automap | Open automap |
 | `X` | Open the cheat screen | Dungeon view only |
 | `C` | Recorded spell favorites | Dungeon view only |
+| `Alt+C`, then `Alt+1` to `Alt+4` | Set or cast favorite 1 to 4 | Dungeon view only |
 | `F1` | Options/Help | Dungeon, inventory, sleep, pause |
 | `Esc` | Options/Help | Dungeon view only |
 | `X` or `Esc` | Close the cheat screen | Open cheat screen |
@@ -110,12 +111,24 @@ A click on a spell line (or Return) casts the spell and closes the screen. The c
 
 ## Recorded spell favorites
 
-`C` opens four favorites and the last attempted combination per champion. Players record only runes they have
-entered, including unknown combinations. The selected power controls the mana preview and replay. Replay
+`C` opens the spell list; its FAVORITES row opens four favorites and the last attempted combination per champion.
+In the spell list the keys `1` to `4` record the marked spell with the shown power rune as favorite 1 to 4 of the
+shown caster (`FIREBALL SET AS FAVORITE 2`), without entered runes and without mana; a spell row shows the number
+of the favorite that has its runes. On the favorites page a favorite row selects the slot and takes its recorded
+power, and Backspace empties the slot of the selected row. Unknown combinations are recorded only from entered
+runes, with `Alt+C`. The selected power controls the mana preview and replay. Replay
 requires a living, ready caster with enough mana and no entered runes, opens that champion's normal spell panel,
 and calls `magic_add_rune` for every rune followed by `magic_cast_entered_runes_failed` once. Thus no rune-entry
 cost, skill roll, failure reporting, experience, flask requirement, or delay is bypassed. Recording leaves runes
 and mana alone. Failed casts are also recorded as LAST. A missing flask retains the paid runes as usual.
+
+`Alt+C` followed by `Alt+1` to `Alt+4` works on favorite 1 to 4 without the screen; another key after `Alt+C` ends
+the combination. The champion is the one of the open spell panel, otherwise the last caster of the spell list,
+otherwise the first living champion. With entered runes it records them (a power rune and at least one rune,
+otherwise `ENTER A SPELL RUNE TO SET FAVORITE 1`) and shows `LIGHT SET AS FAVORITE 1`; the runes stay entered.
+Without entered runes it shows `CAST FAVORITE 1: LIGHT` and replays the favorite at its recorded power rune by the
+same steps as the screen; an empty slot shows `FAVORITE 1 IS EMPTY`, and a busy caster or too little mana shows the
+refusal of the screen. The name is the spell name of a listed spell, otherwise the rune names.
 
 Favorites use the optional FAVS save block; new games and saves without it start empty. Vanilla and turn-based
 modes neither use nor write favorites. This is separate from the unlimited cheat spell catalog.
