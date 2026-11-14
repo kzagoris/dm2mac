@@ -100,7 +100,7 @@ The automap, Options/Help, spell favorites, and cheat screen stop game time whil
 
 On the automap, a single yellow plus marks each explored square containing items, regardless of quantity.
 Click a marked square to see item names and quantities; Left/Right or A/D and PREVIOUS/NEXT change pages.
-Click MAP, press Esc, or right-click to return to the map. Dragging still scrolls; Tab/M close the automap.
+Click anywhere in the list (except PREVIOUS/NEXT), press Esc, or right-click to return to the map. Dragging still scrolls; Tab/M close the automap.
 Reveal map also shows items in unexplored areas. Markers update after pickup/drop, including items in alcoves;
 containers are marked without revealing their contents.
 

@@ -189,6 +189,23 @@ def test_short_click_lists_item_names_and_groups_quantities(lib, item_map):
     assert ctypes.c_int.in_dll(lib, "g_advanced_screen").value == C.ADVANCED_SCREEN_AUTOMAP
 
 
+def test_click_anywhere_in_the_list_except_paging_returns_to_the_map(lib, item_map):
+    drop(lib, item_map)
+    lib.seen_mark(item_map, C.DIR_NORTH)
+    lib.advanced_open_automap()
+    x, y = party_icon(lib)
+    rx, ry, width, height = viewport(lib)
+    for at in ((rx + 15, ry + 118), (rx + width // 2, ry + height // 2), (rx + 1, ry + 1)):
+        click(lib, x, y)
+        assert lib.automap_items_open()
+        click(lib, *at)
+        assert not lib.automap_items_open(), at
+        assert ctypes.c_int.in_dll(lib, "g_advanced_screen").value == C.ADVANCED_SCREEN_AUTOMAP
+    click(lib, x, y)
+    click(lib, rx - 1, ry)
+    assert lib.automap_items_open(), "a click outside the viewport keeps the list"
+
+
 def test_click_cannot_inspect_unexplored_items_but_reveal_map_can(lib, item_map):
     drop(lib, item_map)
     lib.advanced_open_automap()

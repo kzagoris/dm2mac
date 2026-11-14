@@ -584,13 +584,16 @@ bool automap_items_event(int type, int16_t x, int16_t y)
     if (type == INPUT_KEY)
         step = x == KEYPAD_TURN_LEFT || x == SCAN_A ? -1 : x == KEYPAD_TURN_RIGHT || x == SCAN_D ? 1 : 0;
     else if (type == INPUT_BUTTON_LEFT) {
+        /* PREVIOUS and NEXT page when shown; any other click in the viewport returns to the map */
+        int16_t rect[RECT_SIZE];
         int16_t row = rows_find_row(&page.screen, x, y);
-        if (row == ITEM_ROW_COUNT)
-            inspection.open = false;
-        else if (row == ITEM_ROW_PREVIOUS)
+        if (row == ITEM_ROW_PREVIOUS && page.texts[ITEM_ROW_PREVIOUS][0])
             step = -1;
-        else if (row == ITEM_ROW_NEXT)
+        else if (row == ITEM_ROW_NEXT && page.texts[ITEM_ROW_NEXT][0])
             step = 1;
+        else if (zone_get_viewport_rect(rect) && x >= rect[RECT_X] && x < rect[RECT_X] + rect[RECT_W] &&
+                 y >= rect[RECT_Y] && y < rect[RECT_Y] + rect[RECT_H])
+            inspection.open = false;
     }
     inspection.page = clamp_int(0, inspection.page + step, page.page_count - 1);
     return true;
