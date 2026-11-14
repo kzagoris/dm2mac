@@ -85,13 +85,13 @@ Press **F1**, or **Esc** in the dungeon view, to open **Options/Help**. This pau
 
 ![Options and Help menu](docs/images/advanced-options.png)
 
-*The ordinary menu makes common actions discoverable and labels cheats as optional.*
+*Options/Help, enlarged 3Ã— with increased text brightness for readability. This earlier capture predates the SPELLS SHOWN, aspect, scanlines, and SMOOTH STEPPING rows described below.*
 
 F1 also opens help from inventory, sleep, and pause. Save and cast actions require the dungeon view; name entry, recruiting, and dialogs retain their original input behavior. This avoids turning a typed name into a movement or save command.
 
 ![Controls page with movement and spell instructions](docs/images/advanced-controls.png)
 
-*The controls page explains movement, inventory, saves, normal rune entry, and spell favorites inside the game.*
+*Controls, enlarged 3Ã— with increased text brightness. This earlier capture labels B as favorites; the current B screen opens the spell list with favorites available inside it.*
 
 | Key | Action in the dungeon view |
 | --- | --- |
@@ -106,13 +106,62 @@ F1 also opens help from inventory, sleep, and pause. Save and cast actions requi
 
 Tab or Esc closes an open inventory, except while editing a name or recruiting. Advanced shortcuts require an idle party: inspection holds, champion dragging, and push mode prevent dungeon shortcuts from firing.
 
-### Record spell combinations for reuse
+### Spells: cast by name, learn runes, and save combinations
 
-**B** opens four favorites and the last attempted rune combination for each champion. Record runes already entered in the normal spell panel, then choose the power for the mana preview and later replay. Unknown combinations can be recorded too; recording does not spend mana or remove the entered runes.
+Press **B** in the dungeon view, or choose **SPELL LIST (B)** in Options/Help. The list pauses game time while you browse. Each spell shows its name and the rune names after the power rune; the caster and power are separate choices at the top.
 
-Replay follows normal casting: it requires a living, ready caster, enough mana, and an empty rune tray. Rune costs, skill rolls, failures, experience, flask requirements, and action delays still apply. Failed attempts are recorded as LAST as well. Favorites are stored in the optional `FAVS` save block; older saves start with empty favorites.
+#### Known spells or the full spell catalog
 
-The separate cheat spell catalog provides free casting. It does not describe how ordinary favorites work. The screenshots above show the favorites entry and help text; they do not demonstrate a populated favorites list or a successful replay.
+**Options/Help → SPELLS SHOWN** switches between **KNOWN SPELLS**, which lists spells you have cast, and **ALL SPELLS**, which reveals the full catalog. The same setting controls spell-name hints during manual rune entry and is remembered in `SETTINGS.TXT`.
+
+![Known spells screen before learning a spell](docs/images/advanced-spells-known.png)
+
+*With no known spells, the list directs you to enter runes. You can learn through ordinary casting, or choose All spells to browse the catalog.*
+
+![All spells with caster, power, rune names and mana preview](docs/images/advanced-spells-all.png)
+
+*LIGHT is selected at power 1/6 for Torham. MANA 16/14 means the cast needs 16 mana while this caster currently has 14; it does not mean 16 mana remains. NO FLASK NEEDED identifies a spell that does not create a potion.*
+
+The list displays six spells per page. **Left/Right** or **A/D** change pages, and **MORE SPELLS** advances to the next page, wrapping around after the last. **Up/Down** or **W/S** select a row; **Return** activates it. The selected spell is yellow and marked with `>`.
+
+![Second spell page with aura spells and Haste](docs/images/advanced-spells-page2.png)
+
+*Page 2 shows another six spells, with rune combinations alongside the names. The footer previews the selected spell's requirements.*
+
+#### Choose a caster and power, then cast
+
+1. Activate **CASTER … CHANGE** to cycle champions. Choose a living champion who is ready to cast.
+2. Activate **SPELL POWER … CHANGE** to cycle power 1 through 6. Check the updated mana preview; reduce power if the caster cannot afford the spell.
+3. Select a spell and check its flask requirement. Potion spells require an empty flask in one of that caster's hands; the status reports **FLASK READY** or **FLASK MISSING**.
+4. Activate the selected spell to cast. With the mouse, the first click on a different spell selects it and shows its costs; a second click casts. Clicking an already selected spell activates it immediately. With the keyboard, Return activates the selected spell.
+
+The list uses normal rune entry and casting: mana costs, skill checks, failures, experience, flask requirements, and action delays apply. Merely showing **All spells** does not grant free casting. The game reports why an attempt cannot start, such as **CHOOSE A LIVING CASTER**, **CASTER BUSY - WAIT AND TRY AGAIN**, or **NOT ENOUGH MANA - LOWER SPELL POWER**. If runes are already entered, close the list and cast or remove them first.
+
+Press **B** to close the list. **Esc** or right-click closes the main spell list; from favorites, either returns to the list.
+
+#### Rune hints while casting manually
+
+The original spell panel remains available: select a champion's spell hand, enter a power rune, then enter the spell runes. In Advanced mode, the spellbook identifies possible next runes for the current prefix. When the entered combination completes a visible spell, a cyan message names its runes and spell.
+
+With **Known spells**, hints respect discovery and name only known spells. With **All spells**, hints can identify every spell; if no spell begins with the entered combination, the message says **NO SPELL HAS THESE RUNES**. A power rune by itself does not produce a spell-name message because it can begin every spell.
+
+#### Four favorites per champion, plus the last attempt
+
+Choose **FAVORITES AND LAST ATTEMPT** from the list. Each champion has four saved combinations and a separate **LAST ATTEMPT** entry. Unknown rune combinations can be recorded too.
+
+![Favorites screen with empty slots and recording instructions](docs/images/advanced-spells-favorites.png)
+
+*Empty favorites show the next step: enter runes in the normal spell panel before saving a combination. This capture demonstrates the initial state, not a successful recorded cast.*
+
+To record a favorite, close the overlay, enter the desired runes in the champion's normal spell panel, then press B and open favorites. Select **FAVORITE 1–4** and activate **SAVE ENTERED RUNES TO FAVORITE …**. Recording leaves both the entered runes and mana alone. Close the overlay to cast the runes already entered.
+
+To replay later, begin with an empty rune tray, choose the champion and power, select the saved favorite, and activate **CAST SELECTED SPELL**. The mana preview and flask status help check readiness. Replay uses the normal casting path; it cannot bypass mana costs, cooldowns, failure rolls, or potion-flask requirements. An empty slot reports **EMPTY SLOT - SAVE A SPELL FIRST**.
+
+**LAST ATTEMPT** records failed attempts as well as successful ones. It is a separate automatically maintained entry; select one of the four favorite slots when recording manually. A potion cast without a flask retains its paid runes as in ordinary casting. Favorites persist in the optional `FAVS` save block; new games and older saves without that block start empty.
+
+#### Free casting is a separate cheat
+
+The **C → SPELLS - FREE CAST CHEAT** catalog casts at maximum power without mana cost or a failure roll and grants no experience. Flask requirements and action delays still apply. Use the ordinary B list or favorites when you want normal casting rules.
 
 ### Recover quickly and pause when focus changes
 
@@ -121,6 +170,15 @@ The separate cheat spell catalog provides free casting. It does not describe how
 Messages distinguish a successful save/load from a missing quick save, damaged quick save, or inability to save. Keep numbered slots when you want multiple recovery points: each quick save replaces the single quick-save checkpoint. Explored squares, cheat settings, and recorded favorites persist with saves.
 
 Losing focus or minimizing automatically latches an Advanced pause and clears queued input and held interactions. Returning focus alone leaves the game paused. Press a fresh **Return** to resume, then press movement keys again. This prevents old queued movement or mouse holds from continuing when you return to the game.
+
+### Choose animated or direct stepping
+
+**Options/Help â†’ SMOOTH STEPPING** lets you choose how walking between dungeon squares looks:
+
+- **On** (the default): retain the intermediate walking frames for an animated transition between squares.
+- **Off**: skip the intermediate walking frames for a quicker, direct step, similar to Dungeon Master I or Eye of the Beholder.
+
+Collision checks and champion movement cooldowns still apply in either setting. This changes the presentation of walking rather than removing movement restrictions. The choice persists in `SETTINGS.TXT`, so you do not need to reset it each session. Walking animation is separate from the smooth projectile flight described below.
 
 ### More comfortable movement and presentation
 
@@ -138,7 +196,7 @@ These additions belong to Advanced mode. Vanilla retains the original behavior, 
 
 ### Screenshot notes
 
-These are actual Windows game captures retained from the improvement documentation session. The map and item-list captures use an item-rich demonstration state; the revealed map is illustrative rather than a claim about normal starting exploration. The options and controls captures show their native low-resolution interface. They document visible UI; save recovery, focus handling, spell replay, and animation behavior above are described from the repository rules rather than asserted as verified by these still images.
+The automap and item-list images are game captures retained from the improvement documentation session. The map and item-list captures use an item-rich demonstration state; the revealed map is illustrative rather than a claim about normal starting exploration. The options, controls, and spell screens are rendered from the current game UI and original game assets in an isolated test session, using the VGA palette conversion and 3× pixel scaling. Spell screenshots use a new-game demonstration state; All spells is enabled for the catalog examples. They document visible UI; save recovery, focus handling, spell replay, and animation behavior above are described from the repository rules rather than asserted as verified by these still images.
 
 ## Let an LLM play
 
@@ -167,7 +225,7 @@ against the original in an emulator. Build instructions and tests are in [Develo
 
 - [SDL3](https://github.com/libsdl-org/SDL): windowing, input, and audio output.
 - [Nuked-OPL3](https://github.com/nukeykt/Nuked-OPL3) by Nuke.YKT: OPL3 emulation for the music.
-- [tinf](https://github.com/jibsen/tinf) by Jørgen Ibsen: ZIP decompression.
+- [tinf](https://github.com/jibsen/tinf) by JÃ¸rgen Ibsen: ZIP decompression.
 - [xBRZ](https://sourceforge.net/projects/xbrz/) by Zenju: colour-blending pixel-art upscaling.
 - [Unicorn](https://www.unicorn-engine.org): CPU emulation for the differential tests.
 - [reDM2](https://codeberg.org/CyCl0ne/reDM2): an analysis of the same `SKULL.EXE`, read for names, formats, and
