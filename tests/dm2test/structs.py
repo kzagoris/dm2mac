@@ -25,6 +25,13 @@ class Bitmap(ctypes.Structure):
                 ("bpp", ctypes.c_uint8)]
 
 
+@mirror("ui.h")
+class Offscreen(ctypes.Structure):
+    """A panel bitmap, its screen rectangle and pending dirty rectangles."""
+    _fields_ = [("bitmap", ctypes.POINTER(Bitmap)), ("rect", ctypes.c_int16 * C.RECT_SIZE),
+                ("dirty_count", ctypes.c_int16), ("dirty", (ctypes.c_int16 * C.RECT_SIZE) * C.OFFSCREEN_DIRTY_MAX)]
+
+
 @mirror("gdat.h")
 class GdatKey(ctypes.Structure):
     """gdat.h GdatKey: category, index, entry."""

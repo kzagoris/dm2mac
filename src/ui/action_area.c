@@ -4,6 +4,7 @@
 #include "action_area.h"
 #include <string.h>
 #include "action.h"
+#include "advanced.h"
 #include "champion.h"
 #include "dungeon.h"
 #include "game.h"
@@ -108,6 +109,7 @@ static struct {
     uint16_t aura_mask;
     int16_t leader;
     int16_t action_mode; /* the action mode of the last input zone refresh, ACTION_MODE_STALE for none */
+    int rune_hover;      /* the rune whose syllable is drawn, -1 for none */
 } drawn;
 
 /* The ticks to wait for the redraw after the damage shows: one for the original delay, then the extra ones. */
@@ -122,6 +124,7 @@ void area_reset(void)
     drawn.gfx_set = DRAWN_NONE;
     drawn.leader = -1;
     drawn.action_mode = ACTION_MODE_STALE;
+    drawn.rune_hover = -1;
     area.bitmap = NULL;
 }
 
@@ -405,6 +408,7 @@ static void show_panel_face(void)
 /* Draws the spell panel: the runes of the next set, the entered runes, the face. */
 static void show_spell_panel(void)
 {
+    drawn.rune_hover = spellbook_hovered_rune();
     int set = champion(g_action.champion - 1)->rune_count;
     offscreen_draw_gdat_image(&area, (GdatKey){CAT_INTERFACE, UI_INDEX_SPELL, (uint8_t)(set + 1)}, ZONE_PANEL,
                               GFX_OPAQUE);
@@ -413,6 +417,9 @@ static void show_spell_panel(void)
             char s[RUNE_TEXT_SIZE] = {(char)(set * SPELL_RUNES_PER_SET + SPELL_RUNE_GLYPH_FIRST + i), '\0'};
             /* advanced mode: a rune that continues the entered runes to a listed spell stands out */
             int color = spellbook_is_next_rune(i) ? HINT_COLOR : UI_BLACK;
+            if (spellbook_draw_rune_label(&area, ZONE_RUNE_CHOICE_FIRST + i, set * SPELL_RUNES_PER_SET + i,
+                                          g_ui_colors[color]))
+                continue;
             offscreen_draw_text_in_zone(&area, ZONE_RUNE_CHOICE_FIRST + i,
                                         (TextColors){g_ui_colors[color], g_ui_colors[UI_LIGHT_GRAY] | TEXT_TRANSPARENT},
                                         s);
@@ -680,7 +687,9 @@ static void show_hand_panel(void)
 /* Draws the open hand or spell panel when it changed; returns false while the panel waits for its redraw delay. */
 static bool show_open_panel(bool full, bool party_changed, bool tick)
 {
-    if (g_action.redraw_delay || full || party_changed || (g_action.mode == ACTION_MODE_MINION_MAP && tick)) {
+    bool hover_changed = g_action.hand == ACTION_HAND_SPELL && drawn.rune_hover != spellbook_hovered_rune();
+    if (g_action.redraw_delay || full || party_changed || hover_changed ||
+        (g_action.mode == ACTION_MODE_MINION_MAP && tick)) {
         if (g_action.redraw_delay > ACTION_REDRAW_NEXT) {
             g_action.redraw_delay--;
             return false;
@@ -843,6 +852,17 @@ void area_update(bool tick)
     if (g_ui.candidate)
         return;
     redraw_changes(tick);
+    finish_update();
+}
+
+void area_update_rune_hover(void)
+{
+    if (g_main_loop.view_hidden || g_ui.candidate || (input_has_click_feedback() && !g_advanced_screen) ||
+        g_action.mode != ACTION_MODE_SPELL || g_action.champion <= 0 || g_action.redraw_delay ||
+        drawn.rune_hover == spellbook_hovered_rune())
+        return;
+    begin_draw(false);
+    show_spell_panel();
     finish_update();
 }
 

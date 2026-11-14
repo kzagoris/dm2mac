@@ -14,6 +14,7 @@
 #include "minion_map.h"
 #include "move.h"
 #include "recruit.h"
+#include "spellbook.h"
 #include "view.h"
 #include "zone.h"
 
@@ -283,6 +284,9 @@ static void feedback_rune_button(Feedback *f)
     /* the rune of the pressed button in the next rune set */
     int set = champion(g_action.champion - 1)->rune_count;
     int rune = g_input.current.command - CMD_RUNE_FIRST;
+    if (spellbook_draw_rune_label(&f->o, ZONE_RUNE_CHOICE_FIRST + rune, set * SPELL_RUNES_PER_SET + rune,
+                                  g_ui_colors[UI_BLACK]))
+        return;
     char text[RUNE_TEXT_SIZE] = {(char)(set * SPELL_RUNES_PER_SET + SPELL_RUNE_GLYPH_FIRST + rune), '\0'};
     ScreenSize size = text_measure(text);
     rect_center_in(r, f->o.rect, size.w, size.h);
@@ -542,6 +546,11 @@ static bool start_classic_move_feedback(void)
     show_move_arrow(GFX_ARROWS + arrow * ARROW_ENTRY_STEP, ZONE_ARROW_FIRST + arrow, true);
     g_input.classic_arrow_ticks = CLASSIC_ARROW_TICKS;
     return true;
+}
+
+bool input_has_click_feedback(void)
+{
+    return g_input.script != NULL || g_input_feedback_busy;
 }
 
 void input_poll(void)

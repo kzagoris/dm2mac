@@ -4,6 +4,7 @@
 #include <stdbool.h>
 #include <stdio.h>
 #include <string.h>
+#include "action_area.h"
 #include "automap.h"
 #include "cheats.h"
 #include "draw.h"
@@ -342,8 +343,9 @@ void advanced_open_spellbook(void)
 
 void advanced_open_options(void)
 {
-    memcpy(options_picture, g_video_fb, sizeof options_picture);
     g_advanced_screen = ADVANCED_SCREEN_OPTIONS;
+    area_update_rune_hover(); /* the saved picture must contain rune symbols, not a stale hover label */
+    memcpy(options_picture, g_video_fb, sizeof options_picture);
     options_open();
 }
 

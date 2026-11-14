@@ -205,6 +205,8 @@ void input_refine_champion_click(Command *c); /* exported for the tests */
 const uint8_t *input_click_feedback_script(Command *c); /* exported for the tests */
 /* Sets rect to a w x h rect centered in src. */
 void rect_center_in(int16_t *rect, const int16_t *src, int16_t w, int16_t h);
+/* Whether a click feedback script is running or waiting for its delay or the next game step. */
+bool input_has_click_feedback(void);
 /* Turns the waiting events into commands and runs the click feedback. */
 void input_poll(void);
 /* Ends the push mode, the click feedback, and a drag. */
