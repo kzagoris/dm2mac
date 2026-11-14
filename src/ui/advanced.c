@@ -13,7 +13,6 @@
 #include "ids.h"
 #include "interface_state.h"
 #include "magic.h"
-#include "minion.h"
 #include "music.h"
 #include "options.h"
 #include "os.h"

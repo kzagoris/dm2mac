@@ -7,7 +7,7 @@ from pathlib import Path
 
 import pytest
 
-from dm2test.markers import GAME, ROOT
+from dm2test.markers import BUILD, GAME, ROOT
 from dm2test.structs import mirror
 
 NAMES = [
@@ -17,7 +17,8 @@ NAMES = [
 
 
 def require(path: Path) -> Path:
-    """The path of a file that the test needs (a game file or reference file); skips the test when it is missing."""
+    """The path of a file that the test needs (a game file, a reference file or a built file); skips the test when it
+    is missing."""
     if not path.exists():
         pytest.skip(f"{path.relative_to(ROOT)} missing")
     return path
@@ -26,6 +27,12 @@ def require(path: Path) -> Path:
 @pytest.fixture
 def game_dir():
     return require(GAME / "SKULL.EXE").parent
+
+
+@pytest.fixture
+def program():
+    """The path of build/dm2; skips the test when a machine without SDL built only the library."""
+    return require(BUILD / "dm2")
 
 
 @mirror("gamefile.h")

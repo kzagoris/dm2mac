@@ -277,11 +277,11 @@ def test_bad_requests_get_errors(control, lib):
             assert request(payload, path) == {"ok": False, "error": error}
 
 
-def test_program_with_control_answers_and_quits(start, tmp_path):
+def test_program_with_control_answers_and_quits(program, start, tmp_path):
     folder = tempfile.mkdtemp(prefix="dm2c", dir="/tmp")
     path = os.path.join(folder, "control.sock")
     env = dict(os.environ, SDL_VIDEO_DRIVER="dummy", SDL_AUDIO_DRIVER="dummy")
-    program = subprocess.Popen([str(ROOT / "build/dm2"), "--control", path, "--save", str(ROOT / "tests/saves/start.DAT")],
+    process = subprocess.Popen([program, "--control", path, "--save", str(ROOT / "tests/saves/start.DAT")],
                                cwd=ROOT, env=env, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     try:
         for _ in range(200):
@@ -297,10 +297,10 @@ def test_program_with_control_answers_and_quits(start, tmp_path):
         shot = request({"cmd": "screenshot", "path": str(tmp_path / "s.png")}, path, timeout=10)
         assert len(read_png(shot["path"])) == C.SCREEN_H
         assert request({"cmd": "quit"}, path, timeout=10) == {"ok": True}
-        assert program.wait(timeout=10) == 0
+        assert process.wait(timeout=10) == 0
         assert not os.path.exists(path)
     finally:
-        program.kill()
+        process.kill()
         shutil.rmtree(folder)
 
 

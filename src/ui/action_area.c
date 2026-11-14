@@ -413,9 +413,9 @@ static void show_spell_panel(void)
             char s[RUNE_TEXT_SIZE] = {(char)(set * SPELL_RUNES_PER_SET + SPELL_RUNE_GLYPH_FIRST + i), '\0'};
             /* advanced mode: a rune that continues the entered runes to a listed spell stands out */
             int color = spellbook_is_next_rune(i) ? HINT_COLOR : UI_BLACK;
-            offscreen_draw_text_in_zone(
-                &area, ZONE_RUNE_CHOICE_FIRST + i,
-                (TextColors){g_ui_colors[color], g_ui_colors[UI_LIGHT_GRAY] | TEXT_TRANSPARENT}, s);
+            offscreen_draw_text_in_zone(&area, ZONE_RUNE_CHOICE_FIRST + i,
+                                        (TextColors){g_ui_colors[color], g_ui_colors[UI_LIGHT_GRAY] | TEXT_TRANSPARENT},
+                                        s);
         }
     }
     area_draw_entered_runes(false);

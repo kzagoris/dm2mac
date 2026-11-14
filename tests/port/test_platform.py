@@ -29,7 +29,8 @@ def test_layout_fractional(lib):
 
 def test_layout_of_the_4_3_picture(lib):
     layout = lib.video_layout(1000, 700, True)  # 320 x 240 square pixels: the height limits the scale
-    assert (layout.scale_x, layout.scale_y, layout.x, layout.y) == pytest.approx((700 / 240, 3.5, 100 / 3, 0))
+    # the fields are float: a build without fused multiply-add rounds the left edge 4e-5 away
+    assert (layout.scale_x, layout.scale_y, layout.x, layout.y) == pytest.approx((700 / 240, 3.5, 100 / 3, 0), rel=1e-5)
     layout = lib.video_layout(640, 600, True)  # the width limits the scale
     assert (layout.scale_x, layout.scale_y, layout.x, layout.y) == pytest.approx((2, 2.4, 0, 60))
 

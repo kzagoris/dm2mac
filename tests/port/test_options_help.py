@@ -1,9 +1,22 @@
 """Convenience options are reachable without cheats and respect text-entry contexts."""
 import ctypes
 
+import pytest
+
 from dm2test import constants as C
 from dm2test.modes import set_mode, ADVANCED, VANILLA
 from dm2test.structs import UiState
+
+
+@pytest.fixture
+def panel(lib, gdat):
+    """The advanced mode with the font and the interface colors that the options panel draws with; the panel is
+    closed and the mode is vanilla again after the test."""
+    assert lib.zone_load(gdat) and lib.text_init(gdat)
+    set_mode(lib, ADVANCED)
+    yield
+    lib.advanced_reset()
+    set_mode(lib, VANILLA)
 
 
 def test_options_and_spellbook_commands_reach_execution(lib):
@@ -27,8 +40,7 @@ def test_help_key_is_available_in_gameplay_but_not_text_entry_or_vanilla(lib):
     assert not lib.input_key_command(C.INPUT_MODE_MOVE, 0x3b, rect)
 
 
-def test_options_help_reopens_without_enabling_cheats(lib):
-    set_mode(lib, ADVANCED)
+def test_options_help_reopens_without_enabling_cheats(lib, panel):
     lib.game_set_cheats(0)
     lib.advanced_open_options()
     screen = ctypes.c_int.in_dll(lib, 'g_advanced_screen')
@@ -43,8 +55,7 @@ def test_options_help_reopens_without_enabling_cheats(lib):
     assert not lib.game_get_cheats()
 
 
-def test_closing_options_restores_the_paused_or_inventory_picture(lib):
-    set_mode(lib, ADVANCED)
+def test_closing_options_restores_the_paused_or_inventory_picture(lib, panel):
     pixels = (ctypes.c_uint8 * (C.SCREEN_W * C.SCREEN_H)).in_dll(lib, 'g_video_fb')
     ctypes.memset(pixels, 42, len(pixels))
     lib.advanced_open_options()
@@ -53,8 +64,7 @@ def test_closing_options_restores_the_paused_or_inventory_picture(lib):
     assert bytes(pixels) == bytes([42]) * len(pixels)
 
 
-def test_options_cover_the_game_and_help_back_button_remains_clickable(lib):
-    set_mode(lib, ADVANCED)
+def test_options_cover_the_game_and_help_back_button_remains_clickable(lib, panel):
     pixels = (ctypes.c_uint8 * (C.SCREEN_W * C.SCREEN_H)).in_dll(lib, 'g_video_fb')
     ctypes.memset(pixels, 42, len(pixels))
     lib.advanced_open_options()

@@ -6,10 +6,8 @@
 #include "advanced.h"
 #include "filter.h"
 #include "game_text.h"
-#include "ids.h"
 #include "move.h"
 #include "text.h"
-#include "ui.h"
 #include "video.h"
 
 /* Option rows; the title item closes the overlay. */
@@ -26,51 +24,63 @@
 #define OPTIONS_ROW_ROWS      10
 #define OPTIONS_ROW_TEXT_SIZE 40
 
+/* Full-screen options avoid mixing help text with the dungeon controls. */
+#define PANEL_LEFT       18
+#define PANEL_VALUE_LEFT 108
+#define PANEL_TITLE_Y    20
+#define PANEL_FIRST_Y    46
+#define PANEL_ROW_HEIGHT 12
+#define PANEL_NOTE_Y     170
+#define PANEL_BACK_LEFT  260
+#define PANEL_FOOTER_Y   186
+
+/* The help page: the heading, the shortcut rows, and the three spell lines. */
+#define HELP_HEADING_Y     36
+#define HELP_FIRST_Y       46
+#define HELP_ROW_HEIGHT    9
+#define HELP_ROWS          11
+#define HELP_SPELLS_Y      152
+#define HELP_SPELL_STEPS_Y 164
+#define HELP_SPELL_LIST_Y  174
+
 static bool help;
 static int16_t selected;
 static bool blocked;
 
-/* Full-screen options avoid mixing help text with the dungeon controls. */
-#define PANEL_LEFT 18
-#define PANEL_VALUE_LEFT 108
-#define PANEL_TITLE_Y 20
-#define PANEL_FIRST_Y 46
-#define PANEL_ROW_HEIGHT 12
-#define PANEL_NOTE_Y 170
-#define PANEL_BACK_LEFT 260
-#define PANEL_FOOTER_Y 186
-
-static void panel_text(int x, int y, int color, const char *text)
+static void panel_text(int16_t x, int16_t y, int color, const char *text)
 {
-    text_draw_on_screen((int16_t)x, (int16_t)y, g_ui_colors[color], g_ui_colors[UI_BLACK], text);
+    text_draw_on_screen(x, y, g_ui_colors[color], g_ui_colors[UI_BLACK], text);
 }
 
 /* The header action is shared by Help and Options. */
 static bool panel_back_click(int16_t x, int16_t y)
 {
-    return x >= PANEL_BACK_LEFT && x < SCREEN_W - PANEL_LEFT &&
-           y >= PANEL_TITLE_Y - TEXT_LINE_HEIGHT && y <= PANEL_TITLE_Y + FONT_BASELINE;
+    return x >= PANEL_BACK_LEFT && x < SCREEN_W - PANEL_LEFT && y >= PANEL_TITLE_Y - TEXT_LINE_HEIGHT &&
+           y <= PANEL_TITLE_Y + FONT_BASELINE;
 }
 
+/* Draws the options or the help page over the whole screen. */
 static void show_options(void)
 {
     memset(g_video_fb, g_ui_colors[UI_BLACK], sizeof g_video_fb);
     panel_text(PANEL_LEFT, PANEL_TITLE_Y, UI_CYAN, help ? "CONTROLS" : "OPTIONS / HELP");
     panel_text(PANEL_BACK_LEFT, PANEL_TITLE_Y, UI_YELLOW, help ? "BACK" : "CLOSE");
     if (help) {
-        static const char *const keys[] = {
-            "WASD", "Q / E", "ARROWS", "TAB / M", "1 - 4", "F5 / F9", "B", "F1", "ESC", "CTRL+S", "CTRL+R"};
-        static const char *const actions[] = {
-            "MOVE", "TURN LEFT / RIGHT", "ORIGINAL MOVEMENT", "EXPLORED MAP", "CHAMPION INVENTORY",
-            "QUICK SAVE / LOAD", "SPELL LIST", "OPTIONS / HELP", "OPTIONS / RESUME", "DISK MENU", "REST (ZZZ)"};
-        panel_text(PANEL_LEFT, 36, UI_CYAN, "MOVEMENT AND SHORTCUTS");
-        for (int i = 0; i < 11; i++) {
-            panel_text(PANEL_LEFT, 46 + i * 9, UI_YELLOW, keys[i]);
-            panel_text(PANEL_VALUE_LEFT, 46 + i * 9, UI_WHITE, actions[i]);
+        static const char *const keys[HELP_ROWS] = {"WASD", "Q / E", "ARROWS", "TAB / M", "1 - 4", "F5 / F9",
+                                                    "B",    "F1",    "ESC",    "CTRL+S",  "CTRL+R"};
+        static const char *const actions[HELP_ROWS] = {"MOVE",         "TURN LEFT / RIGHT",  "ORIGINAL MOVEMENT",
+                                                       "EXPLORED MAP", "CHAMPION INVENTORY", "QUICK SAVE / LOAD",
+                                                       "SPELL LIST",   "OPTIONS / HELP",     "OPTIONS / RESUME",
+                                                       "DISK MENU",    "REST (ZZZ)"};
+        panel_text(PANEL_LEFT, HELP_HEADING_Y, UI_CYAN, "MOVEMENT AND SHORTCUTS");
+        for (int i = 0; i < HELP_ROWS; i++) {
+            int16_t row_y = (int16_t)(HELP_FIRST_Y + i * HELP_ROW_HEIGHT);
+            panel_text(PANEL_LEFT, row_y, UI_YELLOW, keys[i]);
+            panel_text(PANEL_VALUE_LEFT, row_y, UI_WHITE, actions[i]);
         }
-        panel_text(PANEL_LEFT, 152, UI_CYAN, "SPELLS");
-        panel_text(PANEL_LEFT, 164, UI_WHITE, "CHAMPION ICON > POWER > RUNES > CAST");
-        panel_text(PANEL_LEFT, 174, UI_WHITE, "B CASTS BY NAME; NORMAL MANA RULES APPLY");
+        panel_text(PANEL_LEFT, HELP_SPELLS_Y, UI_CYAN, "SPELLS");
+        panel_text(PANEL_LEFT, HELP_SPELL_STEPS_Y, UI_WHITE, "CHAMPION ICON > POWER > RUNES > CAST");
+        panel_text(PANEL_LEFT, HELP_SPELL_LIST_Y, UI_WHITE, "B CASTS BY NAME; NORMAL MANA RULES APPLY");
     } else {
         char filter[OPTIONS_ROW_TEXT_SIZE];
         snprintf(filter, sizeof filter, "SCREEN FILTER: %s", settings_filter_name(upscale_get_filter()));
@@ -88,7 +98,7 @@ static void show_options(void)
             "QUICK LOAD (F9)",
             "CHEATS (OPTIONAL)"};
         for (int i = 0; i < OPTIONS_ROW_ROWS; i++) {
-            panel_text(PANEL_LEFT, PANEL_FIRST_Y + i * PANEL_ROW_HEIGHT,
+            panel_text(PANEL_LEFT, (int16_t)(PANEL_FIRST_Y + i * PANEL_ROW_HEIGHT),
                        i == selected ? UI_YELLOW : UI_WHITE, lines[i]);
         }
         if (blocked)
@@ -117,8 +127,8 @@ static OptionsResult run_option(void)
 {
     blocked = false;
     if (selected != OPTIONS_ROW_HELP && selected != OPTIONS_ROW_SPELLS && selected != OPTIONS_ROW_FILTER &&
-        selected != OPTIONS_ROW_ASPECT && selected != OPTIONS_ROW_STEPPING &&
-        selected != OPTIONS_ROW_SCANLINES && selected != OPTIONS_ROW_ROWS && input_get_mode() != INPUT_MODE_MOVE) {
+        selected != OPTIONS_ROW_ASPECT && selected != OPTIONS_ROW_STEPPING && selected != OPTIONS_ROW_SCANLINES &&
+        selected != OPTIONS_ROW_ROWS && input_get_mode() != INPUT_MODE_MOVE) {
         blocked = true;
         show_options();
         return OPTIONS_STAY;
@@ -161,8 +171,7 @@ OptionsResult options_event(int type, int16_t x, int16_t y)
 {
     bool back = type == INPUT_BUTTON_RIGHT || (type == INPUT_KEY && (x == SCAN_ESCAPE || x == KEY_OPTIONS));
     if (help) {
-        if (back || (type == INPUT_KEY && x == KEY_ENTER) ||
-            (type == INPUT_BUTTON_LEFT && panel_back_click(x, y))) {
+        if (back || (type == INPUT_KEY && x == KEY_ENTER) || (type == INPUT_BUTTON_LEFT && panel_back_click(x, y))) {
             help = false;
             show_options();
         }
@@ -182,8 +191,7 @@ OptionsResult options_event(int type, int16_t x, int16_t y)
         int16_t hit = -1;
         if (panel_back_click(x, y))
             hit = OPTIONS_ROW_ROWS;
-        else if (x >= PANEL_LEFT && x < SCREEN_W - PANEL_LEFT &&
-                 y >= PANEL_FIRST_Y - TEXT_LINE_HEIGHT &&
+        else if (x >= PANEL_LEFT && x < SCREEN_W - PANEL_LEFT && y >= PANEL_FIRST_Y - TEXT_LINE_HEIGHT &&
                  y < PANEL_FIRST_Y - TEXT_LINE_HEIGHT + OPTIONS_ROW_ROWS * PANEL_ROW_HEIGHT)
             hit = (int16_t)((y - PANEL_FIRST_Y + TEXT_LINE_HEIGHT) / PANEL_ROW_HEIGHT);
         if (hit >= 0) {

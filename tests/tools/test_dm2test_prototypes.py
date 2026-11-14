@@ -114,7 +114,8 @@ def test_the_untyped_functions_are_the_expected_set():
 def test_every_export_has_a_prototype_or_a_reason():
     out = subprocess.run(["nm", "-gU", str(BUILD / "libdm2.dylib")], capture_output=True, text=True, check=True).stdout
     exports = {line.split()[2].removeprefix("_") for line in out.splitlines() if len(line.split()) == 3 and line.split()[1] == "T"}
-    exports = {name for name in exports if not name.startswith(("OPL3_", "tinf_"))}
+    # the vendored code of src/third_party is not in the headers of the port; the xBRZ names are C++ and its C entry
+    exports = {name for name in exports if not name.startswith(("OPL3_", "tinf_", "xbrz_", "ZN4xbrz"))}
     missing = sorted(exports - PROTOTYPES.keys() - UNTYPED.keys())
     assert not missing, f"exports without a prototype or a reason: {missing}"
 

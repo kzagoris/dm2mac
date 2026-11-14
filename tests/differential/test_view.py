@@ -217,9 +217,9 @@ def test_outdoor_sky_matches_original(lib, loaded, original_view):
     lib.view_enter_map(game.party_map)
 
 
-def test_missing_save_exits_1(lib, game_dir, tmp_path):
+def test_missing_save_exits_1(program, game_dir, tmp_path):
     import subprocess
-    result = subprocess.run([ROOT / "build" / "dm2", "--save", tmp_path / "none.DAT"], capture_output=True, timeout=10)
+    result = subprocess.run([program, "--save", tmp_path / "none.DAT"], capture_output=True, timeout=10)
     assert result.returncode == 1
     assert b"cannot load the save" in result.stderr
 

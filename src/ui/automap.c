@@ -81,14 +81,14 @@ static struct {
 /* Three pixels per row: the same plus for any number of items. */
 static const char item_mark[] = "000010111010000";
 
-int automap_cell_size(void)
-{
-    return MAP_CELL_SIZE * zoom;
-}
-
 int automap_zoom_factor(void)
 {
     return zoom;
+}
+
+int automap_cell_size(void)
+{
+    return MAP_CELL_SIZE * zoom;
 }
 
 /* The screen boundary of the middle cell, shared by drawing, selection and zoom anchoring. */

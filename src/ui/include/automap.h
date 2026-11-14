@@ -11,6 +11,10 @@
 #include "ui.h"
 
 /* Queries */
+/* The current integer zoom (1 to 3); exported for the tests. */
+int automap_zoom_factor(void);
+/* Pixel size of a map cell at the current integer zoom. */
+int automap_cell_size(void);
 /* True for a closed fake wall that the party walks through: the automap draws it as a checkered wall; exported for the tests. */
 bool automap_is_imaginary_wall(uint8_t square);
 /* True for a floor square with a sensor that the party, a creature, or an item triggers and that the view draws with a floor ornament; the automap marks it; exported for the tests. */
@@ -40,10 +44,6 @@ bool automap_select(int16_t x, int16_t y);
 bool automap_items_event(int type, int16_t x, int16_t y);
 
 /* Scrolling */
-/* The current integer zoom (1 to 3), and the corresponding cell size in screen pixels. */
-int automap_zoom_factor(void);
-/* Pixel size of a map cell at the current integer zoom. */
-int automap_cell_size(void);
 /* Changes one zoom level around the pointer; false outside the viewport, on the list, or at a limit. */
 bool automap_zoom(int16_t x, int16_t y, int steps);
 /* Moves the middle of the drawn map by (dx, dy) squares; the middle stays inside the level rectangle. */

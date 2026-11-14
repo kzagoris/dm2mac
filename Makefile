@@ -78,7 +78,7 @@ $(OBJ)/%.o: src/%.cpp Makefile $(OBJ)/flags.txt
 	@mkdir -p $(@D)
 	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -c -o $@ $<
 
-$(OBJ)/third_party/xbrz/xbrz.o: CXXFLAGS += -Wno-unused-parameter
+$(OBJ)/third_party/xbrz/xbrz.o: CXXFLAGS += -Wno-unused-parameter -Wno-unused-function
 
 $(B)/dm2: $(call objects,$(OBJ),$(GAME_SOURCES)) $(call cxx_objects,$(OBJ))
 	$(CXX) $(CXXFLAGS) $(LDFLAGS) -o $@ $^ -L$(SDL_PREFIX)/lib -lSDL3 $(LDLIBS)

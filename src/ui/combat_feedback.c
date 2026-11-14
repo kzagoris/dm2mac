@@ -91,7 +91,7 @@ void combat_show_hit(uint16_t group, Location at, int damage)
 }
 
 /* Uses the existing damage-star picture and cyan digits, clipped inside the viewport. */
-static void draw_hit(const HitFeedback *hit, const int16_t *viewport)
+static void render_hit(const HitFeedback *hit, const int16_t *viewport)
 {
     DrawCtx ctx;
     draw_ctx_init(&ctx, CAT_INTERFACE, UI_INDEX_ACTION, GFX_ACTION_RESULT_DAMAGE);
@@ -141,7 +141,7 @@ void combat_draw_feedback(void)
         }
         anchor_hit(hit);
         if (hit->anchored)
-            draw_hit(hit, viewport);
+            render_hit(hit, viewport);
     }
     draw_free_temp();
 }

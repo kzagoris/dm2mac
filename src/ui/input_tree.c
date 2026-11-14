@@ -932,8 +932,8 @@ uint16_t input_click_command(enum InputMode mode, int16_t x, int16_t y, int butt
 uint16_t input_key_command(enum InputMode mode, uint16_t key, int16_t *rect)
 {
     if (g_game_mode == GAME_MODE_ADVANCED && !g_ui.candidate &&
-        ((key == KEY_OPTIONS && (mode == INPUT_MODE_MOVE || mode == INPUT_MODE_INVENTORY ||
-                                 mode == INPUT_MODE_PAUSE || mode == INPUT_MODE_SLEEP)) ||
+        ((key == KEY_OPTIONS && (mode == INPUT_MODE_MOVE || mode == INPUT_MODE_INVENTORY || mode == INPUT_MODE_PAUSE ||
+                                 mode == INPUT_MODE_SLEEP)) ||
          (key == SCAN_ESCAPE && mode == INPUT_MODE_MOVE)))
         return CMD_OPTIONS;
     if (g_game_mode == GAME_MODE_ADVANCED && key == SCAN_ESCAPE && mode == INPUT_MODE_INVENTORY && !g_ui.candidate)

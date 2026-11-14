@@ -373,13 +373,13 @@ def test_lost_game_stays_in_the_turnbased_mode(lib, advanced):
         loop.quit, state.exit_code = 0, 0
 
 
-def test_bad_mode_stops_the_program():
-    result = subprocess.run([str(ROOT / "build" / "dm2"), "--mode", "turbo"], capture_output=True, text=True, timeout=10)
+def test_bad_mode_stops_the_program(program):
+    result = subprocess.run([program, "--mode", "turbo"], capture_output=True, text=True, timeout=10)
     assert result.returncode == 2 and "unknown mode turbo" in result.stderr
 
 
 @pytest.mark.parametrize("args, name", [([], "advanced"), (["--mode", "vanilla"], "vanilla")])
-def test_program_starts_in_advanced_unless_vanilla(game_dir, tmp_path, args, name):
+def test_program_starts_in_advanced_unless_vanilla(program, game_dir, start, tmp_path, args, name):
     # build/dm2 without --mode plays the advanced mode: W walks and F5 writes DATA/QUICK.DAT; --mode vanilla does not.
     (tmp_path / "DATA").mkdir()
     for f in ("GRAPHICS.DAT", "DUNGEON.DAT"):
@@ -387,7 +387,7 @@ def test_program_starts_in_advanced_unless_vanilla(game_dir, tmp_path, args, nam
     folder = tempfile.mkdtemp(prefix="dm2m", dir="/tmp")  # sun_path holds about 100 bytes
     path = os.path.join(folder, "control.sock")
     env = dict(os.environ, SDL_VIDEO_DRIVER="dummy", SDL_AUDIO_DRIVER="dummy")
-    program = subprocess.Popen([str(ROOT / "build/dm2"), "--data", str(tmp_path), "--control", path, *args, "--save",
+    process = subprocess.Popen([program, "--data", str(tmp_path), "--control", path, *args, "--save",
                                 str(ROOT / "tests/saves/start.DAT")], env=env, stdout=subprocess.DEVNULL,
                                stderr=subprocess.DEVNULL)
     try:
@@ -404,9 +404,9 @@ def test_program_starts_in_advanced_unless_vanilla(game_dir, tmp_path, args, nam
         assert (moved != state["party"]) == (name == "advanced")
         assert (tmp_path / "DATA" / "QUICK.DAT").exists() == (name == "advanced")
         assert request({"cmd": "quit"}, path, timeout=10) == {"ok": True}
-        assert program.wait(timeout=10) == 0
+        assert process.wait(timeout=10) == 0
     finally:
-        program.kill()
+        process.kill()
         shutil.rmtree(folder)
 
 

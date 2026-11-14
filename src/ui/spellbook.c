@@ -38,6 +38,7 @@ _Static_assert(LIST_ROWS <= ROWS_MAX_COUNT, "the spell list fits below the title
 #define BOOK_TEXT_SIZE  48
 #define RUNE_NAMES_SIZE 16 /* three rune names, the spaces between them, and the end */
 #define NAME_COLUMNS    17 /* the longest spell name */
+#define SLOT_LABEL_SIZE 24 /* LAST ATTEMPT or FAVORITE and its number */
 
 static struct {
     bool favorites;     /* the favorites page shows, else the spell list */
@@ -124,7 +125,7 @@ static void get_cost_text(char *text, int mana, bool needs_flask)
 {
     const Champion *c = book.caster >= 0 ? champion(book.caster) : NULL;
     snprintf(text, BOOK_TEXT_SIZE, "MANA %d/%d - %s", mana, c ? c->mana : 0,
-             !needs_flask                          ? "NO FLASK NEEDED"
+             !needs_flask                         ? "NO FLASK NEEDED"
              : magic_has_empty_flask(book.caster) ? "FLASK READY"
                                                   : "FLASK MISSING");
 }
@@ -152,8 +153,11 @@ static void show_list(void)
         if (spell)
             get_rune_names(spell, runes, sizeof runes);
         bool marked = book.spell == book.page * LIST_SPELLS + row - LIST_FIRST;
-        snprintf(texts[row], BOOK_TEXT_SIZE, "%s%-*s %s", !spell ? "" : marked ? "> " : "  ", NAME_COLUMNS,
-                 spell ? magic_get_spell_name(spell) : "", runes);
+        snprintf(texts[row], BOOK_TEXT_SIZE, "%s%-*s %s",
+                 !spell   ? ""
+                 : marked ? "> "
+                          : "  ",
+                 NAME_COLUMNS, spell ? magic_get_spell_name(spell) : "", runes);
     }
     snprintf(texts[LIST_NEXT], BOOK_TEXT_SIZE, "MORE SPELLS - PAGE %d/%d", book.page + 1, count_pages());
     if (count_pages() == 1)
@@ -186,7 +190,7 @@ static void show_favorites(void)
             uint8_t glyph = magic_favorite_rune(book.caster, slot, step);
             runes[step - 1] = glyph ? (char)('1' + (glyph - SPELL_RUNE_GLYPH_FIRST) % SPELL_RUNES_PER_SET) : '-';
         }
-        char label[24];
+        char label[SLOT_LABEL_SIZE];
         if (slot == MAGIC_FAVORITE_LAST)
             snprintf(label, sizeof(label), "LAST ATTEMPT");
         else
@@ -349,7 +353,7 @@ static SpellbookResult run_favorites_row(void)
     if (book.row >= BOOK_FIRST && book.row < BOOK_MANA)
         book.slot = (int16_t)(book.row - BOOK_FIRST);
     else if (book.row == BOOK_RECORD)
-        book.status = book.slot == MAGIC_FAVORITE_LAST                  ? "SELECT FAVORITE 1-4 TO SAVE"
+        book.status = book.slot == MAGIC_FAVORITE_LAST                ? "SELECT FAVORITE 1-4 TO SAVE"
                       : magic_record_favorite(book.caster, book.slot) ? "SAVED. CLOSE AND CAST ENTERED RUNES"
                                                                       : "CLOSE, ENTER RUNES, THEN PRESS B";
     else if (book.row == BOOK_CAST) {
@@ -412,7 +416,7 @@ static void select_row(int16_t row)
 }
 
 /* Moves the selection one selectable row up (step -1) or down (step 1); the title item is after the last row. */
-static void move_selection(int step)
+static void step_selection(int step)
 {
     RowsScreen layout = find_layout();
     int16_t row = (int16_t)(book.row + step);
@@ -426,7 +430,7 @@ static void move_selection(int step)
 }
 
 /* Shows the spell list page before (step -1) or after (step 1) the shown page, with its first spell marked. */
-static void turn_page(int step)
+static void flip_page(int step)
 {
     if (book.favorites)
         return;
@@ -444,13 +448,13 @@ SpellbookResult spellbook_event(int type, int16_t x, int16_t y)
         open_list();
     } else if (type == INPUT_KEY) {
         if (x == KEYPAD_FORWARD || x == SCAN_W)
-            move_selection(-1);
+            step_selection(-1);
         else if (x == KEYPAD_BACK || x == SCAN_S)
-            move_selection(1);
+            step_selection(1);
         else if (x == KEYPAD_LEFT || x == SCAN_A)
-            turn_page(-1);
+            flip_page(-1);
         else if (x == KEYPAD_RIGHT || x == SCAN_D)
-            turn_page(1);
+            flip_page(1);
         else if (x == KEY_ENTER)
             return run_row();
     } else if (type == INPUT_BUTTON_LEFT) {

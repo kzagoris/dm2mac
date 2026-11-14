@@ -4,8 +4,6 @@ import subprocess
 
 import pytest
 
-from dm2test.markers import ROOT
-
 
 def run(lib, n, rows):
     h, w = len(rows), len(rows[0])
@@ -32,14 +30,14 @@ def test_scale(lib, n, src, out):
 
 
 @pytest.mark.parametrize("args, env", [(["--filter", "bad"], None), ([], "bad"), (["--filter", "bad"], "none")])
-def test_unknown_filter_exits_2(lib, args, env):
+def test_unknown_filter_exits_2(program, args, env):
     environ = {k: v for k, v in os.environ.items() if k != "DM2_FILTER"} | ({"DM2_FILTER": env} if env else {})
-    result = subprocess.run([ROOT / "build" / "dm2", *args], env=environ, capture_output=True, timeout=10)
+    result = subprocess.run([program, *args], env=environ, capture_output=True, timeout=10)
     assert result.returncode == 2
     assert b"unknown filter bad" in result.stderr
 
 
-def test_filter_without_value_exits_2(lib):
-    result = subprocess.run([ROOT / "build" / "dm2", "--filter"], capture_output=True, timeout=10)
+def test_filter_without_value_exits_2(program):
+    result = subprocess.run([program, "--filter"], capture_output=True, timeout=10)
     assert result.returncode == 2
     assert b"--filter needs a value" in result.stderr

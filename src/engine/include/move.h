@@ -9,10 +9,6 @@
 #include <stdint.h>
 #include "dungeon.h"
 
-/* Player preference, outside saved game state. */
-void move_set_classic_steps(bool enabled);
-bool move_has_classic_steps(void);
-
 /* Movement commands: turn left and right, then step forward, right, back, and left. */
 #define CMD_TURN_LEFT    0x01
 #define CMD_TURN_RIGHT   0x02
@@ -107,6 +103,10 @@ BumpedChampions move_party_bump_damage(Location at, int16_t dir, int step);
 
 /* Turns the party left or right (command 1 or 2). */
 void move_party_turn(int command);
+/* Sets the classic stepping, a player preference outside the saved game state. */
+void move_set_classic_steps(bool enabled);
+/* Whether the classic stepping is on. */
+bool move_has_classic_steps(void);
 /* Moves the party one square in a move command; false when the command must wait. */
 bool move_party(int command);
 /* Puts the party on the square at, facing dir. */
