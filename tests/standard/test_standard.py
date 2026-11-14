@@ -11,6 +11,7 @@ import shutil
 import subprocess
 import sys
 from collections import defaultdict, namedtuple
+from functools import cache
 from pathlib import Path
 
 from dm2test.markers import ROOT
@@ -43,12 +44,20 @@ PREDICATE = re.compile(r"(?:^|_)(?:is|has|can)_")
 FUNC_START = re.compile(r"^(?:static\s+)?[A-Za-z_][\w *]*?\b([a-z_]\w*)\s*\([^;]*$")
 
 
+@cache
+def read(path):
+    """The text of the file; each file is read once per run, since the checks do not change src/."""
+    return path.read_text(errors="replace")
+
+
+@cache
 def sources():
-    return sorted(p for p in SRC.rglob("*.[ch]") if p.relative_to(SRC).parts[0] != "third_party")
+    return tuple(sorted(p for p in SRC.rglob("*.[ch]") if p.relative_to(SRC).parts[0] != "third_party"))
 
 
+@cache
 def headers():
-    return [p for p in sources() if p.suffix == ".h"]
+    return tuple(p for p in sources() if p.suffix == ".h")
 
 
 def rel(path):
@@ -83,6 +92,7 @@ def allowed():
 STRIP_TOKEN = re.compile(r"/\*.*?\*/|//[^\n]*|\"(?:\\.|[^\"\\\n])*\"|'(?:\\.|[^'\\\n])*'", re.S)
 
 
+@cache
 def strip(text):
     """The text without comments and string or character literals; line numbers stay."""
     def drop(match):
@@ -93,7 +103,7 @@ def strip(text):
 
 def code_lines(path):
     """Numbered lines that are not constant definitions."""
-    text = ENUM.sub(lambda m: "\n" * m.group().count("\n"), strip(path.read_text(errors="replace")))
+    text = ENUM.sub(lambda m: "\n" * m.group().count("\n"), strip(read(path)))
     for number, line in enumerate(text.splitlines(), 1):
         if not line.lstrip().startswith("#") and not CONST_DEF.match(line):
             yield number, line
@@ -103,10 +113,11 @@ TABLE_START = re.compile(r"^(?:[^\s#]|[ \t]+static\b)[^\n=;{}()]*?\b([A-Za-z_]\w
                          r"|^[ \t]+\}\s*([A-Za-z_]\w*)\s*(?:\[[^\]=;]*\]\s*)*=\s*\{", re.M)
 
 
+@cache
 def tables(path):
     """Each 1-based line of a table initializer of the file, from the = to the closing brace: (table name, column
     where the initializer starts on the line); the declaration before the = stays outside."""
-    text = strip(path.read_text(errors="replace"))
+    text = strip(read(path))
     found, end = {}, 0
     for m in TABLE_START.finditer(text):
         if m.start() < end:
@@ -148,11 +159,12 @@ def line_check(check, pattern, owners=(), ignore=None):
     report(check, found)
 
 
+@cache
 def declarations(path):
     """(return type, name) of each function that a header declares or defines inline."""
-    text = strip(path.read_text(errors="replace"))
-    return [(ret.replace("static", "").replace("inline", "").strip(), name) for ret, name in DECL.findall(text)
-            if not ret.lstrip().startswith(("typedef", "return", "extern"))]
+    text = strip(read(path))
+    return tuple((ret.replace("static", "").replace("inline", "").strip(), name) for ret, name in DECL.findall(text)
+                 if not ret.lstrip().startswith(("typedef", "return", "extern")))
 
 
 Function = namedtuple("Function", "name ret line params static definition")
@@ -181,9 +193,10 @@ def split_parameters(params):
     return [p.strip() for p in parts if p.strip() and p.strip() != "void"]
 
 
+@cache
 def functions(path):
     """Each function that the file declares or defines at column 0, with its parameters."""
-    text = strip(path.read_text(errors="replace"))
+    text = strip(read(path))
     found = []
     for m in DECL.finditer(text):
         ret, name = m.group(1), m.group(2)
@@ -192,8 +205,8 @@ def functions(path):
         params = parameter_list(text, m.end())
         after = text[m.end() + len(params) + 1:].lstrip()
         found.append(Function(name, " ".join(ret.split()), text.count("\n", 0, m.start()) + 1,
-                              split_parameters(params), "static" in ret.split(), after.startswith("{")))
-    return found
+                              tuple(split_parameters(params)), "static" in ret.split(), after.startswith("{")))
+    return tuple(found)
 
 
 def comment_above(lines, line):
@@ -207,17 +220,18 @@ def comment_above(lines, line):
     return "\n".join(lines[j:i + 1]) if lines[j].lstrip().startswith("/*") else ""
 
 
+@cache
 def definitions(path):
     """(name, first line, last line, static) of each function body at column 0 of a .c file; 1-based lines."""
     found, name = [], None
-    for number, line in enumerate(path.read_text(errors="replace").splitlines(), 1):
+    for number, line in enumerate(read(path).splitlines(), 1):
         match = FUNC_START.match(line)
         if match and name is None:
             name, start, static = match.group(1), number, line.startswith("static")
         elif line.startswith("}") and name:
             found.append((name, start, number, static))
             name = None
-    return found
+    return tuple(found)
 
 
 def test_no_hex_literals():
@@ -238,7 +252,7 @@ def test_enums_are_named_types():
     for path in sources():
         if ("enum", rel(path)) in ok:
             continue
-        text = strip(path.read_text(errors="replace"))
+        text = strip(read(path))
         for m in ENUM_ANY.finditer(text):
             name = m.group(1) or m.group(3)
             members = [hit.group(1) for part in m.group(2).split(",") if (hit := ENUM_MEMBER.match(part))]
@@ -256,7 +270,7 @@ DEFINE_LINE = re.compile(r"^\s*#\s*define\s+([A-Z][A-Z0-9_]*)(?!\()\s+(.*?)\s*(?
 
 def constant_blocks(path):
     """(first line, comment line above, [(name, value)]) of each run of adjacent #define lines with a value."""
-    lines = path.read_text(errors="replace").splitlines()
+    lines = read(path).splitlines()
     i = 0
     while i < len(lines):
         m = DEFINE_LINE.match(lines[i])
@@ -305,7 +319,7 @@ def test_raw_record_access_only_in_accessors():
 def test_each_constant_has_one_definition():
     where = defaultdict(set)
     for path in sources():
-        text = strip(path.read_text(errors="replace"))
+        text = strip(read(path))
         names = set(DEFINE.findall(text))
         for body in ENUM.findall(text):
             names.update(m.group(1) for item in body.split(",") if (m := re.match(r"\s*([A-Z][A-Z0-9_]*)\b", item)))
@@ -332,8 +346,8 @@ def test_headers_state_unique_prefixes():
     for path in sources():
         if path.suffix != ".h" or ("prefix", rel(path)) in ok:
             continue
-        names = [name for _, name in declarations(path)] + MACRO.findall(strip(path.read_text(errors="replace")))
-        match = PREFIXES.search(path.read_text(errors="replace"))
+        names = [name for _, name in declarations(path)] + MACRO.findall(strip(read(path)))
+        match = PREFIXES.search(read(path))
         if not match:
             if names:
                 found.append(f"prefix {rel(path)}  | no Prefixes line")
@@ -362,7 +376,7 @@ def test_no_event_numbers_or_offsets_in_names():
     ok = allowed()
     where = defaultdict(set)
     for path in sources():
-        for name in IDENTIFIER.findall(strip(path.read_text(errors="replace"))):
+        for name in IDENTIFIER.findall(strip(read(path))):
             if NUMBERED.search(name) and ("numbered", name) not in ok:
                 where[name].add(rel(path))
     report("numbered", [f"numbered {name}  | {sorted(paths)}" for name, paths in sorted(where.items())])
@@ -378,7 +392,7 @@ def test_truth_values_are_bool():
     ok = allowed()
     found = []
     for path in sources():
-        lines = path.read_text(errors="replace").splitlines()
+        lines = read(path).splitlines()
         for f in functions(path):
             key = f"{rel(path)}:{f.name}"
             if f.ret.replace("static", "").replace("inline", "").strip() == "bool" or ("bool", key) in ok:
@@ -394,7 +408,7 @@ def test_truth_values_are_bool():
 
 def all_prefixes():
     """Every prefix that a header states, longest first."""
-    found = {p for h in headers() if (m := PREFIXES.search(h.read_text(errors="replace"))) for p in m.group(1).split()}
+    found = {p for h in headers() if (m := PREFIXES.search(read(h))) for p in m.group(1).split()}
     return sorted(found - {"none"}, key=len, reverse=True)
 
 
@@ -443,7 +457,7 @@ def test_globals_have_the_g_prefix():
     for path in sources():
         if ("global", rel(path)) in ok:
             continue
-        text = strip(path.read_text(errors="replace"))
+        text = strip(read(path))
         found += [f"global {rel(path)}  | extern {name}" for decl in EXTERN_VARIABLE.findall(text)
                   for name in extern_names(decl) if not name.startswith("g_")]
         if path.suffix == ".c":
@@ -458,7 +472,7 @@ def test_no_ordinals_in_names():
     ok = allowed()
     where = defaultdict(set)
     for path in sources():
-        for name in IDENTIFIER.findall(strip(path.read_text(errors="replace"))):
+        for name in IDENTIFIER.findall(strip(read(path))):
             if ORDINAL.search(name) and ("ordinal", name) not in ok:
                 where[name].add(rel(path))
     report("ordinal", [f"ordinal {name}  | {sorted(paths)}" for name, paths in sorted(where.items())])
@@ -518,7 +532,7 @@ def test_no_packed_fields_at_call_sites():
     """Also a shift by a *_SHIFT constant of a header in a .c file of another module: the accessor belongs to the owner."""
     ok = allowed()
     owner = {name: module_stem(path.name) for path in sources() if path.suffix == ".h"
-             for name in DEFINE.findall(strip(path.read_text(errors="replace"))) if name.endswith("_SHIFT")}
+             for name in DEFINE.findall(strip(read(path))) if name.endswith("_SHIFT")}
     found = []
     for path in sources():
         if path.suffix == ".c" and ("packed", rel(path)) not in ok:
@@ -542,7 +556,7 @@ def test_byte_order_helpers_only_in_le_header():
     for path in sources():
         if rel(path) == "data/include/le.h":
             continue
-        text = strip(path.read_text(errors="replace"))
+        text = strip(read(path))
         found += [f"byteorder {rel(path)}  | {name}" for _, name in declarations(path) if name.startswith(BYTE_ORDER_HELPERS)]
         found += [f"byteorder {rel(path)}  | #define {name}" for name in BYTE_ORDER_MACRO.findall(text)]
         found += [f"byteorder {rel(path)}  | {n}: {line.strip()}" for n, line in code_lines(path) if BYTE_SHIFT.search(line)]
@@ -561,7 +575,7 @@ def struct_types():
     """The names of the struct types of src/: typedef names and struct tags."""
     names = set()
     for path in sources():
-        names.update(a or b for a, b in STRUCT_TYPE.findall(strip(path.read_text(errors="replace"))))
+        names.update(a or b for a, b in STRUCT_TYPE.findall(strip(read(path))))
     return names
 
 
@@ -581,7 +595,7 @@ def test_no_packed_structs():
     """No packed struct and no file or memory copy between bytes and a struct, except a layout of SKULL.EXE (rule 10.7)."""
     ok = allowed()
     types = struct_types()
-    texts = {path: strip(path.read_text(errors="replace")) for path in sources()}
+    texts = {path: strip(read(path)) for path in sources()}
     globals_ = {name for text in texts.values() for name in re.findall(r"^extern\s+(?:struct\s+)?(?:" + "|".join(sorted(types))
                                                                       + r")\s+(\w+)", text, re.M)}
     found = []
@@ -598,7 +612,7 @@ def test_no_packed_structs():
 
 def function_bodies(path):
     """(first line, body text) of each function that the file defines; the body keeps its line breaks."""
-    text = strip(path.read_text(errors="replace"))
+    text = strip(read(path))
     starts = [0] + [i + 1 for i, ch in enumerate(text) if ch == "\n"]
     for function in functions(path):
         if not function.definition:
@@ -642,7 +656,7 @@ def element_write(name):
 def test_tables_are_const():
     """A file-scope array with an initializer list that no function writes is const (rule 3.13)."""
     ok = allowed()
-    texts = {path: strip(path.read_text(errors="replace")) for path in sources()}
+    texts = {path: strip(read(path)) for path in sources()}
     found = []
     for path, text in texts.items():
         if ("const", rel(path)) in ok:
@@ -672,7 +686,7 @@ def test_platform_code_only_in_platform():
     for path in sources():
         if layer_of(path) == "platform" or ("platform", rel(path)) in ok:
             continue
-        text = path.read_text(errors="replace")
+        text = read(path)
         found += [f"platform {rel(path)}  | {m.group().strip()}" for m in PLATFORM_CODE.finditer(text)]
         for n, line in enumerate(strip(text).splitlines(), 1):
             if NONDETERMINISM.search(line) or rel(path) != "data/os.c" and STDERR_OR_EXIT.search(line):
@@ -687,7 +701,7 @@ REDRAW_FLAG_WRITE = re.compile(r"\bredraw\s*(?:[|&]=|=(?!=))$")
 def engine_globals():
     names = set()
     for path in (SRC / "engine").rglob("*.h"):
-        for decl in EXTERN.findall(strip(path.read_text(errors="replace"))):
+        for decl in EXTERN.findall(strip(read(path))):
             names.update(n for n in re.findall(r"\b(g_\w+)", decl) if n != "g_hooks" and not n.endswith("_hook"))
     return names
 
@@ -741,7 +755,7 @@ def test_layers():
             found.append(f"layer {rel(path)}  | {error}")
             continue
         layer = layer_of(path)
-        text = path.read_text(errors="replace")
+        text = read(path)
         for header in INCLUDE.findall(text):
             key = f"{rel(path)}:{header}"
             if ("layer", key) in ok:
@@ -810,18 +824,26 @@ def test_allowlist_lines_match_violations(monkeypatch):
                          if not any(c == check and (t == target or t.startswith(target + ":")) for c, t in keys)])
 
 
+@cache
 def module_files(header):
     """The public header, its _internal.h and the .c files of its module (rule 1.7: the longest header prefix)."""
     base = header.stem.removesuffix("_internal")
     public = public_header(layer_of(header), base)
     layer = SRC / layer_of(header)
-    return {p for p in [*layer.iterdir(), *(layer / "include").iterdir()]
-            if p == public or p.name == f"{base}_internal.h" or (p.suffix == ".c" and base_header(p) == public)}
+    return frozenset(p for p in [*layer.iterdir(), *(layer / "include").iterdir()]
+                     if p == public or p.name == f"{base}_internal.h" or (p.suffix == ".c" and base_header(p) == public))
 
 
+@cache
+def layer_headers(layer):
+    """The public headers of a layer."""
+    return tuple(sorted((SRC / layer / "include").glob("*.h")))
+
+
+@cache
 def base_header(path):
     """The public header <m>.h with the longest stem m that is the stem of the file or prefixes it as <m>_, or None."""
-    return max((h for h in (SRC / layer_of(path) / "include").glob("*.h") if h != path
+    return max((h for h in layer_headers(layer_of(path)) if h != path
                 and (path.stem == h.stem or path.stem.startswith(h.stem + "_"))), key=lambda h: len(h.stem), default=None)
 
 
@@ -861,7 +883,7 @@ SPDX_C = "/* SPDX-License-Identifier: GPL-3.0-or-later */"
 
 def header_error(path):
     """Why the head of a header is out of order (SPDX, guard, prefix line, purpose paragraph), or None."""
-    lines = path.read_text(errors="replace").splitlines()
+    lines = read(path).splitlines()
     guard = f"DM2_{layer_of(path).upper()}_{path.stem.upper()}_H"
     if lines[:1] != [SPDX_C]:
         return "line 1 is not the SPDX line"
@@ -888,7 +910,7 @@ def defined_names(header, cache={}):
     """The names that a header makes known: macros, types (also function and function pointer types), tags,
     functions, variables, enum members."""
     if header not in cache:
-        text = strip(header.read_text(errors="replace"))
+        text = strip(read(header))
         names = set(re.findall(r"^\s*#\s*define\s+(\w+)", text, re.M))
         names |= set(re.findall(r"\}\s*(\w+)\s*;", text)) | set(re.findall(r"\btypedef\b[^;{]*?(\w+)\s*;", text))
         names |= set(re.findall(r"\b(?:struct|enum|union)\s+(\w+)", text))
@@ -907,7 +929,7 @@ def test_includes_are_used():
     ok = allowed()
     found = []
     for path in sources():
-        raw = path.read_text(errors="replace")
+        raw = read(path)
         used = set(IDENTIFIER.findall(INCLUDE.sub("", strip(raw))))
         own = f"{path.stem}.h"
         for header in INCLUDE.findall(raw):
@@ -948,11 +970,11 @@ def test_function_comments():
     ok = allowed()
     found = []
     for header in headers():
-        hlines = header.read_text(errors="replace").splitlines()
+        hlines = read(header).splitlines()
         bodies = {}
         for c in sorted(module_files(header)):
             if c.suffix == ".c":
-                clines = c.read_text(errors="replace").splitlines()
+                clines = read(c).splitlines()
                 bodies.update({name: (c, clines, start) for name, start, _, static in definitions(c) if not static})
         prototypes = functions(header)
         grouped = grouped_accessors(hlines, prototypes)
@@ -969,7 +991,7 @@ def test_function_comments():
     for path in sources():
         if path.suffix != ".c" or ("comment", rel(path)) in ok:
             continue
-        lines = path.read_text(errors="replace").splitlines()
+        lines = read(path).splitlines()
         found += [f"comment {rel(path)}  | {name}: no comment above the static definition"
                   for name, start, end, static in definitions(path)
                   if static and end - start - 2 > TRIVIAL_BODY_LINES and not comment_above(lines, start)]
@@ -988,7 +1010,7 @@ def first_sections(path):
     a static const table counts as a variable."""
     starts = {start for _, start, _, _ in definitions(path)}
     first, depth = {}, 0
-    for number, line in enumerate(strip(path.read_text(errors="replace")).splitlines(), 1):
+    for number, line in enumerate(strip(read(path)).splitlines(), 1):
         if depth == 0:
             kind = "function" if number in starts else next((k for k, p in SECTION_START if p.search(line)), None)
             first.setdefault(kind, number)
@@ -1018,7 +1040,7 @@ def test_file_order():
             if defined != expected:
                 first = next(a for a, b in zip(defined, expected) if a != b)
                 found.append(f"order {rel(path)}  | {first} stands before its place in {header.name}")
-        lines = path.read_text(errors="replace").splitlines()
+        lines = read(path).splitlines()
         text = strip("\n".join(lines))
         for m in FORWARD_STATIC.finditer(text):
             line = text.count("\n", 0, m.start()) + 1
@@ -1085,7 +1107,7 @@ def test_results():
     ok = allowed()
     found = []
     for path in sources():
-        lines = path.read_text(errors="replace").splitlines()
+        lines = read(path).splitlines()
         found += [f"result {rel(path)}:{f.name}  | the comment gives 0 or -1 as a result" for f in functions(path)
                   if ("result", f"{rel(path)}:{f.name}") not in ok and RESULT_COMMENT.search(comment_above(lines, f.line))]
     report("result", sorted(set(found)))
@@ -1101,28 +1123,36 @@ def test_at_most_five_parameters():
 TEST_MARKER = "exported for the tests"
 
 
-def defines(path, name):
-    """True when the .c file defines the function or the variable name at column 0."""
-    text = strip(path.read_text(errors="replace"))
-    return (any(f.name == name and f.definition for f in functions(path))
-            or re.search(rf"^(?!extern\b)\w[^\n;(=]*\b{name}\s*(?:\[[^\n;=]*\])*\s*[=;]", text, re.M) is not None)
+VARIABLE_DEFINITION = re.compile(r"^(?!extern\b)\w[^\n;(=]*\b(\w+)\s*(?:\[[^\n;=]*\])*\s*[=;]", re.M)
+
+
+@cache
+def file_scope_names(path):
+    """The names of the functions and the variables that the .c file defines at column 0."""
+    return frozenset({f.name for f in functions(path) if f.definition} | set(VARIABLE_DEFINITION.findall(strip(read(path)))))
+
+
+@cache
+def identifiers():
+    """The identifiers of each source file."""
+    return {path: frozenset(IDENTIFIER.findall(strip(read(path)))) for path in sources()}
 
 
 def test_exports_have_users():
     """An exported function or global has a use outside its module and outside the file that defines it, or the test
     marker on its declaration; a name of an _internal.h header has a use outside the file that defines it."""
-    used_in = {path: set(IDENTIFIER.findall(strip(path.read_text(errors="replace")))) for path in sources()}
+    used_in = identifiers()
     ok = allowed()
     found = []
     for header in headers():
         internal = header.stem.endswith("_internal")
-        lines = header.read_text(errors="replace").splitlines()
+        lines = read(header).splitlines()
         text = strip("\n".join(lines))
         names = [(f.name, f.line) for f in functions(header) if not f.static]
         names += [(n, text.count("\n", 0, m.start()) + 1) for m in EXTERN_VARIABLE.finditer(text) for n in extern_names(m.group(1))]
         for name, line in names:
             key = f"{rel(header)}:{name}"
-            defining = {p for p in (module_files(header) if internal else sources()) if p.suffix == ".c" and defines(p, name)}
+            defining = {p for p in (module_files(header) if internal else sources()) if p.suffix == ".c" and name in file_scope_names(p)}
             own = {header} | defining if internal else module_files(header) | defining
             if ("dead-api", key) in ok or any(name in ids for p, ids in used_in.items() if p not in own):
                 continue
@@ -1143,7 +1173,7 @@ def comment_check(check, pattern):
     for path in sources():
         if (check, rel(path)) in ok:
             continue
-        text = path.read_text(errors="replace")
+        text = read(path)
         for m in COMMENT_TEXT.finditer(text):
             if (hit := pattern.search(m.group())):
                 found.append(f"{check} {rel(path)}  | {text.count(chr(10), 0, m.start()) + 1}: {hit.group()}")
@@ -1171,7 +1201,7 @@ def test_tests_follow_the_rules():
         target = path.relative_to(ROOT).as_posix()
         if path.resolve() == Path(__file__).resolve() or ("tests", target) in ok:
             continue
-        for number, line in enumerate(path.read_text(errors="replace").splitlines(), 1):
+        for number, line in enumerate(read(path).splitlines(), 1):
             if TEST_IMPORT.match(line) or MACHINE_PATH.search(line) or CLANG_CALL.search(line):
                 found.append(f"tests {target}  | {number}: {line.strip()}")
     found += dm2test_findings()
@@ -1201,6 +1231,6 @@ def dm2test_findings():
         if "@pytest.fixture" in text and name not in listed:
             found.append(f"tests dm2test/{path.name}  | has a fixture, not in pytest_plugins")
     for path in sorted(TESTS.rglob("*.py")):
-        if path.name != "lib.py" and re.search(r"^def lib\(", path.read_text(errors="replace"), re.M):
+        if path.name != "lib.py" and re.search(r"^def lib\(", read(path), re.M):
             found.append(f"tests {path.relative_to(ROOT).as_posix()}  | defines the lib fixture")
     return found
