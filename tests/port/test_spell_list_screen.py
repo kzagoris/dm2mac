@@ -12,7 +12,7 @@ from dm2test.scenario import champion_bytes, champion_records
 LIGHT, MAGIC_TORCH, FIREBALL = 0, 5, 16  # spell table indices: OH IR RA; FUL; FUL IR
 LO, FUL, IR, VEN = 0, 3, 3, 0  # the place of the rune in its rune set
 GLYPH_OH, GLYPH_FUL = 0x68, 0x69
-OPTIONS_ROW_SPELLS = 2
+OPTIONS_ROW_SPELLS = 3
 SCAN_1 = 0x02  # the keys 1 to 4 of the spell list
 KEY_ALT_C, KEY_ALT_1 = 0x082E, 0x0802  # the favorite keys: Alt+C, then Alt+1 to Alt+4
 # Champion record offsets (the Champion struct of engine/champion.h).

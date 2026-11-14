@@ -148,7 +148,10 @@ Focus gain alone does nothing. A fresh Return after focus returns clears only th
 are suppressed until that key is pressed again. Modal waits also stop their timer counts while focus-paused.
 
 Esc in the dungeon view and the F1 key open ordinary preferences and controls without entering Cheats.
-Help covers movement, inventory, inspection, normal spell entry, favorites, saves and pause. F1 also works in
+Help covers movement, inventory, inspection, normal spell entry, favorites, saves and pause.
+The MAP LEGEND row, below CONTROLS, shows the automap marks as 2x swatches: the light gray checkerboard of an imaginary
+wall, the gray square of a pressure pad, the yellow plus of loose items, and the white frame of the level edge, with a
+line on the red party frame. Enter, Esc, right click, or BACK return to the options. F1 also works in
 inventory, sleep and pause, but save/cast actions require the dungeon view. Name entry, recruiting and dialogs
 keep their original input. The mode screen explains convenience additions and optional cheats off by default.
 

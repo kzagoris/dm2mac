@@ -114,3 +114,41 @@ def test_disk_and_rest_shortcuts_follow_icon_availability(lib):
         UiState.in_dll(lib, 'g_ui').candidate = 0
         set_mode(lib, VANILLA)
         assert not lib.input_key_command(C.INPUT_MODE_MOVE, key, rect)
+
+
+def test_map_legend_page_draws_the_automap_marks_and_goes_back(lib, panel):
+    """The second row opens MAP LEGEND: a swatch per automap mark, 2x enlarged, at x 18 and 24 pixels apart
+    (the swatch tops at 49, 73, 97, 121); Return goes back to the options."""
+    pixels = (ctypes.c_uint8 * (C.SCREEN_W * C.SCREEN_H)).in_dll(lib, 'g_video_fb')
+    colors = ctypes.POINTER(ctypes.c_uint8).in_dll(lib, 'g_ui_colors')
+    lib.advanced_open_options()
+    lib.advanced_screen_event(C.INPUT_KEY, C.SCAN_S, 0)
+    lib.advanced_screen_event(C.INPUT_KEY, C.KEY_ENTER, 0)
+    screen = ctypes.c_int.in_dll(lib, 'g_advanced_screen')
+    assert screen.value == C.ADVANCED_SCREEN_OPTIONS
+
+    def swatch(row):
+        top = 49 + row * 24
+        return {pixels[(top + y) * C.SCREEN_W + 18 + x] for y in range(16) for x in range(16)}
+
+    assert colors[C.UI_LIGHT_GRAY] in swatch(0)
+    assert colors[C.UI_GRAY] in swatch(1)
+    assert colors[C.UI_YELLOW] in swatch(2)
+    assert colors[C.UI_WHITE] in swatch(3) and colors[C.UI_WHITE] not in swatch(2)
+    lib.advanced_screen_event(C.INPUT_KEY, C.KEY_ENTER, 0)  # back to the options, still open
+    assert screen.value == C.ADVANCED_SCREEN_OPTIONS
+    lib.advanced_screen_event(C.INPUT_KEY, C.SCAN_ESCAPE, 0)
+    assert not screen.value
+
+
+def test_legend_swatch_uses_the_automap_item_plus_and_pad_square(lib, panel):
+    """At scale 1 the swatch is the 7 x 7 icon below and right of a 1-pixel frame line."""
+    pixels = (ctypes.c_uint8 * (C.SCREEN_W * C.SCREEN_H)).in_dll(lib, 'g_video_fb')
+    colors = ctypes.POINTER(ctypes.c_uint8).in_dll(lib, 'g_ui_colors')
+    ctypes.memset(pixels, 0, len(pixels))
+    lib.automap_draw_legend_mark(2, 0, 0, 1)  # AUTOMAP_MARK_ITEMS
+    yellow = {(x, y) for y in range(8) for x in range(8) if pixels[y * C.SCREEN_W + x] == colors[C.UI_YELLOW]}
+    assert yellow == {(6, 2), (5, 3), (6, 3), (7, 3), (6, 4)}
+    lib.automap_draw_legend_mark(1, 0, 0, 1)  # AUTOMAP_MARK_PRESSURE_PAD
+    gray = {(x, y) for y in range(8) for x in range(8) if pixels[y * C.SCREEN_W + x] == colors[C.UI_GRAY]}
+    assert gray == {(x, y) for x in range(3, 6) for y in range(3, 6)}

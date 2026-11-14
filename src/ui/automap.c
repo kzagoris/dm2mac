@@ -17,6 +17,7 @@
 #include "save.h"
 #include "seen.h"
 #include "sensor.h"
+#include "video.h"
 #include "zone.h"
 
 /* The gap left of and above each square icon. */
@@ -542,6 +543,47 @@ void automap_draw_items(void)
     ItemPage page;
     build_item_page(&page);
     rows_draw(&page.screen, -1);
+}
+
+/* Legend */
+
+/* Fills the scale x scale block of a legend swatch pixel whose upper left is at the screen place (x, y). */
+static void legend_pixel(int16_t x, int16_t y, int scale, int ui_color)
+{
+    for (int sy = 0; sy < scale; sy++)
+        for (int sx = 0; sx < scale; sx++) {
+            int screen_x = x + sx;
+            int screen_y = y + sy;
+            if (screen_x >= 0 && screen_x < SCREEN_W && screen_y >= 0 && screen_y < SCREEN_H)
+                g_video_fb[screen_y][screen_x] = g_ui_colors[ui_color];
+        }
+}
+
+void automap_draw_legend_mark(AutomapMark mark, int16_t x, int16_t y, int scale)
+{
+    /* the icon sits below and right of the frame line, as the level (0, 0) icon inside map_frame */
+    int base = mark == AUTOMAP_MARK_IMAGINARY_WALL ? UI_DARK_GRAY : UI_DARKEST_GRAY;
+    for (int py = 0; py < AUTOMAP_LEGEND_SIZE; py++)
+        for (int px = 0; px < AUTOMAP_LEGEND_SIZE; px++) {
+            int color = px && py ? base : UI_BLACK;
+            if (mark == AUTOMAP_MARK_LEVEL_EDGE && (!px || !py))
+                color = UI_WHITE;
+            legend_pixel((int16_t)(x + px * scale), (int16_t)(y + py * scale), scale, color);
+        }
+    for (int py = 0; py < MAP_ICON_H; py++)
+        for (int px = 0; px < MAP_ICON_W; px++) {
+            int color = -1;
+            if (mark == AUTOMAP_MARK_IMAGINARY_WALL && !((px + py) & 1))
+                color = UI_LIGHT_GRAY; /* the parity of checker_overlay at an even icon place */
+            else if (mark == AUTOMAP_MARK_PRESSURE_PAD && px >= PAD_MARK_OFFSET &&
+                     px < PAD_MARK_OFFSET + PAD_MARK_SIZE && py >= PAD_MARK_OFFSET &&
+                     py < PAD_MARK_OFFSET + PAD_MARK_SIZE)
+                color = UI_GRAY;
+            else if (mark == AUTOMAP_MARK_ITEMS && px >= ITEM_MARK_LEFT && py < ITEM_MARK_H)
+                color = item_mark[py * ITEM_MARK_W + px - ITEM_MARK_LEFT] == '1' ? UI_YELLOW : UI_BLACK;
+            if (color >= 0)
+                legend_pixel((int16_t)(x + (px + 1) * scale), (int16_t)(y + (py + 1) * scale), scale, color);
+        }
 }
 
 /* Inspection */

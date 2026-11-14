@@ -4,6 +4,7 @@
 #include <stdio.h>
 #include <string.h>
 #include "advanced.h"
+#include "automap.h"
 #include "filter.h"
 #include "game_text.h"
 #include "move.h"
@@ -12,16 +13,17 @@
 
 /* Option rows; the title item closes the overlay. */
 #define OPTIONS_ROW_HELP      0
-#define OPTIONS_ROW_BOOK      1
-#define OPTIONS_ROW_SPELLS    2
-#define OPTIONS_ROW_FILTER    3
-#define OPTIONS_ROW_ASPECT    4
-#define OPTIONS_ROW_SCANLINES 5
-#define OPTIONS_ROW_STEPPING  6
-#define OPTIONS_ROW_SAVE      7
-#define OPTIONS_ROW_LOAD      8
-#define OPTIONS_ROW_CHEATS    9
-#define OPTIONS_ROW_ROWS      10
+#define OPTIONS_ROW_LEGEND    1
+#define OPTIONS_ROW_BOOK      2
+#define OPTIONS_ROW_SPELLS    3
+#define OPTIONS_ROW_FILTER    4
+#define OPTIONS_ROW_ASPECT    5
+#define OPTIONS_ROW_SCANLINES 6
+#define OPTIONS_ROW_STEPPING  7
+#define OPTIONS_ROW_SAVE      8
+#define OPTIONS_ROW_LOAD      9
+#define OPTIONS_ROW_CHEATS    10
+#define OPTIONS_ROW_ROWS      11
 #define OPTIONS_ROW_TEXT_SIZE 40
 
 /* Full-screen options avoid mixing help text with the dungeon controls. */
@@ -29,7 +31,7 @@
 #define PANEL_VALUE_LEFT 108
 #define PANEL_TITLE_Y    20
 #define PANEL_FIRST_Y    46
-#define PANEL_ROW_HEIGHT 12
+#define PANEL_ROW_HEIGHT 11
 #define PANEL_NOTE_Y     170
 #define PANEL_BACK_LEFT  260
 #define PANEL_FOOTER_Y   186
@@ -43,7 +45,19 @@
 #define HELP_SPELL_STEPS_Y 164
 #define HELP_SPELL_LIST_Y  174
 
-static bool help;
+/* The automap legend page: one swatch and its line per mark, the swatch centered on the text line. */
+#define LEGEND_FIRST_Y      60
+#define LEGEND_ROW_HEIGHT   24
+#define LEGEND_SCALE        2
+#define LEGEND_SWATCH_SIZE  (AUTOMAP_LEGEND_SIZE * LEGEND_SCALE)
+#define LEGEND_SWATCH_RAISE ((LEGEND_SWATCH_SIZE + FONT_GLYPH_HEIGHT) / 2)
+#define LEGEND_TEXT_LEFT    (PANEL_LEFT + LEGEND_SWATCH_SIZE + 8)
+#define LEGEND_NOTE_Y       158
+
+/* The page that the panel shows. */
+typedef enum { PAGE_OPTIONS, PAGE_CONTROLS, PAGE_LEGEND } Page;
+
+static Page page;
 static int16_t selected;
 static bool blocked;
 
@@ -59,28 +73,52 @@ static bool panel_back_click(int16_t x, int16_t y)
            y <= PANEL_TITLE_Y + FONT_BASELINE;
 }
 
+/* The legend page: a swatch and a line for each mark that the automap adds to the minion map icons. */
+static void show_legend(void)
+{
+    static const char *const marks[AUTOMAP_MARK_COUNT] = {
+        "CHECKERED WALL: A FAKE WALL TO WALK THROUGH", "GRAY SQUARE: A PRESSURE PLATE",
+        "YELLOW PLUS: ITEMS; CLICK TO LIST THEM", "WHITE LINE: THE EDGE OF THE LEVEL"};
+    panel_text(PANEL_LEFT, HELP_HEADING_Y, UI_CYAN, "AUTOMAP (TAB / M)");
+    for (int i = 0; i < AUTOMAP_MARK_COUNT; i++) {
+        int16_t row_y = (int16_t)(LEGEND_FIRST_Y + i * LEGEND_ROW_HEIGHT);
+        automap_draw_legend_mark((AutomapMark)i, PANEL_LEFT, (int16_t)(row_y - LEGEND_SWATCH_RAISE), LEGEND_SCALE);
+        panel_text(LEGEND_TEXT_LEFT, row_y, UI_WHITE, marks[i]);
+    }
+    panel_text(PANEL_LEFT, LEGEND_NOTE_Y, UI_CYAN, "RED FRAME: THE PARTY; WHITE SIDE: FACING");
+}
+
+/* The controls page: the shortcut rows and the spell lines. */
+static void show_controls(void)
+{
+    static const char *const keys[HELP_ROWS] = {"WASD", "Q / E", "ARROWS", "TAB / M", "1 - 4", "F5 / F9",
+                                                "C",    "F1",    "ESC",    "CTRL+S",  "CTRL+R"};
+    static const char *const actions[HELP_ROWS] = {"MOVE",         "TURN LEFT / RIGHT",  "ORIGINAL MOVEMENT",
+                                                   "EXPLORED MAP", "CHAMPION INVENTORY", "QUICK SAVE / LOAD",
+                                                   "SPELL LIST",   "OPTIONS / HELP",     "OPTIONS / RESUME",
+                                                   "DISK MENU",    "REST (ZZZ)"};
+    panel_text(PANEL_LEFT, HELP_HEADING_Y, UI_CYAN, "MOVEMENT AND SHORTCUTS");
+    for (int i = 0; i < HELP_ROWS; i++) {
+        int16_t row_y = (int16_t)(HELP_FIRST_Y + i * HELP_ROW_HEIGHT);
+        panel_text(PANEL_LEFT, row_y, UI_YELLOW, keys[i]);
+        panel_text(PANEL_VALUE_LEFT, row_y, UI_WHITE, actions[i]);
+    }
+    panel_text(PANEL_LEFT, HELP_SPELLS_Y, UI_CYAN, "SPELLS");
+    panel_text(PANEL_LEFT, HELP_SPELL_STEPS_Y, UI_WHITE, "CHAMPION ICON > POWER > RUNES > CAST");
+    panel_text(PANEL_LEFT, HELP_SPELL_LIST_Y, UI_WHITE, "C CASTS BY NAME; NORMAL MANA RULES APPLY");
+}
+
 /* Draws the options or the help page over the whole screen. */
 static void show_options(void)
 {
     memset(g_video_fb, g_ui_colors[UI_BLACK], sizeof g_video_fb);
-    panel_text(PANEL_LEFT, PANEL_TITLE_Y, UI_CYAN, help ? "CONTROLS" : "OPTIONS / HELP");
-    panel_text(PANEL_BACK_LEFT, PANEL_TITLE_Y, UI_YELLOW, help ? "BACK" : "CLOSE");
-    if (help) {
-        static const char *const keys[HELP_ROWS] = {"WASD", "Q / E", "ARROWS", "TAB / M", "1 - 4", "F5 / F9",
-                                                    "C",    "F1",    "ESC",    "CTRL+S",  "CTRL+R"};
-        static const char *const actions[HELP_ROWS] = {"MOVE",         "TURN LEFT / RIGHT",  "ORIGINAL MOVEMENT",
-                                                       "EXPLORED MAP", "CHAMPION INVENTORY", "QUICK SAVE / LOAD",
-                                                       "SPELL LIST",   "OPTIONS / HELP",     "OPTIONS / RESUME",
-                                                       "DISK MENU",    "REST (ZZZ)"};
-        panel_text(PANEL_LEFT, HELP_HEADING_Y, UI_CYAN, "MOVEMENT AND SHORTCUTS");
-        for (int i = 0; i < HELP_ROWS; i++) {
-            int16_t row_y = (int16_t)(HELP_FIRST_Y + i * HELP_ROW_HEIGHT);
-            panel_text(PANEL_LEFT, row_y, UI_YELLOW, keys[i]);
-            panel_text(PANEL_VALUE_LEFT, row_y, UI_WHITE, actions[i]);
-        }
-        panel_text(PANEL_LEFT, HELP_SPELLS_Y, UI_CYAN, "SPELLS");
-        panel_text(PANEL_LEFT, HELP_SPELL_STEPS_Y, UI_WHITE, "CHAMPION ICON > POWER > RUNES > CAST");
-        panel_text(PANEL_LEFT, HELP_SPELL_LIST_Y, UI_WHITE, "C CASTS BY NAME; NORMAL MANA RULES APPLY");
+    static const char *const titles[] = {"OPTIONS / HELP", "CONTROLS", "MAP LEGEND"};
+    panel_text(PANEL_LEFT, PANEL_TITLE_Y, UI_CYAN, titles[page]);
+    panel_text(PANEL_BACK_LEFT, PANEL_TITLE_Y, UI_YELLOW, page == PAGE_OPTIONS ? "CLOSE" : "BACK");
+    if (page == PAGE_LEGEND) {
+        show_legend();
+    } else if (page == PAGE_CONTROLS) {
+        show_controls();
     } else {
         char filter[OPTIONS_ROW_TEXT_SIZE];
         snprintf(filter, sizeof filter, "SCREEN FILTER: %s", settings_filter_name(upscale_get_filter()));
@@ -88,6 +126,7 @@ static void show_options(void)
             *ch = (char)toupper((unsigned char)*ch);
         const char *lines[OPTIONS_ROW_ROWS] = {
             "CONTROLS",
+            "MAP LEGEND",
             "SPELL LIST (C)",
             upscale_has_all_spells() ? "SPELLS SHOWN: ALL SPELLS" : "SPELLS SHOWN: KNOWN SPELLS",
             filter,
@@ -111,12 +150,12 @@ static void show_options(void)
             panel_text(PANEL_LEFT, PANEL_NOTE_Y, UI_CYAN, "CHEATS ARE SEPARATE AND OPTIONAL");
     }
     panel_text(PANEL_LEFT, PANEL_FOOTER_Y, UI_WHITE,
-               help ? "ENTER / ESC / RIGHT CLICK: BACK" : "UP/DOWN: SELECT  ENTER: OPEN  ESC: CLOSE");
+               page != PAGE_OPTIONS ? "ENTER / ESC / RIGHT CLICK: BACK" : "UP/DOWN: SELECT  ENTER: OPEN  ESC: CLOSE");
 }
 
 void options_open(void)
 {
-    help = false;
+    page = PAGE_OPTIONS;
     blocked = false;
     selected = OPTIONS_ROW_HELP;
     show_options();
@@ -126,16 +165,19 @@ void options_open(void)
 static OptionsResult run_option(void)
 {
     blocked = false;
-    if (selected != OPTIONS_ROW_HELP && selected != OPTIONS_ROW_SPELLS && selected != OPTIONS_ROW_FILTER &&
-        selected != OPTIONS_ROW_ASPECT && selected != OPTIONS_ROW_STEPPING && selected != OPTIONS_ROW_SCANLINES &&
-        selected != OPTIONS_ROW_ROWS && input_get_mode() != INPUT_MODE_MOVE) {
+    if (selected != OPTIONS_ROW_HELP && selected != OPTIONS_ROW_LEGEND && selected != OPTIONS_ROW_SPELLS &&
+        selected != OPTIONS_ROW_FILTER && selected != OPTIONS_ROW_ASPECT && selected != OPTIONS_ROW_STEPPING &&
+        selected != OPTIONS_ROW_SCANLINES && selected != OPTIONS_ROW_ROWS && input_get_mode() != INPUT_MODE_MOVE) {
         blocked = true;
         show_options();
         return OPTIONS_STAY;
     }
     switch (selected) {
     case OPTIONS_ROW_HELP:
-        help = true;
+        page = PAGE_CONTROLS;
+        break;
+    case OPTIONS_ROW_LEGEND:
+        page = PAGE_LEGEND;
         break;
     case OPTIONS_ROW_BOOK:
         return OPTIONS_SPELLBOOK;
@@ -170,9 +212,9 @@ static OptionsResult run_option(void)
 OptionsResult options_event(int type, int16_t x, int16_t y)
 {
     bool back = type == INPUT_BUTTON_RIGHT || (type == INPUT_KEY && (x == SCAN_ESCAPE || x == KEY_OPTIONS));
-    if (help) {
+    if (page != PAGE_OPTIONS) {
         if (back || (type == INPUT_KEY && x == KEY_ENTER) || (type == INPUT_BUTTON_LEFT && panel_back_click(x, y))) {
-            help = false;
+            page = PAGE_OPTIONS;
             show_options();
         }
         return OPTIONS_STAY;

@@ -8,7 +8,20 @@
 #include <stdbool.h>
 #include <stdint.h>
 #include "dungeon.h"
+#include "minion.h"
 #include "ui.h"
+
+/* The marks that the automap adds to the minion map icons, in the order of the legend of Options/Help. */
+typedef enum {
+    AUTOMAP_MARK_IMAGINARY_WALL, /* light gray checkerboard on a wall icon */
+    AUTOMAP_MARK_PRESSURE_PAD,   /* gray square in the middle of a floor icon */
+    AUTOMAP_MARK_ITEMS,          /* yellow plus in the upper right */
+    AUTOMAP_MARK_LEVEL_EDGE,     /* white frame just outside the level */
+    AUTOMAP_MARK_COUNT
+} AutomapMark;
+
+/* Pixels of a legend swatch side before the enlargement: the icon and the frame line above and left of it. */
+#define AUTOMAP_LEGEND_SIZE (MAP_ICON_W + 1)
 
 /* Queries */
 /* The current integer zoom (1 to 3); exported for the tests. */
@@ -43,6 +56,9 @@ bool automap_level_visited(int level);
 void automap_draw(Offscreen *o, const int16_t *clip);
 /* Draws the selected square's current item names and quantities, with previous/next pages and a MAP title item. */
 void automap_draw_items(void);
+/* Draws the legend swatch of mark into the screen with its upper left at (x, y), each map pixel as a scale x scale
+   block: a plain wall or floor icon with the mark that the automap draws. */
+void automap_draw_legend_mark(AutomapMark mark, int16_t x, int16_t y, int scale);
 
 /* Inspection */
 /* Opens the items at the screen point (x, y) of the scrolled viewport; false outside it or without visible items. */

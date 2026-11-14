@@ -178,6 +178,8 @@ reads `LEVEL n  PARTY ON p`. Only levels explored with the automap count; withou
 
 The map shows walls, floors, pits, stairs, doors, ornaments, teleporters, pressure plates, and the creatures that do
 not move. A fake wall that you can walk through has a gray checkerboard. A white line marks the edge of the level.
+MAP LEGEND in Options/Help (`F1`) shows these marks: the checkered wall, the gray square of a pressure plate, the
+yellow plus of items, and the white line of the level edge.
 In low light the party sees fewer squares, so fewer squares appear on the map.
 
 ### Cheats
