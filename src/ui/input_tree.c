@@ -968,6 +968,16 @@ uint16_t input_key_command(enum InputMode mode, uint16_t key, int16_t *rect)
         g_input_match.key = key;
         return command;
     }
+    if (g_game_mode == GAME_MODE_ADVANCED && key == KEY_QUIT_GAME) {
+        /* the QUIT button of the save menu: where the disk icon works */
+        if (g_ui.candidate || (mode != INPUT_MODE_MOVE && mode != INPUT_MODE_INVENTORY))
+            return 0;
+        const InputCommand *entry = input_find_command_entry(&g_input_mode_roots[mode], CMD_SAVE);
+        if (!entry || (entry->flags & COMMAND_OFF))
+            return 0;
+        g_input_match.key = key;
+        return CMD_QUIT_GAME;
+    }
     uint16_t command = find_key_command(&g_input_mode_roots[mode], key, rect);
     if (command || g_game_mode != GAME_MODE_ADVANCED)
         return command;

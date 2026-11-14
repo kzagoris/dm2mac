@@ -20,6 +20,7 @@ The advanced mode adds these keys:
 | `Q`, `E` | Show the visited level above, below | Open automap |
 | `Space` | Show the party level and square | Open automap |
 | `X` | Open the cheat screen | Dungeon view only |
+| `Ctrl+Q` | QUIT of the save menu: the question before a quit when the game is not saved, then the end picture | Dungeon view and inventory, where the disk icon works |
 | `C` | Recorded spell favorites | Dungeon view only |
 | `Alt+C`, then `Alt+1` to `Alt+4` | Set or cast favorite 1 to 4 | Dungeon view only |
 | `F1` | Options/Help | Dungeon, inventory, sleep, pause |

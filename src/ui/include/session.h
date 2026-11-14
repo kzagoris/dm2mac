@@ -46,6 +46,8 @@ void session_close_slot_dialog(void); /* exported for the tests */
 bool session_load(void); /* exported for the tests */
 /* The save dialog of the game: save into a slot, quit, restart, or resume. */
 void session_save(void);
+/* The QUIT button of the save menu without the menu: the question before a quit, then the end of the game. */
+void session_quit_game(void);
 /* The start of a run: the menu until a game loads, then the session of that game. Returns false when the player
    quit. */
 bool session_init(void);

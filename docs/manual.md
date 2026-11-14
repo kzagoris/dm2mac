@@ -120,6 +120,7 @@ Four-letter syllables wrap onto two lines to fit the button.
 | `F5`, `F9` | Quick save, quick load |
 | `Ctrl+S` | Open the disk menu (same as the disk icon) |
 | `Ctrl+R` | Rest (same as the Zzz icon) |
+| `Ctrl+Q` | Quit (same as QUIT in the disk menu, with its question when the game is not saved) |
 | `Tab` or `M` | Automap |
 | `X` | Cheat screen |
 | `Esc` | Pause with Options/Help in the dungeon view; close to resume. In the inventory it closes the inventory (the original pauses) |

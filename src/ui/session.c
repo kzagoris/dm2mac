@@ -491,6 +491,14 @@ static bool write_slot(int16_t slot)
     return true;
 }
 
+/* The question before a quit when the game was not saved or loaded a moment ago; true when the player quits. */
+static bool confirm_quit(void)
+{
+    return g_session.load_time + QUIT_SAFE_TICKS >= g_game.game_time ||
+           g_session.save_time + QUIT_SAFE_TICKS >= g_game.game_time ||
+           dialog_run_cancel(dialog_draw(DIALOG_NOT_SAVED, MESSAGE_NONE), NOT_SAVED_CANCEL) != NOT_SAVED_CANCEL;
+}
+
 /* The save menu until the player saves (returns the slot), quits (*quit true), or resumes (SAVE_SLOT_NONE). */
 static int16_t run_save_menu(bool *quit)
 {
@@ -501,9 +509,7 @@ static int16_t run_save_menu(bool *quit)
         if (choice == SAVE_MENU_QUIT || choice == SAVE_MENU_RESTART) {
             if (choice == SAVE_MENU_RESTART)
                 game_set_restart(true); /* a cancel below keeps it, as in the original */
-            if (g_session.load_time + QUIT_SAFE_TICKS < g_game.game_time &&
-                g_session.save_time + QUIT_SAFE_TICKS < g_game.game_time &&
-                dialog_run_cancel(dialog_draw(DIALOG_NOT_SAVED, MESSAGE_NONE), NOT_SAVED_CANCEL) == NOT_SAVED_CANCEL)
+            if (!confirm_quit())
                 continue;
             game_set_offer_restore(false);
             *quit = true;
@@ -515,7 +521,8 @@ static int16_t run_save_menu(bool *quit)
     }
 }
 
-void session_save(void)
+/* The save menu (quit_only false) or its QUIT button alone, then the save into the chosen slot or the end of the game. */
+static void run_save_or_quit(bool quit_only)
 {
     bool quit = false;
     game_set_restart(false);
@@ -523,7 +530,13 @@ void session_save(void)
     area_update(false);
     play_hide_view();
     timeline_rebuild_free_list();
-    int16_t slot = run_save_menu(&quit);
+    int16_t slot = SAVE_SLOT_NONE;
+    if (!quit_only) {
+        slot = run_save_menu(&quit);
+    } else if (confirm_quit()) {
+        game_set_offer_restore(false);
+        quit = true;
+    }
     if (slot >= 0) {
         game_set_save_slot(slot);
         dialog_draw(DIALOG_SAVING, MESSAGE_NONE);
@@ -536,6 +549,16 @@ void session_save(void)
         return;
     }
     play_show_view();
+}
+
+void session_save(void)
+{
+    run_save_or_quit(false);
+}
+
+void session_quit_game(void)
+{
+    run_save_or_quit(true);
 }
 
 /* The start menu: waits until the player chooses a new game or a load. */

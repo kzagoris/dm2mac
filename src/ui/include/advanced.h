@@ -25,6 +25,7 @@
 #define KEY_FAVORITE_FIRST (KEY_ALT | 0x02) /* Alt+1 */
 #define KEY_DISK_MENU      (KEY_CONTROL | SCAN_S)
 #define KEY_REST           (KEY_CONTROL | SCAN_R)
+#define KEY_QUIT_GAME      (KEY_CONTROL | SCAN_Q)
 
 /* PC scan codes of the numeric keypad keys that move and turn the party. */
 #define KEYPAD_TURN_LEFT  0x4b

@@ -688,9 +688,13 @@ static void execute_session_command(int command)
 {
     switch (command) {
     case CMD_SAVE:
+    case CMD_QUIT_GAME:
         if (g_game.champion_count && !g_ui.candidate) {
             g_input.disabled--;
-            session_save();
+            if (command == CMD_SAVE)
+                session_save();
+            else
+                session_quit_game();
             g_input.disabled++;
         }
         break;
@@ -888,7 +892,7 @@ bool command_execute(Command *c)
         !g_ui.eye && !g_ui.mouth && !g_party.push_mode && !g_input_drag_state; /* no eye, mouth, drag or push mode */
     if (!execute_party_command(c, idle) && !execute_champion_command(command, idle) &&
         (command == CMD_SAVE || command == CMD_VOLUME || (command >= CMD_NEW_GAME && command <= CMD_MENU_PICTURE) ||
-         command == CMD_QUIT) &&
+         command == CMD_QUIT || command == CMD_QUIT_GAME) &&
         idle)
         execute_session_command(command);
     if (g_input_match.value >= CMD_TEXT_FIRST && g_input_match.value <= CMD_TEXT_LAST)
