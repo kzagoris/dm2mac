@@ -88,6 +88,10 @@ changes a few things:
   melee or shooting action, or uses a basic one. Spells and throwing are excluded. Your hand must be empty.
 - A damage star with the damage shows for a moment over a creature that takes a hit.
 - Projectiles fly smoothly from square to square in the dungeon view.
+- An object in your hand shows its details in the open inventory at once, without holding it on the eye.
+- An object held on the eye in the inventory is compared with the item that the champion wears in that slot or holds
+  in the hand: the gauge shows in green what the object has more and in red what it has less. Below the gauges stand
+  the exact numbers and, in cyan, what a magic item adds (mana, statistics, skills).
 - A save keeps the automap and the cheats.
 
 The automap, Options/Help, spell favorites, and cheat screen stop game time while open. The exact rules are in

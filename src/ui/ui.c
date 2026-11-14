@@ -76,6 +76,18 @@
 /* The object info shows up to two gauges: the charges and a value. */
 #define OBJECT_GAUGE_COUNT 2
 
+/* The info lines of the object info in the advanced mode: the bonuses of the object and its fight values, each with
+   its difference to the item that the champion wears or holds; the lines stand at the bottom of the panel. */
+#define COMPARE_LINE_MAX    5
+#define COMPARE_TEXT_SIZE   24
+#define COMPARE_LINE_CHARS  18   /* the characters of a bonus line */
+#define GAUGE_NO_COMPARE    (-1) /* an object gauge without a compared value */
+#define COMPARE_INSET       4    /* the lines start this far right of the panel edge */
+#define COMPARE_BOTTOM      5    /* the base line of the last line above the panel bottom */
+#define COMPARE_GAUGE_GAP   3    /* the free rows between a gauge with its shadow and the first line */
+#define COMPARE_SHARP_BASE  4    /* against a sharp attack: armour * (sharp factor + 4) / 8, as in the fight rules */
+#define COMPARE_SHARP_SHIFT 3
+
 /* Masks of the armour class and of the dither color. */
 #define ARMOUR_CLASS_MASK 0xff
 #define DITHER_COLOR_MASK 0x0f /* the dither pattern holds 4-bit pixels */
@@ -141,6 +153,13 @@ typedef struct {
     int16_t value, high;
     const char *label;
 } ObjectGauge;
+
+/* An info line of the object info in the advanced mode: its text, and the difference to the compared item. */
+typedef struct {
+    char text[COMPARE_TEXT_SIZE];
+    char delta[COMPARE_TEXT_SIZE]; /* empty: none */
+    int color, delta_color;        /* UI colors */
+} CompareLine;
 
 /* The redraw of one champion: what to draw, and what it drew. */
 typedef struct {
@@ -239,6 +258,12 @@ static struct {
     uint8_t shown_raised[SKILL_BASE_COUNT]; /* the raised skill counts that the skills panel showed */
 } cache;
 static Offscreen status_box;
+
+/* The short names of the statistics and the names of the skills in the bonus lines of the object info. */
+static const char *const stat_short_names[STAT_COUNT] = {"LUCK", "STR", "DEX", "WIS", "VIT", "ANTIMAGIC", "ANTIFIRE"};
+static const char *const skill_names[SKILL_COUNT] = {
+    "FIGHTER", "NINJA", "PRIEST",   "WIZARD", "SWING",     "THRUST", "CLUB", "PARRY", "STEAL", "FIGHT",
+    "THROW",   "SHOOT", "IDENTIFY", "HEAL",   "INFLUENCE", "DEFEND", "FIRE", "AIR",   "EARTH", "WATER"};
 
 /* The value gauge of an object of type: the strength or throw power of a weapon, the armour class of an armour, or
    the power of a potion; false when the object shows none. */
@@ -1081,13 +1106,44 @@ static void show_gauge_bar(int16_t value, int zone, int color, GaugeRange range,
         gfx_fill_rect(g_view_viewport.pixels, full, g_ui_colors[split], g_view_viewport.width, IMAGE_8BPP);
 }
 
-/* An object gauge: the bar with its glyph left of it and the end marks. */
-static void show_object_gauge(int zone, int16_t value, int16_t high, uint8_t glyph, int color)
+/* Fills the part of an object gauge between value and compared, the value of the compared item: green when the
+   object has more, red when it has less. */
+static void show_gauge_difference(int zone, int16_t value, int16_t compared, int16_t high)
 {
+    int16_t full[RECT_SIZE], part[RECT_SIZE];
+    if (value == compared || !zone_get_rect(zone, full))
+        return;
+    int low = value < compared ? value : compared;
+    int top = value < compared ? compared : value;
+    if (top > high)
+        top = high;
+    int16_t start = full[RECT_X];
+    if (zone_get_rect_clipped(zone, part, (uint16_t)(low * SCALE_PARTS / high), SCALE_PARTS))
+        start = (int16_t)(part[RECT_X] + part[RECT_W]);
+    if (!zone_get_rect_clipped(zone, part, (uint16_t)(top * SCALE_PARTS / high), SCALE_PARTS))
+        return;
+    int16_t end = (int16_t)(part[RECT_X] + part[RECT_W]);
+    if (end <= start)
+        return;
+    full[RECT_X] = start;
+    full[RECT_W] = (int16_t)(end - start);
+    gfx_fill_rect(g_view_viewport.pixels, full, g_ui_colors[value > compared ? UI_GREEN : UI_RED],
+                  g_view_viewport.width, IMAGE_8BPP);
+}
+
+/* An object gauge g: the bar with its glyph left of it and the end marks; compared: the value of the compared item,
+   which colors the difference (GAUGE_NO_COMPARE: none). */
+static void show_object_gauge(int zone, const ObjectGauge *g, int color, int16_t compared)
+{
+    int16_t value = g->value;
+    int16_t high = g->high;
+    uint8_t glyph = g->glyph;
     int16_t r[RECT_SIZE];
     if (!zone_get_rect(zone, r))
         return;
     show_gauge_bar(value, zone, color, (GaugeRange){0, high}, GAUGE_REST_COLOR);
+    if (compared != GAUGE_NO_COMPARE)
+        show_gauge_difference(zone, value, compared, high);
     int16_t y = (int16_t)(r[RECT_Y] + r[RECT_H] - GAUGE_TEXT_RAISE);
     int bg = g_ui_colors[UI_BLACK] | TEXT_TRANSPARENT;
     char s[GLYPH_TEXT_SIZE] = {(char)glyph, '\0'};
@@ -1124,22 +1180,197 @@ static void show_chest_contents(uint16_t container)
         show_slot(t, SLOT_CONTAINER_INFO_FIRST + i, false, false, false);
 }
 
+/* The value that the value gauge of a weapon or an armour shows, read from item: the strength or the throw power
+   (by the glyph of the gauge), or the armour defense; GAUGE_NO_COMPARE for another type. */
+static int16_t gauge_value_of(uint16_t item, int type, uint8_t glyph)
+{
+    if (type == THING_WEAPON)
+        return (int16_t)item_attr(item, glyph == GLYPH_STRENGTH ? ATTR_STRENGTH : ATTR_THROW_POWER);
+    if (type == THING_ARMOUR)
+        return (int16_t)(item_attr(item, ATTR_ARMOUR_CLASS) & ARMOUR_CLASS_MASK);
+    return GAUGE_NO_COMPARE;
+}
+
+/* The hand item of champion c that the object info compares a hand object with: of the hand items that have the
+   value of the gauge, the one with the lowest value (the one that the object would replace); without such an item,
+   the item of the action hand, else of the ready hand. */
+static uint16_t compared_hand_item(const Champion *c, uint16_t thing, int type)
+{
+    uint16_t found = THING_NONE;
+    ObjectGauge g;
+    if (object_value_gauge(thing, type, &g)) {
+        int16_t lowest = 0;
+        for (int16_t hand = SLOT_HAND_COUNT - 1; hand >= 0; hand--) {
+            uint16_t item = c->slots[hand];
+            int16_t value = item == THING_NONE || item == thing ? 0 : gauge_value_of(item, type, g.glyph);
+            if (value > 0 && (found == THING_NONE || value < lowest)) {
+                found = item;
+                lowest = value;
+            }
+        }
+    }
+    if (found == THING_NONE)
+        found = c->slots[SLOT_ACTION_HAND] != THING_NONE ? c->slots[SLOT_ACTION_HAND] : c->slots[SLOT_READY_HAND];
+    return found;
+}
+
+/* The item of the inventory champion that the object info compares thing with: the item in the body slot that thing
+   fits, else a hand item; THING_NONE in the vanilla mode, without an inventory, and when there is none. */
+static uint16_t compared_item(uint16_t thing, int type)
+{
+    if (g_game_mode != GAME_MODE_ADVANCED || !g_ui.inventory)
+        return THING_NONE;
+    const Champion *c = champion(inventory_champion());
+    uint16_t other = THING_NONE;
+    int16_t slot = SLOT_BODY_FIRST;
+    while (slot <= SLOT_BODY_LAST && !item_fits_slot(thing, slot, true))
+        slot++;
+    other = slot <= SLOT_BODY_LAST ? c->slots[slot] : compared_hand_item(c, thing, type);
+    return other == thing ? THING_NONE : other;
+}
+
 /* Draws the gauges of an object of type in the object info: its charges, and the strength or throw power of a
-   weapon, the armour class of an armour, or the power of a potion. */
-static void show_object_gauges(uint16_t thing, int type)
+   weapon, the armour class of an armour, or the power of a potion. The value gauge of a weapon or an armour colors
+   its difference to the same value of the item other (THING_NONE: none). Returns the number of gauges. */
+static int show_object_gauges(uint16_t thing, int type, uint16_t other)
 {
     static const int16_t gauge_zones[OBJECT_GAUGE_COUNT] = {ZONE_OBJECT_GAUGE_FIRST, ZONE_OBJECT_GAUGE_FIRST + 1};
     int gauge = 0;
     if (item_has_charged_action(thing)) {
         int charges = item_charges(thing);
         if (charges) {
-            show_object_gauge(gauge_zones[0], charges, item_max_charges(thing), GLYPH_CHARGES, GAUGE_CHARGE_COLOR);
+            ObjectGauge charge = {
+                .glyph = GLYPH_CHARGES, .value = (int16_t)charges, .high = (int16_t)item_max_charges(thing)};
+            show_object_gauge(gauge_zones[0], &charge, GAUGE_CHARGE_COLOR, GAUGE_NO_COMPARE);
             gauge = 1;
         }
     }
     ObjectGauge g;
-    if (object_value_gauge(thing, type, &g))
-        show_object_gauge(gauge_zones[gauge], g.value, g.high, g.glyph, GAUGE_VALUE_COLOR);
+    if (object_value_gauge(thing, type, &g)) {
+        int16_t compared = other != THING_NONE ? gauge_value_of(other, type, g.glyph) : GAUGE_NO_COMPARE;
+        show_object_gauge(gauge_zones[gauge], &g, GAUGE_VALUE_COLOR, compared);
+        gauge++;
+    }
+    return gauge;
+}
+
+/* The armour defense of thing against a sharp attack. */
+static int sharp_defense(uint16_t thing)
+{
+    uint16_t attr = item_attr(thing, ATTR_ARMOUR_CLASS);
+    return item_armour_defense(attr) * (item_armour_sharp_factor(attr) + COMPARE_SHARP_BASE) >> COMPARE_SHARP_SHIFT;
+}
+
+/* Adds the word "name+bonus" of a bonus that is not 0 to the info lines; a word that does not fit the last bonus
+   line starts a new line. Returns the new line count. */
+static int add_bonus_word(CompareLine *lines, int count, const char *name, int bonus)
+{
+    if (!bonus)
+        return count;
+    char word[COMPARE_TEXT_SIZE];
+    snprintf(word, sizeof word, "%s%+d", name, bonus);
+    if (count && strlen(lines[count - 1].text) + 1 + strlen(word) <= COMPARE_LINE_CHARS) {
+        strcat(lines[count - 1].text, " ");
+        strcat(lines[count - 1].text, word);
+        return count;
+    }
+    if (count >= COMPARE_LINE_MAX)
+        return count;
+    lines[count] = (CompareLine){.color = UI_CYAN};
+    snprintf(lines[count].text, sizeof lines[count].text, "%s", word);
+    return count + 1;
+}
+
+/* Fills the bonus lines of thing: what it adds to the maximum mana, the statistics, and the skills of the champion
+   who wears or holds it. Returns the line count. */
+static int bonus_lines(CompareLine *lines, uint16_t thing)
+{
+    int count = add_bonus_word(lines, 0, "MANA", champ_item_bonus(thing, ITEM_BONUS_MANA, 0));
+    for (int stat = 0; stat < STAT_COUNT; stat++)
+        count = add_bonus_word(lines, count, stat_short_names[stat], champ_item_bonus(thing, ITEM_BONUS_STAT, stat));
+    for (int skill = 0; skill < SKILL_COUNT; skill++)
+        count = add_bonus_word(lines, count, skill_names[skill], champ_item_bonus(thing, ITEM_BONUS_SKILL, skill));
+    return count;
+}
+
+/* Adds the info line "label value" when value is not 0, with the difference to other_value; returns the new line
+   count. */
+static int add_compare_line(CompareLine *lines, int count, const char *label, int value, int other_value)
+{
+    if (!value || count >= COMPARE_LINE_MAX)
+        return count;
+    CompareLine *line = &lines[count];
+    *line = (CompareLine){.color = UI_LIGHT_GRAY};
+    snprintf(line->text, sizeof line->text, "%s %d", label, value);
+    int difference = value - other_value;
+    snprintf(line->delta, sizeof line->delta, "(%+d)", difference);
+    line->delta_color = !difference ? UI_LIGHT_GRAY : difference > 0 ? UI_GREEN : UI_RED;
+    return count + 1;
+}
+
+/* Adds the number lines of thing after the count lines that are there: its fight values, each with the difference to
+   the item other (THING_NONE: none), and the weight difference. Returns the new line count. */
+static int number_lines(CompareLine *lines, int count, uint16_t thing, uint16_t other)
+{
+    bool has_other = other != THING_NONE;
+    int first = count;
+    uint16_t attr = item_attr(thing, ATTR_ARMOUR_CLASS);
+    uint16_t other_attr = item_attr(other, ATTR_ARMOUR_CLASS);
+    count = add_compare_line(lines, count, "ARMOR", item_armour_defense(attr), item_armour_defense(other_attr));
+    count = add_compare_line(lines, count, "VS SHARP", sharp_defense(thing), sharp_defense(other));
+    count =
+        add_compare_line(lines, count, "STRENGTH", item_attr(thing, ATTR_STRENGTH), item_attr(other, ATTR_STRENGTH));
+    count =
+        add_compare_line(lines, count, "THROW", item_attr(thing, ATTR_THROW_POWER), item_attr(other, ATTR_THROW_POWER));
+    count = add_compare_line(lines, count, "SHOOT", item_attr(thing, ATTR_SHOOT_ATTACK),
+                             item_attr(other, ATTR_SHOOT_ATTACK));
+    count = add_compare_line(lines, count, "EXTRA", item_attr(thing, ATTR_EXTRA_DAMAGE),
+                             item_attr(other, ATTR_EXTRA_DAMAGE));
+    if (!has_other) /* without a compared item the lines show no difference */
+        for (int i = first; i < count; i++)
+            lines[i].delta[0] = 0;
+    if (count == first || !has_other || count >= COMPARE_LINE_MAX)
+        return count;
+    CompareLine *line = &lines[count];
+    int difference = item_weight(thing) - item_weight(other);
+    int tenths = difference < 0 ? -difference : difference;
+    *line = (CompareLine){.color = UI_LIGHT_GRAY};
+    snprintf(line->text, sizeof line->text, "WEIGHT");
+    snprintf(line->delta, sizeof line->delta, "(%c%d.%d)", difference < 0 ? '-' : '+', tenths / WEIGHT_TENTHS,
+             tenths % WEIGHT_TENTHS);
+    line->delta_color = !difference ? UI_LIGHT_GRAY : difference < 0 ? UI_GREEN : UI_RED;
+    return count + 1;
+}
+
+/* Draws the info lines of thing in the object info of the advanced mode, under the gauges (gauge_count of them): the
+   bonuses of the object and its fight values with the difference to the item other. */
+static void show_object_lines(uint16_t thing, uint16_t other, int gauge_count)
+{
+    CompareLine lines[COMPARE_LINE_MAX];
+    int count = number_lines(lines, bonus_lines(lines, thing), thing, other);
+    int16_t panel[RECT_SIZE], gauge[RECT_SIZE];
+    if (!count || !zone_get_rect(ZONE_INVENTORY_PANEL, panel))
+        return;
+    int16_t last = (int16_t)(panel[RECT_Y] + panel[RECT_H] - COMPARE_BOTTOM);
+    int room = COMPARE_LINE_MAX;
+    /* the first line stands under the last gauge, or in the place of the first gauge when the object has none */
+    if (zone_get_rect(ZONE_OBJECT_GAUGE_FIRST + (gauge_count ? gauge_count - 1 : 0), gauge)) {
+        int top = gauge[RECT_Y] + FONT_GLYPH_HEIGHT;
+        if (gauge_count)
+            top += gauge[RECT_H] + GAUGE_SHADOW + COMPARE_GAUGE_GAP;
+        room = last < top ? 0 : (last - top) / TEXT_LINE_HEIGHT + 1;
+    }
+    if (count > room)
+        count = room;
+    int16_t x = (int16_t)(panel[RECT_X] + COMPARE_INSET);
+    for (int i = 0; i < count; i++) {
+        const CompareLine *line = &lines[i];
+        int16_t y = (int16_t)(last - (count - 1 - i) * TEXT_LINE_HEIGHT);
+        text_draw_in_viewport(x, y, g_ui_colors[line->color], line->text);
+        if (line->delta[0])
+            text_draw_in_viewport((int16_t)(x + ((int16_t)strlen(line->text) + 1) * FONT_ADVANCE), y,
+                                  g_ui_colors[line->delta_color], line->delta);
+    }
 }
 
 /* Draws the info panel of an object (full: its picture, name, weight, and gauges; else only a scroll);
@@ -1177,7 +1408,10 @@ static bool show_object_info(uint16_t thing, bool full)
             show_coin_counts(thing);
         return true;
     }
-    show_object_gauges(thing, type);
+    uint16_t other = compared_item(thing, type);
+    int gauge_count = show_object_gauges(thing, type, other);
+    if (g_game_mode == GAME_MODE_ADVANCED && g_ui.inventory)
+        show_object_lines(thing, other, gauge_count);
     return true;
 }
 
@@ -1239,11 +1473,19 @@ static void show_skills_and_stats(void)
     }
 }
 
-/* The object that the inventory panel shows: the leader hand object with the eye, none with the mouth, else the
-   action hand object. */
+/* True when the inventory panel shows the object info of the leader hand object without the eye: in the advanced
+   mode, while the leader hand holds an object, and not with the mouth or for a recruit candidate. */
+static bool shows_held_object(void)
+{
+    return g_game_mode == GAME_MODE_ADVANCED && g_game.leader_hand != THING_NONE && !g_ui.eye && !g_ui.mouth &&
+           !g_ui.candidate;
+}
+
+/* The object that the inventory panel shows: the leader hand object with the eye (in the advanced mode also
+   without it), none with the mouth, else the action hand object. */
 static uint16_t panel_object(const Champion *c)
 {
-    if (g_ui.eye)
+    if (g_ui.eye || shows_held_object())
         return g_game.leader_hand;
     if (g_ui.mouth)
         return THING_NONE;
@@ -1334,7 +1576,7 @@ static bool show_inventory_panel(const Champion *c, uint16_t flags)
         ui_draw_viewport_image(CAT_PANEL, 0, GFX_PANEL_EYE, ZONE_EYE, GFX_OPAQUE);
         /* the mouth picture of the held eye follows the mouth picture */
         ui_draw_viewport_image(CAT_PANEL, 0, g_ui.eye ? GFX_PANEL_MOUTH + 1 : GFX_PANEL_MOUTH, ZONE_MOUTH, GFX_OPAQUE);
-        if (g_ui.eye) {
+        if (g_ui.eye || shows_held_object()) {
             if (object == THING_NONE)
                 show_skills_and_stats();
             else
@@ -1353,7 +1595,7 @@ static bool show_inventory_panel(const Champion *c, uint16_t flags)
         return true;
     }
     if (cache.shown_object != THING_NONE && item_attr(cache.shown_object, ATTR_FLAGS) & ITEM_FLAG_SCROLL_INFO) {
-        show_object_info(cache.shown_object, g_ui.eye);
+        show_object_info(cache.shown_object, g_ui.eye || shows_held_object());
         return true;
     }
     return false;
