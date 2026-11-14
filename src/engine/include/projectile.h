@@ -146,6 +146,8 @@ void projectile_cancel_event(uint16_t projectile);
 void projectile_destroy(uint16_t projectile, uint16_t *list, int16_t x, int16_t y);
 /* The power of a hit of projectile with payload. */
 int projectile_get_attack(uint16_t projectile, uint16_t payload);
+/* Whether an ordinary ammunition item could pass this square; grate collision rolls still happen in flight. */
+bool projectile_can_pass_square(Location at, uint16_t ammo);
 /* The move event of a projectile: it hits what is on its square, then flies on to the next cell or square. */
 void projectile_process_event(TimelineEvent *e);
 

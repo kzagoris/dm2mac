@@ -572,8 +572,71 @@ void view_get_depth_shading(uint8_t *palette, int depth, int key1, int key2, int
                             key1, key2, count);
 }
 
+/* Pixel ownership follows the same scaled, clipped, mirrored blits as the view. */
+#define ATTACK_TARGET_MAX 64
+static uint8_t attack_pixels[VIEWPORT_WIDTH * VIEWPORT_HEIGHT];
+static struct {
+    uint16_t group;
+    Location at;
+} attack_targets[ATTACK_TARGET_MAX];
+static int attack_target_count;
+static uint16_t attack_picture_group = THING_NONE;
+static Location attack_picture_at;
+
+void view_set_attack_group(uint16_t group, int pos)
+{
+    attack_picture_group = group;
+    attack_picture_at = (Location){g_view_squares[pos].x, g_view_squares[pos].y};
+}
+
+/* Closes transparent holes inside each row of the visible body, keeping its outer contour. */
+static void fill_attack_body(const int16_t *rect, uint8_t tag)
+{
+    for (int y = rect[RECT_Y]; y < rect[RECT_Y] + rect[RECT_H]; y++) {
+        uint8_t *row = &attack_pixels[y * VIEWPORT_WIDTH];
+        int left = rect[RECT_X];
+        int right = left + rect[RECT_W] - 1;
+        while (left <= right && row[left] != tag)
+            left++;
+        while (right >= left && row[right] != tag)
+            right--;
+        if (left <= right)
+            memset(row + left, tag, (size_t)(right - left + 1));
+    }
+}
+
+void view_record_attack_pixels(const DrawCtx *ctx, uint16_t group, Location at)
+{
+    if (g_game_mode != GAME_MODE_ADVANCED || ctx->mode != DRAW_BLIT || !ctx->image || ctx->dst != &g_view_viewport ||
+        ctx->w <= 0 || ctx->h <= 0)
+        return;
+    int tag = 0;
+    if (group != THING_NONE && attack_target_count < ATTACK_TARGET_MAX) {
+        tag = ++attack_target_count;
+        attack_targets[tag - 1].group = group;
+        attack_targets[tag - 1].at = at;
+    }
+    uint8_t colors[REMAP_COLORS];
+    memset(colors, tag, sizeof colors);
+    Blit blit = {.src = ctx->image->pixels,
+                 .dst = attack_pixels,
+                 .src_x = ctx->src_x,
+                 .src_y = ctx->src_y,
+                 .src_width = ctx->image->width,
+                 .dst_width = VIEWPORT_WIDTH,
+                 .src_bpp = ctx->image->bpp,
+                 .dst_bpp = IMAGE_8BPP,
+                 .transparent = ctx->transparent,
+                 .mirror = ctx->flip,
+                 .colormap = colors};
+    gfx_blit(&blit, ctx->rect);
+    if (tag)
+        fill_attack_body(ctx->rect, (uint8_t)tag);
+}
+
 void view_setup_picture(const PicturePlace *p, int category, int index, int entry)
 {
+    attack_picture_group = THING_NONE;
     DrawCtx *c = draw_ctx_init(&g_view_state.ctx, category, index, entry);
     int scale_x = p->scale_x;
     int depth = p->depth;
@@ -598,7 +661,19 @@ void view_setup_picture(const PicturePlace *p, int category, int index, int entr
 
 void view_flush_picture(void)
 {
-    draw_ctx_draw(&g_view_state.ctx);
+    view_draw_attack_picture(&g_view_state.ctx, attack_picture_group, attack_picture_at, false);
+}
+
+void view_flush_effect_picture(void)
+{
+    view_draw_attack_picture(&g_view_state.ctx, THING_NONE, (Location){0, 0}, true);
+}
+
+void view_draw_attack_picture(DrawCtx *ctx, uint16_t group, Location at, bool transient)
+{
+    draw_ctx_draw(ctx);
+    if (!transient)
+        view_record_attack_pixels(ctx, group, at);
 }
 
 void view_flush_picture_or_measure(bool draw)
@@ -683,6 +758,7 @@ void view_show_map_picture(int entry, int zone, int key, int flip)
     c.zone = zone;
     draw_ctx_prepare(&c);
     draw_ctx_draw(&c);
+    view_record_attack_pixels(&c, THING_NONE, (Location){0, 0});
 }
 
 Bitmap *view_render_offscreen(DrawCtx *ctx, const PicturePlace *p, int category, int index, int entry)
@@ -718,6 +794,7 @@ void view_show_offscreen(DrawCtx *ctx, Bitmap *offscreen, int zone, int anchor, 
     ctx->palette_count = 0;
     draw_ctx_set_image(ctx, offscreen);
     draw_ctx_draw(ctx);
+    view_record_attack_pixels(ctx, THING_NONE, (Location){0, 0});
 }
 
 /* ---- Rain ---- */
@@ -980,6 +1057,17 @@ bool view_shows_party(void)
            g_view_state.party_map == g_game.party_map && g_view_state.party_dir == g_game.party_dir;
 }
 
+uint16_t view_attack_target(int16_t x, int16_t y, Location *at)
+{
+    if (!view_shows_party() || x < 0 || y < 0 || x >= VIEWPORT_WIDTH || y >= VIEWPORT_HEIGHT)
+        return THING_NONE;
+    int tag = attack_pixels[y * VIEWPORT_WIDTH + x];
+    if (!tag || tag > attack_target_count)
+        return THING_NONE;
+    *at = attack_targets[tag - 1].at;
+    return attack_targets[tag - 1].group;
+}
+
 /* A view of a game step starts new projectile tracks; the tracks of the view of the game step just before stay when the
    party view is the same. Another view in the same game step keeps them. */
 static void start_tracks(int16_t dir, int16_t x, int16_t y)
@@ -1007,6 +1095,8 @@ static void start_tracks(int16_t dir, int16_t x, int16_t y)
 
 void view_draw_dungeon(Location at, int16_t dir)
 {
+    memset(attack_pixels, 0, sizeof attack_pixels);
+    attack_target_count = 0;
     g_view_state.party_map = g_game.party_map;
     g_view_state.map = g_view_state.party_map;
     g_view_state.party_dir = dir;

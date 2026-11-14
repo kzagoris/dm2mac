@@ -43,6 +43,7 @@
 #define FACE_HOT_X       8
 #define FACE_HOT_Y       6
 #define OBJECT_HOT       8 /* the hot spot of the held object cursor: the center of the icon */
+#define ATTACK_HOT       7 /* the crossing of the two swords */
 
 /* Cursor kinds of a cursor zone. */
 #define CURSOR_KIND_HAND     1
@@ -95,7 +96,16 @@ static const uint8_t cursor_hand[HAND_W * CURSOR_H / 2] = {
     0xc0, 0xff, 0xff, 0xff, 0xff, 0xff, 0xcc, 0xcc, 0xcc, 0xc0, 0xff, 0xff, 0xff, 0xff,
 };
 
+/* Original crossed-swords art: x outline, s steel, g gold, dot transparent. */
+static const char cursor_attack[CURSOR_H][HAND_W + 1] = {
+    "................", "xsx..........xsx", ".xsx........xsx.", "..xsx......xsx..",
+    "...xsx....xsx...", "....xsx..xsx....", ".....xsxxsx.....", "......xssx......",
+    "...g..xssx..g...", "....gxsxxsxg....", "....xgx..xgx....", "...xgxg..gxgx...",
+    "..xgx..gg..xgx..", ".xgx........xgx.", "................", "................",
+};
+
 InputState g_input;
+static uint8_t attack_cursor_pixels[HAND_W * CURSOR_H];
 
 InputMatch g_input_match = {.zone = ZONE_NONE, .origin = -1};
 bool g_input_feedback_busy;
@@ -104,8 +114,26 @@ int16_t g_input_mouse_y = -1;
 
 /* ---- The cursor ---- */
 
+uint16_t input_party_attack_target(int16_t x, int16_t y, Location *at)
+{
+    if (g_game_mode != GAME_MODE_ADVANCED || input_get_mode() != INPUT_MODE_MOVE ||
+        g_advanced_screen != ADVANCED_SCREEN_NONE || g_ui.inventory || g_ui.candidate || g_ui.eye || g_ui.mouth ||
+        g_party.push_mode || g_party.push_pending_group != THING_NONE || g_party.move_steps || g_input_drag_state ||
+        g_game.leader_hand != THING_NONE || !view_shows_party())
+        return THING_NONE;
+    int16_t origin[RECT_SIZE];
+    if (!zone_get_rect(ZONE_VIEWPORT, origin) || !rect_contains_point(origin, x, y))
+        return THING_NONE;
+    uint16_t group = view_attack_target((int16_t)(x - origin[RECT_X]), (int16_t)(y - origin[RECT_Y]), at);
+    return group != THING_NONE && champ_party_attack_state(group, *at) != PARTY_ATTACK_NONE ? group : THING_NONE;
+}
+
 enum CursorKind input_cursor_at(int16_t x, int16_t y)
 {
+    Location at;
+    uint16_t group = input_party_attack_target(x, y, &at);
+    if (group != THING_NONE)
+        return champ_can_party_attack(group, at) ? CURSOR_ATTACK : CURSOR_ATTACK_WAITING;
     int kind = 0;
     for (int i = 0; i < g_input.cursor_count; i++) {
         const CursorZone *z = &g_input_cursor_zones[g_input.cursor_list[i] - 1];
@@ -141,6 +169,21 @@ void input_set_champion_cursor(int16_t champion_index)
 CursorImage input_cursor_image(enum CursorKind cursor)
 {
     switch (cursor) {
+    case CURSOR_ATTACK:
+    case CURSOR_ATTACK_WAITING: {
+        uint8_t steel = cursor == CURSOR_ATTACK_WAITING ? UI_LIGHT_GRAY : UI_WHITE;
+        uint8_t guard = cursor == CURSOR_ATTACK_WAITING ? UI_LIGHT_GRAY : UI_YELLOW;
+        for (int y = 0; y < CURSOR_H; y++)
+            for (int x = 0; x < HAND_W; x++) {
+                char pixel = cursor_attack[y][x];
+                attack_cursor_pixels[y * HAND_W + x] = pixel == 'x'   ? UI_BLACK
+                                                       : pixel == 's' ? steel
+                                                       : pixel == 'g' ? guard
+                                                                      : UI_KEY;
+            }
+        return (CursorImage){attack_cursor_pixels, g_ui_colors, IMAGE_8BPP, HAND_W, CURSOR_H,
+                             ATTACK_HOT,           ATTACK_HOT,  UI_KEY};
+    }
     case CURSOR_HAND:
         return (CursorImage){cursor_hand, g_ui_colors, IMAGE_4BPP, HAND_W, CURSOR_H, 0, 0, UI_KEY};
     case CURSOR_OBJECT: {
@@ -581,6 +624,8 @@ static void click_with_object(const ViewSquares *v, int16_t x, int16_t y, bool f
 static void click_in_viewport(int16_t x, int16_t y)
 {
     dungeon_set_current_map(g_game.party_map);
+    Location target_at;
+    uint16_t target = input_party_attack_target(x, y, &target_at);
     if (g_party.push_mode) {
         move_set_push_mode(false);
         creature_push_creature(g_party.push_arrow);
@@ -598,6 +643,10 @@ static void click_in_viewport(int16_t x, int16_t y)
     ViewSquares v = {dir, party, ahead};
     uint8_t front = dungeon_square_at(v.front);
     uint16_t hand = g_game.leader_hand;
+    if (target != THING_NONE) {
+        champ_party_attack(target, target_at);
+        return;
+    }
     if (click_zones_hit(&v, x, y, hand))
         return;
     /* as in the original, which also tests the passable fake wall flags of the front square: a wall square never

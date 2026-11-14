@@ -258,6 +258,8 @@ static void set_slot_thing(int16_t champion_index, int16_t slot, uint16_t thing)
 uint16_t champ_remove_object_from_slot(int16_t champion_index, int16_t slot)
 {
     uint16_t thing = slot_thing(champion_index, slot);
+    if (slot < SLOT_HAND_COUNT)
+        champ_forget_party_attack(champion_index, slot);
     set_slot_thing(champion_index, slot, THING_NONE);
     if (thing != THING_NONE) {
         if (champion_index == g_action.champion - 1 && slot < SLOT_HAND_COUNT && slot == g_action.hand)

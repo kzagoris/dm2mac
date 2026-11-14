@@ -996,6 +996,7 @@ static enum SaveTail read_tail(FILE *f, uint8_t *cheats)
    block; the cheats come only from a valid CHTS block after it, and only in the advanced mode. */
 static void read_extension(FILE *f)
 {
+    champ_reset_party_attacks();
     magic_reset_favorites();
     uint8_t cheats = 0;
     bool amap = seen_read(f);

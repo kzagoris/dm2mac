@@ -397,6 +397,7 @@ static bool load_new_game(void)
         return false;
     seen_reset();
     magic_reset_favorites();
+    champ_reset_party_attacks();
     game_set_cheats(0);
     uint16_t start = dungeon_party_start();
     /* the party start keeps the direction in the map bits */

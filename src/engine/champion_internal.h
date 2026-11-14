@@ -27,6 +27,8 @@ void inv_show_object_name(uint16_t thing);
 
 /* The repeats of the actions of each champion and hand; exported for the tests. */
 extern ActionRepeat g_action_repeats[CHAMPION_MAX][SLOT_HAND_COUNT];
+/* Invalidates a remembered attack when its weapon leaves a hand. */
+void champ_forget_party_attack(int16_t champion_index, int16_t hand);
 
 /* Action commands (FIELD_COMMAND of an action text). */
 #define COMMAND_LOAD           0x11

@@ -1,6 +1,7 @@
 /* SPDX-License-Identifier: GPL-3.0-or-later */
 /* The actions of the champions: the action menu, the actions, their delays and repeats, experience, throwing. */
 #include "champion.h"
+#include <string.h>
 #include "action.h"
 #include "ai.h"
 #include "champion_internal.h"
@@ -50,6 +51,8 @@
 #define COMMAND_SUMMON_2         0x32
 #define COMMAND_SUMMON_LAST      0x33
 #define COMMAND_WARP             0x36
+/* Farthest square drawn on the party's forward ray. */
+#define PARTY_ATTACK_RANGE       4
 /* The charges that CHARGES_USE_ALL takes. */
 #define ALL_CHARGES              0x000f
 /* The alerts of a fear and of a melee hit. */
@@ -153,6 +156,15 @@ typedef struct {
     uint16_t delay;
     bool silent; /* the action plays no sound */
 } ActionRun;
+
+typedef struct {
+    bool valid;
+    int16_t hand;
+    uint16_t thing;
+    ChampionAction action;
+} PartyAttack;
+
+static PartyAttack party_attacks[CHAMPION_MAX];
 
 ActionRepeat g_action_repeats[CHAMPION_MAX][SLOT_HAND_COUNT];
 /* g_action.result after the last champ_perform_action (damage >= 0, failure < 0). */
@@ -1004,6 +1016,141 @@ bool champ_perform_action(int16_t champion_index, int index, bool repeated)
     return done;
 }
 
+void champ_reset_party_attacks(void)
+{
+    memset(party_attacks, 0, sizeof party_attacks);
+}
+
+void champ_forget_party_attack(int16_t champion_index, int16_t hand)
+{
+    if ((unsigned)champion_index < CHAMPION_MAX && party_attacks[champion_index].hand == hand)
+        party_attacks[champion_index].valid = false;
+}
+
+static bool is_weapon_attack(int command)
+{
+    return command == COMMAND_MELEE || command == COMMAND_MELEE_2 || command == COMMAND_SHOOT;
+}
+
+/* The caller saves/restores the shared action list. No rolls or combat side effects here. */
+static int party_attack_index(int16_t index, uint16_t group, Location at, bool require_ready)
+{
+    const PartyAttack *p = &party_attacks[index];
+    Champion *c = champion(index);
+    if (!p->valid || !c->health || c->dir != g_game.party_dir || c->slots[p->hand] != p->thing ||
+        (require_ready && (c->action_delay[p->hand] || g_action_repeats[index][p->hand].left)))
+        return -1;
+    champ_list_actions(index, p->thing, p->hand);
+    int action_index = -1;
+    for (int i = 0; i < g_champ_action_count; i++)
+        if (!memcmp(&p->action, &g_champ_actions[i], sizeof p->action))
+            action_index = i;
+    if (action_index < 0)
+        return -1;
+    int command = field_of(p->action, FIELD_COMMAND);
+    Location front = dungeon_step((Location){g_game.party_x, g_game.party_y}, c->dir);
+    if (command == COMMAND_SHOOT) {
+        if (!item_is_ammo_for_hand(index, p->hand, c->slots[p->hand ^ 1]))
+            return -1;
+        /* Shots travel along the party's facing; a click never steers a projectile. */
+        for (int distance = 1; distance <= PARTY_ATTACK_RANGE; distance++, front = dungeon_step(front, c->dir)) {
+            if (!projectile_can_pass_square(front, c->slots[p->hand ^ 1]))
+                return -1;
+            uint16_t encountered = creature_group_at((Position){g_game.party_map, front.x, front.y});
+            if (front.x == at.x && front.y == at.y)
+                return encountered == group ? action_index : -1;
+            if (encountered != THING_NONE)
+                return -1;
+        }
+        return -1;
+    }
+    if (front.x != at.x || front.y != at.y || dungeon_square_blocks_movement(dungeon_square_at(front)))
+        return -1;
+    int rel = dir_relative(c->cell, c->dir);
+    if (rel >= CELL_BACK_RIGHT &&
+        champ_get_index_in_cell(dir_turn(c->cell, rel == CELL_BACK_RIGHT ? TURN_LEFT : TURN_RIGHT)) != -1)
+        return -1;
+    if (field_of(p->action, FIELD_MODE) == MELEE_MODE_REACH &&
+        !(creature_group_info(group)->flags & CREATURE_NON_MATERIAL))
+        return -1;
+    return action_index;
+}
+
+/* Rejects stale sprite targets, static interaction creatures and non-Advanced modes. */
+static bool party_attack_target_exists(uint16_t group, Location at)
+{
+    return g_game_mode == GAME_MODE_ADVANCED && group != THING_NONE &&
+           creature_group_at((Position){g_game.party_map, at.x, at.y}) == group &&
+           !(creature_group_info(group)->flags & CREATURE_STATIC);
+}
+
+bool champ_can_party_attack(uint16_t group, Location at)
+{
+    return champ_party_attack_state(group, at) == PARTY_ATTACK_READY;
+}
+
+enum PartyAttackState champ_party_attack_state(uint16_t group, Location at)
+{
+    if (!party_attack_target_exists(group, at))
+        return PARTY_ATTACK_NONE;
+    ChampActionList saved;
+    champ_action_list_save(&saved);
+    enum PartyAttackState state = PARTY_ATTACK_NONE;
+    for (int16_t i = 0; i < g_game.champion_count && state != PARTY_ATTACK_READY; i++) {
+        if (party_attack_index(i, group, at, false) < 0)
+            continue;
+        int hand = party_attacks[i].hand;
+        state = champion(i)->action_delay[hand] || g_action_repeats[i][hand].left ? PARTY_ATTACK_WAITING
+                                                                                  : PARTY_ATTACK_READY;
+    }
+    champ_action_list_restore(&saved);
+    return state;
+}
+
+bool champ_party_attack(uint16_t group, Location at)
+{
+    if (!party_attack_target_exists(group, at))
+        return false;
+    ChampActionList saved_list;
+    champ_action_list_save(&saved_list);
+    ActionArea saved_area = g_action;
+    int16_t saved_result = g_champ_action_result;
+    bool done = false;
+    for (int16_t i = 0; i < g_game.champion_count; i++) {
+        if (!party_attack_target_exists(group, at))
+            break;
+        int action_index = party_attack_index(i, group, at, true);
+        if (action_index < 0)
+            continue;
+        g_action.champion = (int16_t)(i + 1);
+        g_action.hand = party_attacks[i].hand;
+        ChampionAction action = g_champ_actions[action_index];
+        bool ran = champ_perform_action(i, action_index, false);
+        if (ran) {
+            ActionRepeat *r = &g_action_repeats[i][g_action.hand];
+            bool use = !r->left || (r->fresh && !rand_below((uint16_t)(r->count + 1)));
+            if (use && champ_use_action_charge(i, action)) {
+                r->count = 0;
+                r->left = 0;
+                r->fresh = false;
+            }
+        }
+        champion(i)->redraw |= REDRAW_BARS;
+        done |= ran;
+    }
+    g_action = saved_area;
+    g_champ_action_result = saved_result;
+    champ_action_list_restore(&saved_list);
+    if (g_action.champion > 0 && action_is_hand_slot(g_action.hand) &&
+        champion(g_action.champion - 1)->slots[g_action.hand] != saved_list.thing)
+        action_area_close();
+    if (done) {
+        action_request_redraw();
+        g_hooks.update_action_area(false);
+    }
+    return done;
+}
+
 bool champ_execute_selected_action(int index)
 {
     bool done = false;
@@ -1015,6 +1162,11 @@ bool champ_execute_selected_action(int index)
     } else {
         champion(champion_index)->redraw |= REDRAW_BARS;
         ChampionAction action = g_champ_actions[index];
+        if (g_game_mode == GAME_MODE_ADVANCED && action_is_hand_slot(g_action.hand) &&
+            champion(champion_index)->slots[g_action.hand] != THING_NONE &&
+            is_weapon_attack(field_of(action, FIELD_COMMAND)))
+            party_attacks[champion_index] =
+                (PartyAttack){true, g_action.hand, champion(champion_index)->slots[g_action.hand], action};
         done = champ_perform_action(champion_index, index, false);
         g_champ_action_result = g_action.result;
         ActionRepeat *r = action_is_hand_slot(g_action.hand) ? &g_action_repeats[champion_index][g_action.hand] : NULL;

@@ -408,7 +408,10 @@ static void flush_projectile(uint16_t thing, int pos)
                 (FlightTrack){thing & THING_ID_MASK, pos, last ? last->to : corner, corner};
         }
     }
-    view_flush_picture();
+    if (thing != THING_NONE)
+        view_flush_effect_picture();
+    else
+        view_flush_picture();
 }
 
 void view_show_object(uint16_t thing, int pos, const ObjectLook *look)
@@ -586,7 +589,6 @@ void view_show_creature(int pos, int depth, uint16_t group)
         scale = gfx_scale_64(sizes && at < size ? sizes[at] : 0,
                              g_view_depth_scale[depth]); /* fix: no read past the table */
     }
-    int zone = zone_id_for_view_cell(pos, cell, side) | ZONE_RELATIVE;
     int shift = (int8_t)still[FRAME_SHIFT];
     int dx = 0;
     int dy = 0;
@@ -609,11 +611,12 @@ void view_show_creature(int pos, int depth, uint16_t group)
                         .dx = jitter_offset[anim & ANIM_JITTER] + dx,
                         .dy = jitter_offset[anim >> ANIM_JITTER_Y_SHIFT & ANIM_JITTER] + dy,
                         .depth = depth,
-                        .zone = zone,
+                        .zone = zone_id_for_view_cell(pos, cell, side) | ZONE_RELATIVE,
                         .anchor = ZONE_NO_ANCHOR,
                         .key = (int16_t)gdat_entry_index(g, CAT_CREATURE, type, GDAT_TYPE_VALUE, CREATURE_KEY_COLOR),
                         .key2 = NO_KEY},
         CAT_CREATURE, type, pic.entry);
+    view_set_attack_group(group, pos);
 }
 
 /* Draws the possessions of a static creature in the cells of cell_mask; the other cells wait for
@@ -904,7 +907,7 @@ static void show_explosion(uint16_t thing, int pos, int order, uint32_t cell_mas
     raise_explosion(power, near, depth, centered, order);
     g_view_state.ctx.src_x = gfx_scale_64(g_view_state.ctx.src_x, (int16_t)scale);
     g_view_state.ctx.src_y = gfx_scale_64(g_view_state.ctx.src_y, (int16_t)scale);
-    view_flush_picture();
+    view_flush_effect_picture();
     if (near)
         show_explosion_tint(type, power);
 }

@@ -182,6 +182,10 @@ Collision checks and champion movement cooldowns still apply in either setting. 
 
 ### More comfortable movement and presentation
 
+In Advanced mode, choose a melee or shooting action normally for each champion, then hover over an enemy: crossed swords indicate an eligible target. Bright swords mean at least one champion is ready; grey swords mean the party is still recovering. Left-click for one party volley using each champion's last chosen weapon attack. A click while everyone is recovering is ignored. Living, ready champions attack within normal range and formation rules; ranged weapons need loaded ammunition. Normal stamina, ammunition, charges, and cooldowns apply. Spells and throwing are excluded. Keep the leader hand empty to use this shortcut. Small gaps inside a creature's body remain targetable, and passing missiles and explosions do not interrupt detection. Walls, doors, and foreground objects still block targeting.
+
+Changing a chosen weapon requires choosing its action again. Attack choices last until a new game or load, so choose them again after loading a save.
+
 Held movement repeats only while the game waits for input, allowing the party to stop when the key is released. Larger champion status areas make inventory interaction easier: with an empty leader hand, clicking outside the hand slots opens inventory; with an object held, it places that object into the champion's inventory.
 
 Advanced mode also extends the display of a successful damage star by one game step, without changing action delays. Projectile rendering interpolates flight at timer frequency while the party view stays still; simulation movement and combat rules retain their original steps. A still screenshot cannot demonstrate either timing improvement.

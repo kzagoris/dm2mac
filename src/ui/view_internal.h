@@ -261,6 +261,14 @@ void view_get_depth_shading(uint8_t *palette, int depth, int key1, int key2, int
 void view_setup_picture(const PicturePlace *p, int category, int index, int entry);
 /* Draws the picture that view_setup_picture prepared. */
 void view_flush_picture(void);
+/* Draws a transient missile or explosion without erasing the creature hit area beneath it. */
+void view_flush_effect_picture(void);
+/* Draws and records a viewport picture; transient effects keep existing target pixels. */
+void view_draw_attack_picture(DrawCtx *ctx, uint16_t group, Location at, bool transient); /* exported for the tests */
+/* Tags the prepared picture as a creature for the next viewport blit. */
+void view_set_attack_group(uint16_t group, int pos);
+/* Records opaque pixels after drawing ctx, including zero tags for foreground occluders. */
+void view_record_attack_pixels(const DrawCtx *ctx, uint16_t group, Location at); /* exported for the tests */
 /* Draws the picture of view_setup_picture, or with draw false only finds its rectangle (for a hit test). */
 void view_flush_picture_or_measure(bool draw);
 /* Adds a click zone of kind at rect for the square at view position pos. */

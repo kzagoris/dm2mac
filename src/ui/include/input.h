@@ -7,6 +7,7 @@
 
 #include <stdbool.h>
 #include <stdint.h>
+#include "dungeon.h"
 #include "gfx.h"
 #include "interface_state.h"
 
@@ -87,7 +88,7 @@
 #define CMD_CHEATS               0xf6 /* the advanced mode: no original command has these numbers */
 
 /* The cursor images of input_cursor_at. */
-enum CursorKind { CURSOR_ARROW, CURSOR_HAND, CURSOR_OBJECT, CURSOR_CHAMPION };
+enum CursorKind { CURSOR_ARROW, CURSOR_HAND, CURSOR_OBJECT, CURSOR_CHAMPION, CURSOR_ATTACK, CURSOR_ATTACK_WAITING };
 
 /* A command and the click that made it: position and the rectangle of its zone. */
 typedef struct {
@@ -160,8 +161,9 @@ void input_pop_mode(void);
 
 /* ---- The cursor ---- */
 
-/* The cursor image at (x, y) of the screen: the held object or the hand over a cursor zone of kind 1, the dragged
-   champion over a zone of kind 2, else the arrow. */
+/* Shared screen-space targeting and readiness for enemy hover and click. */
+uint16_t input_party_attack_target(int16_t x, int16_t y, Location *at); /* exported for the tests */
+/* The cursor at screen coordinates (x, y): attack over a ready enemy, else the original hand, object, face or arrow. */
 enum CursorKind input_cursor_at(int16_t x, int16_t y); /* exported for the tests */
 /* Draws the face of the champion champion_index into the dragged champion cursor. */
 void input_set_champion_cursor(int16_t champion_index);

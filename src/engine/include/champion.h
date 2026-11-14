@@ -349,6 +349,16 @@ void champ_add_experience(int16_t champion_index, int skill, uint32_t experience
 /* Champ performs the action of g_champ_actions at index with the item in the open hand; a repeat (repeated) takes no
    delay, stamina, or experience. True when the action was done; exported for the tests. */
 bool champ_perform_action(int16_t champion_index, int index, bool repeated);
+/* Advanced party attack preferences: exact manually chosen weapon action, reset at a new game/load. */
+void champ_reset_party_attacks(void);
+/* Pure eligibility query for remembered attacks against the creature group on at. */
+bool champ_can_party_attack(uint16_t group, Location at);
+/* A valid remembered attack can remain targeted while its hand is recovering. */
+enum PartyAttackState { PARTY_ATTACK_NONE, PARTY_ATTACK_WAITING, PARTY_ATTACK_READY };
+/* Pure query of range, weapon validity and readiness; does not roll or spend resources. */
+enum PartyAttackState champ_party_attack_state(uint16_t group, Location at);
+/* Executes one volley against the group on at, preserving the open action menu. */
+bool champ_party_attack(uint16_t group, Location at);
 /* Runs the action at index (0 to 2, -1: none) of the open action menu; true when the action was done. */
 bool champ_execute_selected_action(int index);
 /* The repeats of the actions of all champions. */

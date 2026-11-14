@@ -598,6 +598,20 @@ static bool hit_champion(Hit *h, int16_t cell)
     return true;
 }
 
+bool projectile_can_pass_square(Location at, uint16_t ammo)
+{
+    uint8_t square = dungeon_square_at(at);
+    int type = square_type(square);
+    if (type == SQUARE_WALL || (type == SQUARE_FAKE_WALL && !(square & (SQUARE_FAKE_WALL_OPEN | SQUARE_FLAG_0))))
+        return false;
+    if (type != SQUARE_DOOR)
+        return true;
+    int state = square & SQUARE_DOOR_STATE;
+    return state == DOOR_STATE_BROKEN || state <= DOOR_STATE_ONE_FOURTH ||
+           (sensor_door_value(dungeon_first_thing_at(at), DOOR_KEY_GRATE) &&
+            item_attr(ammo, ATTR_FLAGS) & ITEM_FLAG_GRATE_PASSES);
+}
+
 /* The projectile hits the door at (x, y). True when it stops, false when it flies through. */
 static bool hit_door(Hit *h)
 {
