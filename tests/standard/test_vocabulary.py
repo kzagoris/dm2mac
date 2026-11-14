@@ -17,7 +17,7 @@ STATE_TABLES = {
 
 
 def section():
-    text = (ROOT / "docs/llm/control-socket.md").read_text()
+    text = (ROOT / "docs/llm/control-socket.md").read_text(encoding="utf-8")
     start = text.index("## Protocol vocabulary")
     end = text.find("\n## ", start + 1)
     return text[start : end if end > 0 else None]
@@ -25,7 +25,7 @@ def section():
 
 def tables(path, only=None):
     found = {}
-    for name, body in TABLE.findall((ROOT / path).read_text()):
+    for name, body in TABLE.findall((ROOT / path).read_text(encoding="utf-8")):
         if only is not None and name not in only:
             continue
         found[name] = set(re.findall(r'"([^"]+)"', body))
@@ -41,7 +41,7 @@ def protocol_names():
     for found in (state, magic):
         for table in found.values():
             names |= table
-    actions = set(ACTION.findall((ROOT / "src/control/turn.c").read_text()))
+    actions = set(ACTION.findall((ROOT / "src/control/turn.c").read_text(encoding="utf-8")))
     assert actions, "no action table found in src/control/turn.c"
     names |= actions
     return names

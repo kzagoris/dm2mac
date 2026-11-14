@@ -17,13 +17,13 @@ def markdown_files():
 
 def tracked_paths():
     files = subprocess.run(["git", "ls-files"], cwd=ROOT, capture_output=True, text=True, check=True).stdout.split("\n")
-    return set(files) | {str(Path(f).parent) for f in files if f}
+    return set(files) | {Path(f).parent.as_posix() for f in files if f}
 
 
 def slugs(path):
     """GitHub slugs of the headings of a page, outside fenced code; a repeated heading gets -N."""
     found, count, fenced = set(), {}, False
-    for line in path.read_text().split("\n"):
+    for line in path.read_text(encoding="utf-8").split("\n"):
         if line.lstrip().startswith(("```", "~~~")):
             fenced = not fenced
         match = None if fenced else HEADING.match(line)
@@ -38,7 +38,7 @@ def slugs(path):
 def test_doc_links_resolve():
     tracked = tracked_paths()
     broken = [f"{path.relative_to(ROOT)}: {target}" for path in markdown_files() if path.exists()
-              for target, _ in LINK.findall(path.read_text())
+              for target, _ in LINK.findall(path.read_text(encoding="utf-8"))
               if "://" not in target and not target.startswith("mailto:") and (path.parent / target).resolve().relative_to(ROOT).as_posix() not in tracked]
     assert not broken, "broken links:\n" + "\n".join(broken)
 
@@ -48,7 +48,7 @@ def test_doc_anchors_resolve():
     for path in markdown_files():
         if not path.exists():
             continue
-        for target, anchor in LINK.findall(path.read_text()):
+        for target, anchor in LINK.findall(path.read_text(encoding="utf-8")):
             page = (path.parent / target).resolve()
             if anchor and "://" not in target and page.suffix == ".md" and page.exists() and anchor not in slugs(page):
                 broken.append(f"{path.relative_to(ROOT)}: {target}#{anchor}")

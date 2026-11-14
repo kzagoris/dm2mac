@@ -85,7 +85,7 @@ def allowed():
     """The (check, target) pairs of the allowlist; none when DM2_STANDARD_IGNORE_ALLOWLIST is set."""
     if os.environ.get("DM2_STANDARD_IGNORE_ALLOWLIST"):
         return set()
-    return {tuple(line.split(maxsplit=2)[:2]) for line in ALLOWLIST.read_text().splitlines()
+    return {tuple(line.split(maxsplit=2)[:2]) for line in ALLOWLIST.read_text(encoding="utf-8").splitlines()
             if line.strip() and not line.startswith("#")}
 
 
@@ -794,7 +794,7 @@ def test_sources_are_formatted():
 
 def allowlist_lines():
     """(line number, check, target, reason) of each allowlist line."""
-    return [(number, *line.split(maxsplit=2)) for number, line in enumerate(ALLOWLIST.read_text().splitlines(), 1)
+    return [(number, *line.split(maxsplit=2)) for number, line in enumerate(ALLOWLIST.read_text(encoding="utf-8").splitlines(), 1)
             if line.strip() and not line.startswith("#")]
 
 
@@ -849,7 +849,7 @@ def base_header(path):
 
 def main_suffixes():
     """The part file suffixes that IncludeIsMainRegex of .clang-format lists."""
-    regex = re.search(r"^IncludeIsMainRegex: '(.*)'", (ROOT / ".clang-format").read_text(), re.M).group(1)
+    regex = re.search(r"^IncludeIsMainRegex: '(.*)'", (ROOT / ".clang-format").read_text(encoding="utf-8"), re.M).group(1)
     return set(re.search(r"\(_\(([^)]*)\)\)\?", regex).group(1).split("|"))
 
 
@@ -1211,15 +1211,15 @@ def test_tests_follow_the_rules():
 def dm2test_findings():
     """Rule 11.6: the import levels of dm2test, the one lib fixture, the plugin list."""
     helpers = TESTS / "dm2test"
-    docstring = re.match(r'"""(.*?)"""', (helpers / "__init__.py").read_text(), re.S).group(1)
+    docstring = re.match(r'"""(.*?)"""', (helpers / "__init__.py").read_text(encoding="utf-8"), re.S).group(1)
     order = []
     for line in re.findall(r"^\d+\. (.+)$", docstring, re.M):
         order += [name.strip() for name in line.split(",")]
     found = []
-    plugins = re.search(r"pytest_plugins = \[(.*?)\]", (TESTS / "conftest.py").read_text(), re.S).group(1)
+    plugins = re.search(r"pytest_plugins = \[(.*?)\]", (TESTS / "conftest.py").read_text(encoding="utf-8"), re.S).group(1)
     listed = set(re.findall(r'"dm2test\.(\w+)"', plugins))
     for path in sorted(helpers.glob("*.py")):
-        name, text = path.stem, path.read_text()
+        name, text = path.stem, path.read_text(encoding="utf-8")
         if name == "__init__":
             continue
         if name not in order:

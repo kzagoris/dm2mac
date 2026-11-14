@@ -22,6 +22,7 @@ The advanced mode adds these keys:
 | `Esc` | Options/Help | Dungeon view only |
 | `C` or `Esc` | Close the cheat screen | Open cheat screen |
 | `Tab` or `Esc` | Close the inventory | Open inventory; not in the name editor or the recruit dialog |
+| `Esc` | Send the candidate back to its mirror | Recruit dialog |
 
 A right click closes the automap and the cheat screen; on an automap item list it returns to the map, and on a spell page of the cheat screen it shows the cheat page. In the save menu a right click is RESUME, in the save menu's slot list CANCEL, and in the question before a quit CANCEL. The other dialogs keep the original right click.
 
@@ -31,7 +32,7 @@ The dungeon view is the screen where the party moves, with at least one champion
 
 - In the dungeon view the advanced keys work only without a recruit candidate and with an idle party: no held eye or mouth, no champion drag, and no push mode. Otherwise they do nothing.
 - In other places `F5`, `F9`, `Tab`, `M`, and `C` do nothing.
-- `Esc` closes the inventory, like `Tab`; the original pauses there. In the pause it keeps its original use and ends the pause. In the dungeon view it opens Options/Help, which also stops game time; on the open automap, the open cheat screen and Options/Help it closes the screen.
+- `Esc` closes the inventory, like `Tab`; the original pauses there. With a recruit candidate it is the cancel button: the candidate goes back to its mirror and the dungeon view returns. In the pause it keeps its original use and ends the pause. In the dungeon view it opens Options/Help, which also stops game time; on the open automap, the open cheat screen and Options/Help it closes the screen.
 - Only one Advanced overlay is open at a time.
 
 ## Quick save and quick load
