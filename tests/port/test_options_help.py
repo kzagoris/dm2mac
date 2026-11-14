@@ -84,6 +84,12 @@ def test_escape_opens_options_only_in_the_dungeon_view(lib):
     rect = (ctypes.c_int16 * 4)()
     assert lib.input_key_command(C.INPUT_MODE_MOVE, C.SCAN_ESCAPE, rect) == C.CMD_OPTIONS
     assert lib.input_key_command(C.INPUT_MODE_INVENTORY, C.SCAN_ESCAPE, rect) == C.CMD_INVENTORY_LEADER
+    UiState.in_dll(lib, 'g_ui').candidate = 1
+    assert lib.input_key_command(C.INPUT_MODE_RECRUIT, C.SCAN_ESCAPE, rect) == C.CMD_RECRUIT_CANCEL
+    UiState.in_dll(lib, 'g_ui').candidate = 0
+    set_mode(lib, VANILLA)
+    assert lib.input_key_command(C.INPUT_MODE_RECRUIT, C.SCAN_ESCAPE, rect) != C.CMD_RECRUIT_CANCEL
+    set_mode(lib, ADVANCED)
     for mode in (C.INPUT_MODE_PAUSE, C.INPUT_MODE_SLEEP):
         set_mode(lib, VANILLA)
         original = lib.input_key_command(mode, C.SCAN_ESCAPE, rect)

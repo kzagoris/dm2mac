@@ -118,6 +118,7 @@ containers are marked without revealing their contents.
 | `F1` | Pause with Options/Help; close to resume (also in inventory, sleep, and pause) |
 | `B` | Recorded spell favorites |
 | `Tab` or `Esc` | Close the inventory |
+| `Esc` | With a champion from a mirror on the screen: do not take it and return to the dungeon view |
 
 The keys work only in the dungeon view. In the inventory, a dialog, or a menu they do nothing, except `Tab`, which
 closes the inventory, `Esc`, which closes the inventory (the original pauses there) and resumes from the pause, and `F1`, which opens Options/Help in inventory, sleep, and pause. Save/cast options require the dungeon view. `Esc` and a right click close the automap and the cheat screen.

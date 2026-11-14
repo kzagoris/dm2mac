@@ -8,6 +8,7 @@
 #include "ids.h"
 #include "input_internal.h"
 #include "minion.h"
+#include "recruit.h"
 #include "zone.h"
 
 /* Sizes of the input tables of SKULL.EXE. */
@@ -936,6 +937,8 @@ uint16_t input_key_command(enum InputMode mode, uint16_t key, int16_t *rect)
                                  mode == INPUT_MODE_SLEEP)) ||
          (key == SCAN_ESCAPE && mode == INPUT_MODE_MOVE)))
         return CMD_OPTIONS;
+    if (g_game_mode == GAME_MODE_ADVANCED && key == SCAN_ESCAPE && mode == INPUT_MODE_RECRUIT)
+        return CMD_RECRUIT_CANCEL;
     if (g_game_mode == GAME_MODE_ADVANCED && key == SCAN_ESCAPE && mode == INPUT_MODE_INVENTORY && !g_ui.candidate)
         return CMD_INVENTORY_LEADER;
     if (g_game_mode == GAME_MODE_ADVANCED && (key == KEY_DISK_MENU || key == KEY_REST)) {
