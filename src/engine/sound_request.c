@@ -75,6 +75,7 @@ static struct {
     bool collecting_immediate;
     Pending deferred[DEFERRED_MAX];
     int deferred_count;
+    bool hold_deferred;
     Delayed delayed[DELAYED_MAX];
 } queues;
 
@@ -85,7 +86,7 @@ void sndreq_reset_requests(void)
     queues.request_count = 0;
     queues.immediate_count = 0;
     queues.collecting_immediate = false;
-    queues.deferred_count = 0;
+    sndreq_clear_deferred();
     memset(queues.delayed, 0, sizeof queues.delayed);
 }
 
@@ -93,6 +94,12 @@ void sndreq_clear_requests(void)
 {
     queues.request_count = 0;
     queues.immediate_count = 0;
+}
+
+void sndreq_clear_deferred(void)
+{
+    queues.deferred_count = 0;
+    queues.hold_deferred = false;
 }
 
 /* Queries */
@@ -359,6 +366,8 @@ void sndreq_request_delayed(int16_t slot)
 void sndreq_flush_requests(bool deferred)
 {
     if (deferred) {
+        if (queues.hold_deferred)
+            return;
         if (queues.deferred_count > 0)
             start_requests(queues.deferred, queues.deferred_count);
         queues.deferred_count = 0;
@@ -367,4 +376,12 @@ void sndreq_flush_requests(bool deferred)
     if (queues.request_count > 0)
         start_requests(queues.requests, queues.request_count);
     queues.request_count = 0;
+}
+
+void sndreq_hold_deferred(bool hold)
+{
+    bool was_held = queues.hold_deferred;
+    queues.hold_deferred = hold;
+    if (was_held && !hold)
+        sndreq_flush_requests(true);
 }

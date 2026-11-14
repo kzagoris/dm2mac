@@ -90,6 +90,8 @@ extern int g_sound_started_count;                     /* exported for the tests 
 void sndreq_reset_requests(void); /* exported for the tests */
 /* Drops the requests of the game step: a map change loads other sounds. */
 void sndreq_clear_requests(void);
+/* Drops transition sounds waiting for a destination view when a session starts or loads. */
+void sndreq_clear_deferred(void);
 
 /* Queries */
 /* Finds sound (category, index, entry) in GRAPHICS.DAT; the data stays in g; exported for the tests. */
@@ -119,5 +121,7 @@ void sndreq_request_after(SoundCue cue, int16_t x, int16_t y, uint16_t ticks);
 void sndreq_request_delayed(int16_t slot);
 /* Plays the requests of the game step, or the deferred requests when deferred. */
 void sndreq_flush_requests(bool deferred);
+/* Holds deferred transition sounds until the destination view is ready; releasing the hold plays them once. */
+void sndreq_hold_deferred(bool hold);
 
 #endif /* DM2_ENGINE_SOUND_REQUEST_H */

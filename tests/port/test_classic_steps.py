@@ -313,3 +313,121 @@ def test_a_second_arrow_does_not_leave_the_first_one_pressed(lib, walk):
     lib.play_tick()
     assert arrow_pixels(lib, C.CMD_TURN_RIGHT) == right
     assert arrow_pixels(lib, C.CMD_TURN_LEFT) != left
+
+
+def audible_teleporter(lib, at, same_map=False):
+    maps = [at.map] if same_map else [m for m in range(lib.dungeon_map_count()) if m != at.map]
+    destination = next(Position(m, x, y) for m in maps
+                       for x in range(1, lib.dungeon_map_width(m) - 1)
+                       for y in range(1, lib.dungeon_map_height(m) - 1)
+                       if (m, x, y) not in ((at.map, at.x, at.y), (at.map, at.x + 1, at.y))
+                       and lib.dungeon_square(m, x, y) >> C.SQUARE_TYPE_SHIFT == C.SQUARE_FLOOR
+                       and lib.dungeon_square_first_thing(m, x, y) == C.THING_ENDOFLIST)
+    teleporter = lib.dungeon_unused_thing(C.THING_TELEPORTER)
+    assert teleporter != C.THING_NONE
+    party_scope = C.TELEPORTER_SCOPE_MASK & ~C.TELEPORTER_SCOPE_CREATURES
+    lib.thing_set_word(teleporter, C.TELEPORTER_TARGET,
+                      destination.x | destination.y << C.LOCATION_Y_SHIFT
+                      | party_scope << C.TELEPORTER_SCOPE_SHIFT | C.TELEPORTER_AUDIBLE)
+    lib.thing_set_word(teleporter, C.TELEPORTER_MAP, destination.map << C.TELEPORTER_MAP_SHIFT)
+    square = ctypes.c_uint8.from_address(lib.dungeon_square_byte(at.map, at.x + 1, at.y))
+    square.value = C.SQUARE_TELEPORTER << C.SQUARE_TYPE_SHIFT | C.SQUARE_TELEPORTER_ON
+    assert lib.dungeon_link_thing_to_square(teleporter, at.map, at.x + 1, at.y)
+    return destination
+
+
+@pytest.fixture
+def teleport_audio(lib, gdat, walk):
+    """Trace the actual voice start, retaining the real sound mixer."""
+    sample = Sound()
+    assert lib.sndreq_load(gdat, C.CAT_TELEPORTER, 0, C.SOUND_ENTRY_TELEPORT, ctypes.byref(sample)) == 0
+    data = ctypes.cast(sample.data, ctypes.c_void_p).value
+    signature = ctypes.CFUNCTYPE(ctypes.c_bool, ctypes.POINTER(Sound), ctypes.c_uint8, ctypes.c_int8, ctypes.c_int8)
+    hooks = (ctypes.c_void_p * 3).in_dll(lib, "g_hooks")
+    saved = hooks[2]
+    original = signature(saved)
+    events = []
+
+    @signature
+    def record(sound, volume, lateral, forward):
+        if ctypes.cast(sound.contents.data, ctypes.c_void_p).value == data:
+            events.append((MainLoop.in_dll(lib, "g_main_loop").timer_ticks, bool(lib.view_shows_party()),
+                           Party.in_dll(lib, "g_party").new_map))
+        return original(sound, volume, lateral, forward)
+
+    lib.sndreq_reset_requests()
+    lib.sound_stop_all()
+    hooks[2] = ctypes.cast(record, ctypes.c_void_p).value
+    yield events
+    hooks[2] = saved
+
+
+@pytest.mark.parametrize("phase", [0, 6, 7])
+@pytest.mark.parametrize("same_map", [False, True])
+def test_teleport_sound_starts_after_the_destination_is_drawn(lib, walk, teleport_audio, phase, same_map):
+    game, loop, at = walk
+    destination = audible_teleporter(lib, at, same_map)
+    for _ in range(phase):
+        lib.play_tick()
+    first_tick = loop.timer_ticks
+    lib.input_key_down(C.KEYPAD_FORWARD)
+    for _ in range(C.STEP_TICKS + 1):
+        lib.play_tick()
+    assert (game.party_map, game.party_x, game.party_y) == (destination.map, destination.x, destination.y)
+    expected = first_tick + (1 if same_map else C.STEP_TICKS - phase)
+    assert teleport_audio == [(expected, True, -1)], "teleport audio must start once, after drawing the arrival view"
+
+
+def test_teleport_sound_waits_while_the_inventory_covers_the_destination(lib, walk, teleport_audio):
+    _, _, at = walk
+    audible_teleporter(lib, at)
+    lib.input_key_down(C.KEYPAD_FORWARD)
+    lib.play_tick()
+    lib.game_set_open_inventory(1)
+    for _ in range(C.STEP_TICKS):
+        lib.play_tick()
+    assert teleport_audio == []
+    lib.game_set_open_inventory(0)
+    for _ in range(C.STEP_TICKS):
+        lib.play_tick()
+    assert len(teleport_audio) == 1 and teleport_audio[0][1:] == (True, -1)
+
+
+def test_a_new_session_discards_the_previous_pending_teleport_sound(lib, walk, teleport_audio):
+    _, _, at = walk
+    audible_teleporter(lib, at)
+    lib.input_key_down(C.KEYPAD_FORWARD)
+    lib.play_tick()
+    assert teleport_audio == []
+    assert lib.session_start_new_game()
+    for _ in range(C.STEP_TICKS):
+        lib.play_tick()
+    assert teleport_audio == []
+
+
+def test_loading_discards_the_previous_pending_teleport_sound(lib, gdat, walk, teleport_audio, tmp_path):
+    _, _, at = walk
+    path, backup = tmp_path / "BEFORE.DAT", tmp_path / "BEFORE.BAK"
+    assert lib.save_write(str(path).encode(), str(backup).encode(), b"BEFORE", gdat) == 0
+    audible_teleporter(lib, at)
+    lib.input_key_down(C.KEYPAD_FORWARD)
+    lib.play_tick()
+    assert teleport_audio == []
+    assert lib.session_start_save(str(path).encode())
+    for _ in range(C.STEP_TICKS):
+        lib.play_tick()
+    assert teleport_audio == []
+
+
+@pytest.mark.parametrize("mode, classic", [(C.GAME_MODE_ADVANCED, False), (C.GAME_MODE_VANILLA, True)])
+def test_other_modes_retain_original_deferred_teleport_timing(lib, walk, teleport_audio, mode, classic):
+    _, _, at = walk
+    lib.move_party_to(at, C.DIR_NORTH)
+    lib.view_draw_dungeon(Location(at.x, at.y), C.DIR_NORTH)
+    lib.play_present_viewport()
+    audible_teleporter(lib, at)
+    ctypes.c_int.in_dll(lib, "g_game_mode").value = mode
+    lib.move_set_classic_steps(classic)
+    lib.input_key_down(C.KEYPAD_RIGHT)  # a sidestep has no walking frames in the original
+    lib.play_tick()
+    assert teleport_audio == [(1, False, -1)]
