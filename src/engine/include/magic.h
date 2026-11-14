@@ -39,6 +39,11 @@ typedef enum { CAST_OK, CAST_FAILED, CAST_UNKNOWN_SPELL, CAST_NEEDS_FLASK } Cast
 void magic_reset_favorites(void);
 /* Records the currently entered runes in a favorite slot; false for invalid/incomplete input. */
 bool magic_record_favorite(int16_t caster, int16_t slot);
+/* Records spell with the power rune of power 1 to 6 in a favorite slot, without entered runes; false for a spell
+   with another power rune and for invalid input. */
+bool magic_record_spell_favorite(int16_t caster, int16_t slot, const Spell *spell, int power);
+/* Empties a favorite slot or the last attempt. */
+void magic_clear_favorite(int16_t caster, int16_t slot);
 /* Recorded glyph at step, or 0 for an absent/invalid entry. */
 uint8_t magic_favorite_rune(int16_t caster, int16_t slot, int step);
 /* Total rune-entry mana at the chosen power; -1 for no combination or invalid power. */

@@ -338,6 +338,26 @@ bool magic_record_favorite(int16_t caster, int16_t slot)
     return true;
 }
 
+bool magic_record_spell_favorite(int16_t caster, int16_t slot, const Spell *spell, int power)
+{
+    if (g_game_mode != GAME_MODE_ADVANCED || !valid_favorite(caster, slot) || slot == MAGIC_FAVORITE_LAST ||
+        power < 1 || power > POWER_MON)
+        return false;
+    uint8_t power_rune = magic_get_spell_rune(spell, 0);
+    if (power_rune && power_rune - POWER_RUNE_BASE != power)
+        return false; /* a spell with a power rune takes only that power */
+    favorites[caster][slot][0] = (uint8_t)(POWER_RUNE_BASE + power);
+    for (int step = 1; step < CHAMPION_RUNES_SIZE; step++)
+        favorites[caster][slot][step] = magic_get_spell_rune(spell, step);
+    return true;
+}
+
+void magic_clear_favorite(int16_t caster, int16_t slot)
+{
+    if (valid_favorite(caster, slot))
+        memset(favorites[caster][slot], 0, CHAMPION_RUNES_SIZE);
+}
+
 uint8_t magic_favorite_rune(int16_t caster, int16_t slot, int step)
 {
     return valid_favorite(caster, slot) && step >= 0 && step < CHAMPION_RUNES_SIZE ? favorites[caster][slot][step] : 0;

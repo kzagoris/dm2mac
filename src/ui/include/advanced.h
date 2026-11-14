@@ -20,6 +20,9 @@
 #define KEY_OPTIONS   0x3b /* F1 */
 #define KEY_SPELLBOOK 0x2e /* C */
 #define KEY_CHEATS    0x2d /* X */
+/* Alt+C, then Alt+1 to Alt+4, sets or casts a favorite. */
+#define KEY_FAVORITE       (KEY_ALT | KEY_SPELLBOOK)
+#define KEY_FAVORITE_FIRST (KEY_ALT | 0x02) /* Alt+1 */
 #define KEY_DISK_MENU (KEY_CONTROL | SCAN_S)
 #define KEY_REST      (KEY_CONTROL | SCAN_R)
 

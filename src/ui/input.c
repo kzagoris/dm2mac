@@ -848,6 +848,9 @@ static bool execute_champion_command(int command, bool idle)
     } else if (command == CMD_SPELLBOOK) {
         if (g_game_mode == GAME_MODE_ADVANCED && g_game.champion_count && !g_ui.candidate && idle)
             advanced_open_spellbook();
+    } else if (command >= CMD_FAVORITE_FIRST && command <= CMD_FAVORITE_LAST) {
+        if (g_game_mode == GAME_MODE_ADVANCED && g_game.champion_count && !g_ui.candidate && idle)
+            spellbook_run_favorite((int16_t)(command - CMD_FAVORITE_FIRST));
     } else if (command >= CMD_QUICK_SAVE && command <= CMD_CHEATS) {
         if (g_game.champion_count && !g_ui.candidate && idle) {
             if (command == CMD_QUICK_SAVE)

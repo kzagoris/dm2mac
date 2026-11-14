@@ -147,15 +147,15 @@ With **Known spells**, hints respect discovery and name only known spells. With 
 
 #### Four favorites per champion, plus the last attempt
 
-Choose **FAVORITES AND LAST ATTEMPT** from the list. Each champion has four saved combinations and a separate **LAST ATTEMPT** entry. Unknown rune combinations can be recorded too.
+Choose **FAVORITES - KEYS 1-4 SET THE SPELL** from the list. Each champion has four saved combinations and a separate **LAST ATTEMPT** entry. Unknown rune combinations can be recorded too.
 
 ![Favorites screen with empty slots and recording instructions](docs/images/advanced-spells-favorites.png)
 
 *Empty favorites show the next step: enter runes in the normal spell panel before saving a combination. This capture demonstrates the initial state, not a successful recorded cast.*
 
-To record a favorite, close the overlay, enter the desired runes in the champion's normal spell panel, then press C and open favorites. Select **FAVORITE 1–4** and activate **SAVE ENTERED RUNES TO FAVORITE …**. Recording leaves both the entered runes and mana alone. Close the overlay to cast the runes already entered.
+To record a favorite, mark a spell in the list and press **1**–**4**: it becomes that favorite of the shown caster at the shown power, and the list shows the number in front of the spell. To record runes you entered by hand (also an unknown combination), hold **Alt**, press **C**, then **1**–**4** in the dungeon view; the same keys with no runes entered cast that favorite. Recording costs no mana. **Backspace** on a favorite row of the favorites page empties it.
 
-To replay later, begin with an empty rune tray, choose the champion and power, select the saved favorite, and activate **CAST SELECTED SPELL**. The mana preview and flask status help check readiness. Replay uses the normal casting path; it cannot bypass mana costs, cooldowns, failure rolls, or potion-flask requirements. An empty slot reports **EMPTY SLOT - SAVE A SPELL FIRST**.
+To replay later, begin with an empty rune tray, choose the champion and power, select the saved favorite, and activate **CAST SELECTED SPELL**. The mana preview and flask status help check readiness. Replay uses the normal casting path; it cannot bypass mana costs, cooldowns, failure rolls, or potion-flask requirements. An empty slot reports **EMPTY SLOT - SET A SPELL FIRST**.
 
 **LAST ATTEMPT** records failed attempts as well as successful ones. It is a separate automatically maintained entry; select one of the four favorite slots when recording manually. A potion cast without a flask retains its paid runes as in ordinary casting. Favorites persist in the optional `FAVS` save block; new games and older saves without that block start empty.
 
