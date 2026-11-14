@@ -289,6 +289,7 @@ void play_tick(void)
         step_after_input();
         step_before_input();
     }
+    area_update_rune_hover();
     show_classic_step();
     show_projectile_flight();
 }

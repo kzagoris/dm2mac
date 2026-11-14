@@ -9,6 +9,7 @@
 
 #include <stdbool.h>
 #include <stdint.h>
+#include "ui.h"
 
 typedef enum { SPELLBOOK_STAY, SPELLBOOK_CLOSE, SPELLBOOK_CAST } SpellbookResult;
 
@@ -16,8 +17,12 @@ typedef enum { SPELLBOOK_STAY, SPELLBOOK_CLOSE, SPELLBOOK_CAST } SpellbookResult
 /* Whether rune 0 to 5 of the next rune set continues the entered runes of the open spell panel to a listed spell;
    false before the power rune and outside the advanced mode. */
 bool spellbook_is_next_rune(int rune);
+/* The rune button under the pointer, 0 to 5; -1 outside the advanced spell panel or its buttons. */
+int spellbook_hovered_rune(void);
 
 /* Commands */
+/* Draws compact syllable letters only for the hovered rune choice; false for the original rune drawing. */
+bool spellbook_draw_rune_label(Offscreen *area, int zone, int rune, uint8_t color);
 /* The champion of the open spell panel enters rune 0 to 5 of the next rune set, as magic_add_rune. In the advanced
    mode the message area then names the listed spell that the entered runes are, for example FUL IR: FIREBALL, or
    says that no spell has them when every spell is listed and none begins with them. */

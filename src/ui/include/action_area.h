@@ -36,6 +36,8 @@ void area_draw_name(int i, bool highlight);
 
 /* Redraws what changed in the action area (tick: one game tick passed). */
 void area_update(bool tick);
+/* Refreshes rune hover letters after pointer movement, without advancing game time or the click feedback. */
+void area_update_rune_hover(void);
 /* Ends the extra hold of a hit's damage of the advanced mode when the click at (x, y) is in the action area, and draws
    the hand icons; returns whether it did. */
 bool area_end_damage_hold(int16_t x, int16_t y);

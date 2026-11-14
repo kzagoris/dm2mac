@@ -103,6 +103,13 @@ Click MAP, press Esc, or right-click to return to the map. Dragging still scroll
 Reveal map also shows items in unexplored areas. Markers update after pickup/drop, including items in alcoves;
 containers are marked without revealing their contents.
 
+### Spell rune hints
+
+In advanced mode, hovering over a grey rune button replaces its symbol with syllable letters (for example `FUL`).
+Moving the pointer away restores the rune symbol. Yellow highlighting still marks choices that continue a listed spell.
+
+Four-letter syllables wrap onto two lines to fit the button.
+
 ### Advanced keys
 
 | Key | Action |

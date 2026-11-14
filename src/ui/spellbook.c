@@ -2,15 +2,18 @@
 #include "spellbook.h"
 #include <ctype.h>
 #include <stdio.h>
+#include <string.h>
 #include "action.h"
 #include "advanced.h"
 #include "champion.h"
 #include "filter.h"
 #include "game.h"
 #include "game_text.h"
+#include "input.h"
 #include "magic.h"
 #include "rows.h"
 #include "text.h"
+#include "zone.h"
 
 /* Selectable rows and informational rows of the spell list page. */
 #define LIST_CASTER    0
@@ -39,6 +42,45 @@ _Static_assert(LIST_ROWS <= ROWS_MAX_COUNT, "the spell list fits below the title
 #define RUNE_NAMES_SIZE 16 /* three rune names, the spaces between them, and the end */
 #define NAME_COLUMNS    17 /* the longest spell name */
 #define SLOT_LABEL_SIZE 24 /* LAST ATTEMPT or FAVORITE and its number */
+
+/* Compact capitals keep even NETA inside a rune button. */
+#define LABEL_WIDTH       3
+#define LABEL_HEIGHT      5
+#define LABEL_ADVANCE     (LABEL_WIDTH + 1)
+#define LABEL_MAX_LETTERS 4
+#define LABEL_ROW_LETTERS (LABEL_MAX_LETTERS - 1)
+#define LABEL_MAX_WIDTH   (LABEL_ROW_LETTERS * LABEL_ADVANCE - 1)
+#define LABEL_ROW_HEIGHT  (LABEL_HEIGHT + 1)
+#define LABEL_MAX_HEIGHT  (LABEL_HEIGHT + LABEL_ROW_HEIGHT)
+
+static const char label_letters[][LABEL_WIDTH * LABEL_HEIGHT + 1] = {
+    "010101111101101", /* A */
+    "110101110101110", /* B */
+    "011100100100011", /* C */
+    "110101101101110", /* D */
+    "111100110100111", /* E */
+    "111100110100100", /* F */
+    "011100101101011", /* G */
+    "101101111101101", /* H */
+    "111010010010111", /* I */
+    "001001001101010", /* J */
+    "101101110101101", /* K */
+    "100100100100111", /* L */
+    "101111111101101", /* M */
+    "101111111111101", /* N */
+    "010101101101010", /* O */
+    "110101110100100", /* P */
+    "010101101111011", /* Q */
+    "110101110101101", /* R */
+    "011100010001110", /* S */
+    "111010010010010", /* T */
+    "101101101101111", /* U */
+    "101101101101010", /* V */
+    "101101111111101", /* W */
+    "101101010101101", /* X */
+    "101101010010010", /* Y */
+    "111001010100111", /* Z */
+};
 
 static struct {
     bool favorites;     /* the favorites page shows, else the spell list */
@@ -307,7 +349,48 @@ bool spellbook_is_next_rune(int rune)
     return false;
 }
 
+int spellbook_hovered_rune(void)
+{
+    if (g_game_mode != GAME_MODE_ADVANCED || g_advanced_screen || g_action.champion <= 0 ||
+        g_action.hand != ACTION_HAND_SPELL || champion(g_action.champion - 1)->rune_count >= CHAMPION_RUNES_SIZE)
+        return -1;
+    int16_t rect[RECT_SIZE];
+    for (int rune = 0; rune < SPELL_RUNES_PER_SET; rune++)
+        if (input_command_rect((uint16_t)(CMD_RUNE_FIRST + rune), rect) && g_input_mouse_x >= rect[RECT_X] &&
+            g_input_mouse_x < rect[RECT_X] + rect[RECT_W] && g_input_mouse_y >= rect[RECT_Y] &&
+            g_input_mouse_y < rect[RECT_Y] + rect[RECT_H])
+            return rune;
+    return -1;
+}
+
 /* Commands */
+
+bool spellbook_draw_rune_label(Offscreen *area, int zone, int rune, uint8_t color)
+{
+    const char *name = magic_get_rune_name(rune);
+    if (!name || spellbook_hovered_rune() != rune % SPELL_RUNES_PER_SET)
+        return false;
+    uint8_t pixels[LABEL_MAX_WIDTH * LABEL_MAX_HEIGHT];
+    int length = (int)strlen(name);
+    int columns = length == LABEL_MAX_LETTERS ? length / 2 : length;
+    int width = columns * LABEL_ADVANCE - 1;
+    int height = length == LABEL_MAX_LETTERS ? LABEL_MAX_HEIGHT : LABEL_HEIGHT;
+    memset(pixels, UI_KEY, sizeof pixels);
+    for (int letter = 0; name[letter]; letter++) {
+        const char *glyph = label_letters[name[letter] - 'a'];
+        for (int y = 0; y < LABEL_HEIGHT; y++)
+            for (int x = 0; x < LABEL_WIDTH; x++)
+                if (glyph[y * LABEL_WIDTH + x] == '1')
+                    pixels[(y + letter / columns * LABEL_ROW_HEIGHT) * width + letter % columns * LABEL_ADVANCE + x] =
+                        color;
+    }
+    Bitmap image = {pixels, (int16_t)width, (int16_t)height, IMAGE_8BPP};
+    ScreenSize size = {(int16_t)width, (int16_t)height};
+    int16_t rect[RECT_SIZE];
+    if (zone_compute_rect(&image, rect, (uint16_t)zone, &size))
+        offscreen_blit(area, &(BlitSource){.bitmap = &image, .x = size.w, .y = size.h, .transparent = UI_KEY}, rect);
+    return true;
+}
 
 void spellbook_add_rune(int rune)
 {
