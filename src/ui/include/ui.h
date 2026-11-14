@@ -123,5 +123,8 @@ void ui_draw_all_champion_states(bool tick);
 void ui_close_inventory(bool draw_arrows);
 /* Opens the inventory of a champion, or closes it when it is open; an index outside 0 to 3 changes nothing. */
 void ui_toggle_inventory(int16_t champion_index);
+/* The advanced mode: pins the skills panel in the open inventory in place of the food and water gauges, or removes
+   the pin. */
+void ui_toggle_pinned_stats(void);
 
 #endif /* DM2_UI_UI_H */

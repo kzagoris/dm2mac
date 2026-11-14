@@ -171,6 +171,43 @@ def test_eye_and_mouth_hold_while_the_left_button_is_down(control, lib, tmp_path
         hold_and_release(x, y, PANEL_MODE_SCROLL)
 
 
+def test_advanced_click_pins_the_skills_panel(control, lib):
+    # The advanced mode: a click on the eye with an empty leader hand, or on the food and water panel, keeps the skills
+    # panel in the inventory after the release; a second click brings the food and water gauges back.
+    path, *_ = control
+    ui = UiState.in_dll(lib, "g_ui")
+    mode = ctypes.c_int.in_dll(lib, "g_game_mode")
+    rect = (ctypes.c_int16 * 4)()
+
+    def click(x, y, shown):
+        assert request({"cmd": "click", "x": x, "y": y}, path)["ok"]
+        assert request({"cmd": "wait", "ticks": 20}, path)["ok"]
+        assert ui.eye == 0 and ui.panel_mode == shown
+
+    try:
+        with pumped(lib):
+            assert request({"cmd": "key", "key": "1"}, path)["ok"]
+            assert request({"cmd": "wait", "ticks": 20}, path)["ok"]
+            origin = lib.zone_get_position(ZONE_VIEWPORT)
+            eye_x, eye_y = arrow_center(lib, ZONE_EYE_CLICK)
+            eye_x, eye_y = eye_x + origin.x, eye_y + origin.y
+            x, y = arrow_center(lib, C.ZONE_INVENTORY_PANEL)
+            x, y = x + origin.x, y + origin.y
+            assert lib.input_click_command(INPUT_MODE_INVENTORY, x, y, LEFT, rect) == 0  # vanilla: no command
+            mode.value = C.GAME_MODE_ADVANCED
+            assert lib.input_click_command(INPUT_MODE_INVENTORY, x, y, LEFT, rect) == C.CMD_PIN_STATS
+            click(x, y, PANEL_MODE_SKILLS)
+            click(x, y, C.PANEL_MODE_FOOD)
+            click(eye_x, eye_y, PANEL_MODE_SKILLS)
+            lib.champ_put_in_leader_hand(things_of(lib, THING_SCROLL, 1)[0])  # the held object shows over the pin
+            assert request({"cmd": "wait", "ticks": 20}, path)["ok"]
+            assert ui.panel_mode == PANEL_MODE_SCROLL
+            assert lib.input_click_command(INPUT_MODE_INVENTORY, x, y, LEFT, rect) != C.CMD_PIN_STATS
+    finally:
+        mode.value = C.GAME_MODE_VANILLA
+        lib.ui_toggle_pinned_stats()  # the pin of the eye click
+
+
 def test_wait_answers_after_the_ticks(control, lib):
     path, _, loop = control
     with pumped(lib):

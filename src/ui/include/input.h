@@ -86,6 +86,7 @@
 #define CMD_QUICK_LOAD           0xf4
 #define CMD_AUTOMAP              0xf5
 #define CMD_CHEATS               0xf6 /* the advanced mode: no original command has these numbers */
+#define CMD_PIN_STATS            0xf9 /* the advanced mode: a click on the food and water panel of the inventory */
 
 /* The cursor images of input_cursor_at. */
 enum CursorKind { CURSOR_ARROW, CURSOR_HAND, CURSOR_OBJECT, CURSOR_CHAMPION, CURSOR_ATTACK, CURSOR_ATTACK_WAITING };
@@ -138,7 +139,8 @@ bool input_is_idle(void);
 
 /* The command of a click with buttons at (x, y) in mode, and the rectangle of its zone; 0 for none. In the advanced
    mode a left click on a status box outside the hands is a click on the bars when the leader hand holds an object
-   (it stores the object), else a click on the name (it opens the inventory of the champion);
+   (it stores the object), else a click on the name (it opens the inventory of the champion); a left click with an
+   empty leader hand on the inventory panel that shows the food and water gauges or the skills gives CMD_PIN_STATS;
    exported for the tests. */
 uint16_t input_click_command(enum InputMode mode, int16_t x, int16_t y, int buttons, int16_t *rect);
 /* The command of key in mode, and the rectangle of its zone; 0 for none. In the advanced mode, F5 and F9 in the
