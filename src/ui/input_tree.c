@@ -913,6 +913,10 @@ uint16_t input_click_command(enum InputMode mode, int16_t x, int16_t y, int butt
     uint16_t command = find_click_command(&g_input_mode_roots[mode], x, y, buttons, rect);
     if (g_game_mode != GAME_MODE_ADVANCED || buttons != INPUT_BUTTON_LEFT)
         return command;
+    if (!command && mode == INPUT_MODE_INVENTORY && !g_ui.candidate && g_game.leader_hand == THING_NONE &&
+        (g_ui.panel_mode == PANEL_MODE_FOOD || g_ui.panel_mode == PANEL_MODE_SKILLS) &&
+        input_get_zone_rect(ZONE_INVENTORY_PANEL | ZONE_IN_PANEL, rect) && rect_contains_point(rect, x, y))
+        return CMD_PIN_STATS;
     for (int16_t champion_index = 0; champion_index < CHAMPION_MAX; champion_index++) {
         int16_t box[RECT_SIZE], target[RECT_SIZE];
         uint16_t open = (uint16_t)(CMD_INVENTORY_FIRST + champion_index);

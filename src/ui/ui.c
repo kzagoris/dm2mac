@@ -255,8 +255,12 @@ static struct {
     uint16_t shown_object; /* the object of the panel */
     bool shown_eye, shown_mouth;
     int16_t description_x, description_y;
-    uint8_t shown_raised[SKILL_BASE_COUNT]; /* the raised skill counts that the skills panel showed */
+    uint8_t shown_raised[SKILL_BASE_COUNT];            /* the raised skill counts that the skills panel showed */
+    bool shown_pinned;                                 /* the panel showed the pinned skills panel */
+    int16_t shown_stats[STAT_COUNT][STAT_VALUE_COUNT]; /* the statistics that the skills panel showed */
 } cache;
+/* The advanced mode: the skills panel stays in the open inventory in place of the food and water gauges. */
+static bool stats_pinned;
 static Offscreen status_box;
 
 /* The short names of the statistics and the names of the skills in the bonus lines of the object info. */
@@ -1465,6 +1469,8 @@ static void show_skills_and_stats(void)
         text_draw_in_viewport(x, y, g_ui_colors[UI_LIGHT_GRAY], gtext_gdat(CAT_PANEL, 0, TEXT_STAT_FIRST + stat, text));
         int current = champ_get_stat(c, stat, STAT_CURRENT);
         int maximum = champ_get_stat(c, stat, STAT_MAXIMUM);
+        cache.shown_stats[stat][STAT_CURRENT] = (int16_t)current;
+        cache.shown_stats[stat][STAT_MAXIMUM] = (int16_t)maximum;
         int color = current < maximum ? UI_RED : current > maximum ? UI_GREEN : UI_LIGHT_GRAY;
         text_draw_in_viewport(stat_x, y, g_ui_colors[color], gtext_format_number(current, true, NUMBER_DIGITS));
         snprintf(text, sizeof text, "/%s", gtext_format_number(maximum, true, NUMBER_DIGITS));
@@ -1479,6 +1485,29 @@ static bool shows_held_object(void)
 {
     return g_game_mode == GAME_MODE_ADVANCED && g_game.leader_hand != THING_NONE && !g_ui.eye && !g_ui.mouth &&
            !g_ui.candidate;
+}
+
+void ui_toggle_pinned_stats(void)
+{
+    stats_pinned = !stats_pinned;
+}
+
+/* True when the skills panel stays in place of the food and water gauges: in the advanced mode, when it is pinned,
+   with an empty leader hand, and not with the mouth or for a recruit candidate. */
+static bool shows_pinned_stats(void)
+{
+    return g_game_mode == GAME_MODE_ADVANCED && stats_pinned && g_game.leader_hand == THING_NONE && !g_ui.mouth &&
+           !g_ui.candidate;
+}
+
+/* True when a statistic or a raised skill of the champion differs from what the skills panel showed. */
+static bool shown_stats_changed(const Champion *c)
+{
+    for (int stat = STAT_STRENGTH; stat < STAT_COUNT; stat++)
+        if (cache.shown_stats[stat][STAT_CURRENT] != champ_get_stat(c, stat, STAT_CURRENT) ||
+            cache.shown_stats[stat][STAT_MAXIMUM] != champ_get_stat(c, stat, STAT_MAXIMUM))
+            return true;
+    return memcmp(cache.shown_raised, g_champ_skill_raised[inventory_champion()], sizeof cache.shown_raised) != 0;
 }
 
 /* The object that the inventory panel shows: the leader hand object with the eye (in the advanced mode also
@@ -1571,8 +1600,10 @@ static void show_inventory_values(const Champion *c)
 static bool show_inventory_panel(const Champion *c, uint16_t flags)
 {
     uint16_t object = panel_object(c);
+    bool pinned = shows_pinned_stats();
     if (cache.shown_object != object || g_ui.mouth != cache.shown_mouth || g_ui.eye != cache.shown_eye ||
-        flags & REDRAW_TITLE_ALL) {
+        pinned != cache.shown_pinned || flags & REDRAW_TITLE_ALL ||
+        (g_ui.panel_mode == PANEL_MODE_SKILLS && pinned && shown_stats_changed(c))) {
         ui_draw_viewport_image(CAT_PANEL, 0, GFX_PANEL_EYE, ZONE_EYE, GFX_OPAQUE);
         /* the mouth picture of the held eye follows the mouth picture */
         ui_draw_viewport_image(CAT_PANEL, 0, g_ui.eye ? GFX_PANEL_MOUTH + 1 : GFX_PANEL_MOUTH, ZONE_MOUTH, GFX_OPAQUE);
@@ -1587,8 +1618,12 @@ static bool show_inventory_panel(const Champion *c, uint16_t flags)
             else
                 show_food_water();
         } else if (!show_object_info(object, false)) {
-            show_food_water();
+            if (pinned)
+                show_skills_and_stats();
+            else
+                show_food_water();
         }
+        cache.shown_pinned = pinned;
         cache.shown_object = object;
         cache.shown_eye = g_ui.eye;
         cache.shown_mouth = g_ui.mouth;

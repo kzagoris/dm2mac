@@ -811,7 +811,11 @@ static bool execute_champion_command(int command, bool idle)
         recruit_finish((Position){g_game.party_map, g_game.party_x, g_game.party_y}, g_game.party_dir, command);
     } else if (command == CMD_MOUTH) {
         champ_consume_object(-1, THING_NONE, -1);
+    } else if (command == CMD_PIN_STATS) {
+        ui_toggle_pinned_stats();
     } else if (command == CMD_EYE) {
+        if (g_game_mode == GAME_MODE_ADVANCED && g_game.leader_hand == THING_NONE && !g_ui.candidate)
+            ui_toggle_pinned_stats(); /* the held eye shows the skills panel until the release, the pin after it */
         game_set_eye_held((g_input_mouse_buttons & INPUT_BUTTON_LEFT) != 0);
         if (g_ui.eye)
             input_flush();
