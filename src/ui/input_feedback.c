@@ -89,6 +89,8 @@
 #define ARROW_CENTER_X       20 /* half size of the middle part of the viewport, without an arrow */
 #define ARROW_CENTER_Y       15
 #define ARROW_PRESSED_OFFSET 1 /* the graphic entry of a pressed movement arrow after the released one */
+#define ARROW_ENTRY_STEP     2 /* the released and pressed pictures of each movement arrow */
+#define CLASSIC_ARROW_TICKS  4 /* timer ticks of feedback, independent of the game step */
 
 /* The feedback bitmap of the clicked button, open or closed. */
 typedef struct {
@@ -501,12 +503,54 @@ static uint16_t next_event_command(void)
     return command;
 }
 
+/* Draws a movement arrow released or pressed. */
+static void show_move_arrow(int entry, int zone, bool pressed)
+{
+    g_input.arrow_pressed = pressed;
+    g_input.arrow_zone = zone;
+    g_input.arrow_entry = entry;
+    g_input.classic_arrow_ticks = 0;
+    Offscreen o;
+    offscreen_create(&o, zone, true);
+    gfx_fill_bitmap(o.bitmap, g_ui_colors[UI_BLACK]);
+    offscreen_draw_gdat_image(
+        &o, (GdatKey){CAT_INTERFACE, UI_INDEX_ARROWS, entry + (pressed ? ARROW_PRESSED_OFFSET : 0)}, zone, GFX_OPAQUE);
+    offscreen_flush(&o, true);
+    draw_free_temp();
+}
+
+/* Releases a classic arrow on its own timer, even while another command waits for its cooldown. */
+static void update_classic_move_arrow(int elapsed)
+{
+    if (!g_input.classic_arrow_ticks)
+        return;
+    if (elapsed < g_input.classic_arrow_ticks)
+        g_input.classic_arrow_ticks -= elapsed;
+    else
+        show_move_arrow(g_input.arrow_entry, g_input.arrow_zone, false);
+}
+
+/* The classic movement arrows give feedback without a script that waits for the next game step. */
+static bool start_classic_move_feedback(void)
+{
+    int command = g_input.current.command;
+    if (g_game_mode != GAME_MODE_ADVANCED || !move_has_classic_steps() || g_party.push_mode ||
+        g_party.push_pending_group != THING_NONE || command < CMD_TURN_LEFT || command > CMD_MOVE_LEFT)
+        return false;
+    update_classic_move_arrow(g_input.classic_arrow_ticks);
+    int arrow = command - CMD_TURN_LEFT;
+    show_move_arrow(GFX_ARROWS + arrow * ARROW_ENTRY_STEP, ZONE_ARROW_FIRST + arrow, true);
+    g_input.classic_arrow_ticks = CLASSIC_ARROW_TICKS;
+    return true;
+}
+
 void input_poll(void)
 {
     int elapsed = (int)(g_main_loop.timer_ticks - g_input.last_ticks);
     if (!elapsed)
         return;
     g_input.last_ticks = g_main_loop.timer_ticks;
+    update_classic_move_arrow(elapsed);
     if (g_advanced_screen) {
         forward_to_screen();
         return;
@@ -522,7 +566,8 @@ void input_poll(void)
             input_flush_deferred_click();
             if (!command)
                 break;
-            g_input.script = input_click_feedback_script(&g_input.current);
+            g_input.script = start_classic_move_feedback() ? click_feedback_scripts + SCRIPT_QUEUE
+                                                           : input_click_feedback_script(&g_input.current);
             elapsed = 0;
         }
     }
@@ -531,6 +576,7 @@ void input_poll(void)
 
 void input_reset_states(void)
 {
+    update_classic_move_arrow(g_input.classic_arrow_ticks);
     game_release_eye_and_mouth();
     move_set_push_mode(false);
     g_input_feedback_busy = false;
@@ -549,25 +595,11 @@ void input_cancel_push_mode(void)
     ui_draw_movement_arrows();
 }
 
-/* Draws a movement arrow released or pressed. */
-static void show_move_arrow(int entry, int zone, bool pressed)
-{
-    g_input.arrow_pressed = pressed;
-    g_input.arrow_zone = zone;
-    g_input.arrow_entry = entry;
-    Offscreen o;
-    offscreen_create(&o, zone, true);
-    gfx_fill_bitmap(o.bitmap, g_ui_colors[UI_BLACK]);
-    offscreen_draw_gdat_image(
-        &o, (GdatKey){CAT_INTERFACE, UI_INDEX_ARROWS, entry + (pressed ? ARROW_PRESSED_OFFSET : 0)}, zone, GFX_OPAQUE);
-    offscreen_flush(&o, true);
-    draw_free_temp();
-}
-
 void input_release_move_arrow(void)
 {
     /* the push arrow under the mouse stays pressed; after the push mode the arrows are already drawn released */
-    if (!g_input.arrow_pressed || (g_party.push_mode && g_party.push_arrow != PUSH_ARROW_NONE))
+    if (!g_input.arrow_pressed || g_input.classic_arrow_ticks ||
+        (g_party.push_mode && g_party.push_arrow != PUSH_ARROW_NONE))
         return;
     if (g_party.push_mode)
         show_move_arrow(g_input.arrow_entry, g_input.arrow_zone, false);
