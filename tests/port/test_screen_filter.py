@@ -15,6 +15,7 @@ XBRZ2X, XBRZ3X, XBRZ4X = C.SETTINGS_FILTER_XBRZ2X, C.SETTINGS_FILTER_XBRZ3X, C.S
 ROW_OPTIONS, ROW_FILTER, ROW_QUICK_SAVE = 6, 7, 8
 SCAN_ESCAPE, SCAN_RETURN, SCAN_S = 0x01, 0x1C, 0x1F
 HOOK = ctypes.CFUNCTYPE(ctypes.c_bool, ctypes.c_int)
+FULLSCREEN_HOOK = ctypes.CFUNCTYPE(ctypes.c_bool, ctypes.c_bool)
 
 
 class Cursor(ctypes.Structure):
@@ -71,13 +72,13 @@ def test_click_cycles_the_filter_and_the_subtitle_does_nothing(lib, screen):
 def test_a_change_goes_to_the_file_once(lib, screen):
     _, data = screen
     cycle(lib)
-    assert (data / "SETTINGS.TXT").read_text() == "filter=scale2x\naspect=off\nscanlines=off\nclassic_steps=off\nspells=known\n"
+    assert (data / "SETTINGS.TXT").read_text() == "filter=scale2x\naspect=off\nscanlines=off\nclassic_steps=off\nspells=known\nfullscreen=off\n"
     (data / "SETTINGS.TXT").unlink()
     lib.cheats_move_selection(1)
     lib.cheats_move_selection(-1)
     assert not (data / "SETTINGS.TXT").exists(), "no change, no write"
     cycle(lib)
-    assert (data / "SETTINGS.TXT").read_text() == "filter=scale3x\naspect=off\nscanlines=off\nclassic_steps=off\nspells=known\n"
+    assert (data / "SETTINGS.TXT").read_text() == "filter=scale3x\naspect=off\nscanlines=off\nclassic_steps=off\nspells=known\nfullscreen=off\n"
 
 
 def test_the_window_refuses_a_filter(lib, screen):
@@ -87,7 +88,7 @@ def test_the_window_refuses_a_filter(lib, screen):
     cycle(lib)
     cycle(lib)
     assert seen == [SCALE2X, SCALE3X] and state(lib) == (ROW_FILTER, SCALE2X)
-    assert (screen[1] / "SETTINGS.TXT").read_text() == "filter=scale2x\naspect=off\nscanlines=off\nclassic_steps=off\nspells=known\n"
+    assert (screen[1] / "SETTINGS.TXT").read_text() == "filter=scale2x\naspect=off\nscanlines=off\nclassic_steps=off\nspells=known\nfullscreen=off\n"
 
 
 def test_failed_write_keeps_the_filter(lib, screen):
@@ -150,3 +151,29 @@ def test_stepping_option_persists_and_vanilla_ignores_it(lib, tmp_path):
     lib.upscale_start(NONE)
     assert not lib.move_has_classic_steps()
     state.save_dir = b""
+
+
+def test_fullscreen_persists_in_the_advanced_mode_only(lib, tmp_path):
+    from dm2test.structs import Session
+
+    session = Session.in_dll(lib, "g_session")
+    session.save_dir = str(tmp_path).encode()
+    settings = tmp_path / "SETTINGS.TXT"
+    set_mode(lib, ADVANCED)
+    lib.upscale_start(NONE)
+    lib.upscale_note_fullscreen(True)
+    assert settings.read_text().endswith("fullscreen=on\n")
+    shown = []
+    hook = FULLSCREEN_HOOK(lambda fullscreen: shown.append(fullscreen) or True)
+    ctypes.c_void_p.in_dll(lib, "g_upscale_fullscreen_hook").value = ctypes.cast(hook, ctypes.c_void_p).value
+    lib.upscale_start(C.SETTINGS_FILTER_UNSET)
+    assert shown == [True], "the start makes the window fullscreen"
+    lib.upscale_note_fullscreen(False)
+    assert settings.read_text().endswith("fullscreen=off\n")
+    set_mode(lib, VANILLA)
+    lib.upscale_start(C.SETTINGS_FILTER_UNSET)
+    lib.upscale_note_fullscreen(True)
+    assert settings.read_text().endswith("fullscreen=off\n"), "the vanilla mode writes no file"
+    assert shown == [True]
+    ctypes.c_void_p.in_dll(lib, "g_upscale_fullscreen_hook").value = None
+    session.save_dir = b""

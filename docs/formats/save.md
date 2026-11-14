@@ -135,18 +135,21 @@ adventure to preserve. A missing/corrupt quick file leaves the chooser open and 
 
 ## SETTINGS.TXT
 
-The settings file of advanced mode keeps the rows SCREEN FILTER, 4:3 ASPECT and SCANLINES of Options/Help ([manual.md](../manual.md#screen-filter)). The three rows write it. It is in the same folder as `QUICK.DAT`. The file is a text file of `key=value` lines (`src/data/settings.c`). It has three lines:
+The settings file of advanced mode keeps the rows SCREEN FILTER, 4:3 ASPECT, SCANLINES of Options/Help, the stepping, the spells of the spell list, and the fullscreen window ([manual.md](../manual.md#screen-filter)). The rows and the fullscreen keys (Alt+Enter, `F11`) write it. It is in the same folder as `QUICK.DAT`. The file is a text file of `key=value` lines (`src/data/settings.c`). It has six lines:
 
 ```
 filter=scale2x
 aspect=on
 scanlines=off
+classic_steps=off
+spells=known
+fullscreen=off
 ```
 
 - The values of `filter` are `none`, `scale2x`, `scale3x`, `xbrz2x`, `xbrz3x`, and `xbrz4x`.
-- The values of `aspect` (the 4:3 picture) and `scanlines` are `on` and `off`. A missing line gives `off`, so a file with only the `filter` line stays valid.
+- The values of `aspect` (the 4:3 picture), `scanlines`, `classic_steps` and `fullscreen` (the window fills the screen) are `on` and `off`; the values of `spells` are `known` and `all`. A missing line gives `off` or `known`, so a file with only the `filter` line stays valid.
 - The game ignores a CR at the end of a line, an unknown key, a bad value, and a line of 64 characters or more.
-- A file over 1024 bytes gives the defaults (no filter, `aspect` and `scanlines` off).
+- A file over 1024 bytes gives the defaults (no filter, the switches `off`, the known spells).
 - The game writes `SETTINGS.TMP` first and replaces the file with it.
 
 ## Deviations from the original

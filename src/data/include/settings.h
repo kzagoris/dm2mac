@@ -5,7 +5,7 @@
 
 /* The settings file of the advanced mode (SETTINGS.TXT in the saves folder): the upscale filter as the text line
    filter=none|scale2x|scale3x|xbrz2x|xbrz3x|xbrz4x, the 4:3 picture as aspect=on|off, the scanlines as scanlines=on|off,
-   and the spells of the spell list as spells=known|all. A player preference, not game state: the save file does not hold it. It reads and writes the file; it does not apply the
+   the spells of the spell list as spells=known|all, and the fullscreen window as fullscreen=on|off. A player preference, not game state: the save file does not hold it. It reads and writes the file; it does not apply the
    values. */
 
 #include <stdbool.h>
@@ -34,6 +34,7 @@ typedef struct {
     bool scanlines;     /* a dark line below every line of the game screen */
     bool classic_steps; /* skip intermediate walking frames */
     bool all_spells;    /* the spell list and the rune hints show every spell, not only the known spells */
+    bool fullscreen;    /* the window fills the screen */
 } Settings;
 
 /* Queries */

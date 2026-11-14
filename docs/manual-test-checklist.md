@@ -44,6 +44,7 @@ An item with "Covered by" has no box: automated tests check it against the origi
 - [ ] A4. Run `build/dm2 --filter bad`. Expected: an error message and exit code 2.
 - [ ] A5. Run `build/dm2 --data /tmp`. Expected: the message `cannot read /tmp/DATA/GRAPHICS.DAT` and exit code 1.
 - [ ] A6. Start with `--data` on a copy of `game/` without `MELODIC.BNK`. Expected: the log says the port plays without music; the game runs with sound effects.
+- [ ] A6a. In Advanced, press Alt+Enter, then `F11`: the window fills the screen and comes back, the picture keeps its aspect and a click still hits its row; a held key does not flicker it. Leave it fullscreen and restart: the game starts fullscreen and `SETTINGS.TXT` has `fullscreen=on`. On macOS, the green window button changes the file too. In Vanilla the keys work and `SETTINGS.TXT` stays the same.
 - [ ] A7. Close the window during the game. Expected: the program ends without a crash.
 - [ ] A8. Run `make dist`, extract `build/DM2Mac-macos-arm64.zip` into a new folder, copy your game into `DM2Mac`, remove the quarantine as `README.txt` says, and double-click `DM2Mac.app` in the Finder. Expected: the game starts and no Terminal opens; `game/` with the game files and `dm2.log` is in the `DM2Mac` folder; nothing new is in the home folder.
 

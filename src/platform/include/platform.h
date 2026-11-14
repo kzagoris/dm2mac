@@ -42,6 +42,8 @@ bool plat_set_filter(enum SettingsFilter filter);
    square pixels, scanlines draws a dark line below every line of the game screen. A window that fits the picture
    exactly keeps fitting it. False, and no change, when the scanline texture cannot be made. */
 bool plat_set_picture(bool aspect, bool scanlines);
+/* Makes the window fill the screen, or a window again. False, and no change, when the system refuses. */
+bool plat_set_fullscreen(bool fullscreen);
 /* Closes the window, the sound output and SDL. */
 void plat_quit(void);
 /* Sets the window and Dock icon from w by h ARGB pixels. */
@@ -56,7 +58,9 @@ void plat_present_movie(const MoviePicture *p);
 
 /* Input */
 
-/* True with the next key, mouse button, or quit event; mouse motion only moves the pointer. */
+/* True with the next key, mouse button, or quit event; mouse motion only moves the pointer. Alt+Enter and F11
+   toggle the fullscreen window and do not reach the caller; a fullscreen change of the window goes to
+   upscale_note_fullscreen. */
 bool plat_poll(PlatEvent *e);
 /* Mouse position in game screen pixels. */
 void plat_mouse_position(int *out_x, int *out_y);

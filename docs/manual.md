@@ -67,6 +67,7 @@ The mouse, arrow keys, and numeric keypad work as in the original game. Keys tha
 | Shift+Left, Shift+Right | Step sideways |
 | Alt+S (Option+S on a Mac) | Save menu |
 | `Esc` | Pause |
+| Alt+Enter (Option+Enter on a Mac), `F11` | Fullscreen on or off, in every mode; the advanced mode remembers it in `SETTINGS.TXT` |
 
 ## Saved games
 
@@ -234,7 +235,11 @@ Options/Help (`F1`) has three rows for the picture of the window:
 - SCANLINES draws a soft dark line below every line of the game screen, as on a monitor tube. It works with every
   filter. The lines show when the picture is at least 400 pixels high; the movies have none.
 
-The game remembers the three rows in `game/DATA/SETTINGS.TXT` and uses them on the next startup.
+Alt+Enter or `F11` makes the window fill the screen and back. The picture keeps its aspect, with black bars at the
+sides or above and below.
+
+The game remembers the three rows and the fullscreen window in `game/DATA/SETTINGS.TXT` and uses them on the next
+startup.
 `--filter` overrides the filter. If the file cannot be written, the message area shows `UNABLE TO SAVE OPTIONS`. The file is
 described in [Save files](formats/save.md#settingstxt).
 

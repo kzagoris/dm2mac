@@ -45,6 +45,8 @@ static void parse_line(char *line, Settings *settings)
         parse_switch(value, &settings->scanlines);
     if (!strcmp(line, "classic_steps"))
         parse_switch(value, &settings->classic_steps);
+    if (!strcmp(line, "fullscreen"))
+        parse_switch(value, &settings->fullscreen);
     if (!strcmp(line, "spells") && (!strcmp(value, SPELLS_ALL) || !strcmp(value, SPELLS_KNOWN)))
         settings->all_spells = !strcmp(value, SPELLS_ALL);
     if (strcmp(line, "filter"))
@@ -127,10 +129,10 @@ bool settings_save(const char *folder, const Settings *settings)
         !settings_filter_name(settings->filter))
         return false;
     int length =
-        snprintf(text, sizeof text, "filter=%s\naspect=%s\nscanlines=%s\nclassic_steps=%s\nspells=%s\n",
+        snprintf(text, sizeof text, "filter=%s\naspect=%s\nscanlines=%s\nclassic_steps=%s\nspells=%s\nfullscreen=%s\n",
                  settings_filter_name(settings->filter), settings->aspect ? SWITCH_ON : SWITCH_OFF,
                  settings->scanlines ? SWITCH_ON : SWITCH_OFF, settings->classic_steps ? SWITCH_ON : SWITCH_OFF,
-                 settings->all_spells ? SPELLS_ALL : SPELLS_KNOWN);
+                 settings->all_spells ? SPELLS_ALL : SPELLS_KNOWN, settings->fullscreen ? SWITCH_ON : SWITCH_OFF);
     FILE *file = fopen(temporary, "wb");
     if (!file)
         return false;

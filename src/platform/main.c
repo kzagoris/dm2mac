@@ -801,6 +801,7 @@ int main(int argc, char **argv)
         return EXIT_FAILURE;
     g_upscale_filter_hook = plat_set_filter;
     g_upscale_picture_hook = plat_set_picture;
+    g_upscale_fullscreen_hook = plat_set_fullscreen;
     g_play_frame_hook = g_game_mode == GAME_MODE_TURNBASED ? turnbased_modal_frame : modal_frame;
     if (!mode_given && !options.save && !getenv(RESTART_ENV))
         choose_mode();

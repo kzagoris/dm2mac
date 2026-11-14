@@ -72,7 +72,7 @@ def test_a_spell_is_listed_after_its_cast_or_when_the_option_lists_all(lib, book
     key(lib, C.SCAN_ESCAPE)
     assert screen(lib) == C.ADVANCED_SCREEN_NONE
     lib.upscale_toggle_all_spells()
-    assert (book[1] / 'SETTINGS.TXT').read_text().endswith('spells=all\n')
+    assert (book[1] / 'SETTINGS.TXT').read_text().endswith('spells=all\nfullscreen=off\n')
     lib.advanced_open_spellbook()
     key(lib, C.KEY_ENTER)  # the first spell of the spell table is marked
     assert screen(lib) == C.ADVANCED_SCREEN_NONE
@@ -133,10 +133,10 @@ def test_the_options_row_changes_the_listed_spells(lib, book):
         key(lib, C.SCAN_S)
     key(lib, C.KEY_ENTER)
     assert lib.upscale_has_all_spells()
-    assert (book[1] / 'SETTINGS.TXT').read_text().endswith('spells=all\n')
+    assert (book[1] / 'SETTINGS.TXT').read_text().endswith('spells=all\nfullscreen=off\n')
     key(lib, C.KEY_ENTER)
     assert not lib.upscale_has_all_spells()
-    assert (book[1] / 'SETTINGS.TXT').read_text().endswith('spells=known\n')
+    assert (book[1] / 'SETTINGS.TXT').read_text().endswith('spells=known\nfullscreen=off\n')
 
 
 def test_the_favorite_keys_set_the_entered_runes_and_cast_the_favorite(lib, book):

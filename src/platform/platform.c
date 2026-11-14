@@ -1,6 +1,7 @@
 /* SPDX-License-Identifier: GPL-3.0-or-later */
 #include "platform.h"
 #include <SDL3/SDL.h>
+#include "filter.h"
 #include "movie.h"
 #include "music.h"
 #include "os.h"
@@ -232,12 +233,31 @@ bool plat_set_picture(bool aspect, bool scanlines)
     if (scanlines && !platform.scanline_tex && !make_scanline_texture())
         return false;
     SDL_GetWindowSize(platform.win, &w, &h);
-    if (aspect != platform.aspect && h * SCREEN_W == w * picture_height(platform.aspect))
+    bool fullscreen = SDL_GetWindowFlags(platform.win) & SDL_WINDOW_FULLSCREEN;
+    if (aspect != platform.aspect && !fullscreen && h * SCREEN_W == w * picture_height(platform.aspect))
         SDL_SetWindowSize(platform.win, w, w * picture_height(aspect) / SCREEN_W);
     platform.aspect = aspect;
     platform.scanlines = scanlines;
     render_frame();
     return true;
+}
+
+bool plat_set_fullscreen(bool fullscreen)
+{
+    if (!SDL_SetWindowFullscreen(platform.win, fullscreen)) {
+        os_log("SDL: %s", SDL_GetError());
+        return false;
+    }
+    return true;
+}
+
+/* True for the keys that toggle the fullscreen window: Alt+Enter and F11 without a modifier. */
+static bool is_fullscreen_key(const SDL_KeyboardEvent *key)
+{
+    if (key->scancode == SDL_SCANCODE_RETURN || key->scancode == SDL_SCANCODE_KP_ENTER)
+        return (key->mod & SDL_KMOD_ALT) && !(key->mod & (SDL_KMOD_CTRL | SDL_KMOD_SHIFT | SDL_KMOD_GUI));
+    return key->scancode == SDL_SCANCODE_F11 &&
+           !(key->mod & (SDL_KMOD_ALT | SDL_KMOD_CTRL | SDL_KMOD_SHIFT | SDL_KMOD_GUI));
 }
 
 void plat_quit(void)
@@ -299,12 +319,36 @@ void plat_present_movie(const MoviePicture *p)
 
 /* Input */
 
+/* Toggles the fullscreen window on its key and passes a fullscreen change of the window, by the key or by the system,
+   to upscale_note_fullscreen; true when the event was one of them. */
+static bool take_fullscreen_event(const SDL_Event *ev)
+{
+    if (ev->type == SDL_EVENT_WINDOW_ENTER_FULLSCREEN || ev->type == SDL_EVENT_WINDOW_LEAVE_FULLSCREEN) {
+        upscale_note_fullscreen(ev->type == SDL_EVENT_WINDOW_ENTER_FULLSCREEN);
+        return true;
+    }
+    if (ev->type != SDL_EVENT_KEY_DOWN || !is_fullscreen_key(&ev->key))
+        return false;
+    if (!ev->key.repeat)
+        plat_set_fullscreen(!(SDL_GetWindowFlags(platform.win) & SDL_WINDOW_FULLSCREEN));
+    return true;
+}
+
+/* The game screen pixel of a point in output pixels. */
+static VideoPoint map_output_point(float output_x, float output_y)
+{
+    int w, h;
+    SDL_GetCurrentRenderOutputSize(platform.ren, &w, &h);
+    return video_map_mouse(w, h, (int)output_x, (int)output_y, platform.aspect);
+}
+
 bool plat_poll(PlatEvent *e)
 {
     SDL_Event ev;
-    int w, h;
     VideoPoint at;
     while (SDL_PollEvent(&ev)) {
+        if (take_fullscreen_event(&ev))
+            continue;
         *e = (PlatEvent){0};
         switch (ev.type) {
         case SDL_EVENT_QUIT:
@@ -325,8 +369,7 @@ bool plat_poll(PlatEvent *e)
             return true;
         case SDL_EVENT_MOUSE_WHEEL:
             SDL_ConvertEventToRenderCoordinates(platform.ren, &ev);
-            SDL_GetCurrentRenderOutputSize(platform.ren, &w, &h);
-            at = video_map_mouse(w, h, (int)ev.wheel.mouse_x, (int)ev.wheel.mouse_y, platform.aspect);
+            at = map_output_point(ev.wheel.mouse_x, ev.wheel.mouse_y);
             platform.wheel_remainder += ev.wheel.direction == SDL_MOUSEWHEEL_FLIPPED ? -ev.wheel.y : ev.wheel.y;
             e->wheel = (int)platform.wheel_remainder;
             platform.wheel_remainder -= (float)e->wheel;
@@ -338,18 +381,16 @@ bool plat_poll(PlatEvent *e)
             return true;
         case SDL_EVENT_MOUSE_MOTION:
             SDL_ConvertEventToRenderCoordinates(platform.ren, &ev); /* window points -> output pixels */
-            SDL_GetCurrentRenderOutputSize(platform.ren, &w, &h);
-            at = video_map_mouse(w, h, (int)ev.motion.x, (int)ev.motion.y, platform.aspect);
+            at = map_output_point(ev.motion.x, ev.motion.y);
             platform.mouse_x = at.x;
             platform.mouse_y = at.y;
             break;
         case SDL_EVENT_MOUSE_BUTTON_DOWN:
         case SDL_EVENT_MOUSE_BUTTON_UP:
             SDL_ConvertEventToRenderCoordinates(platform.ren, &ev);
-            SDL_GetCurrentRenderOutputSize(platform.ren, &w, &h);
             e->type = ev.type == SDL_EVENT_MOUSE_BUTTON_DOWN ? PLAT_MOUSE : PLAT_MOUSE_UP;
             e->button = ev.button.button;
-            at = video_map_mouse(w, h, (int)ev.button.x, (int)ev.button.y, platform.aspect);
+            at = map_output_point(ev.button.x, ev.button.y);
             e->x = at.x;
             e->y = at.y;
             platform.mouse_x = e->x;

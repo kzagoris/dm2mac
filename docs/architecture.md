@@ -61,7 +61,7 @@ paragraph. A module with several `.c` files has one `<module>_internal.h` for it
 | `data/num.h` | `abs_` `clamp_` `max_` `min_` | Integer helpers: absolute value, clamping, maximum, and minimum. |
 | `data/os.h` | `os_` | The operating system services that `data/`, `engine/`, `ui/`, and `control/` need: the log, fatal errors, and full paths. |
 | `data/pcx.h` | `pcx_` | PCX pictures: 8-bit, RLE (run-length encoded), palette at the end (the INTRPLAY.PCX splash); decodes from memory only. |
-| `data/settings.h` | `settings_` | The advanced-mode settings file (SETTINGS.TXT in the saves folder) and the upscale filters: their names and output factors (separate from their enum values); also the switches of the 4:3 picture and the scanlines. It reads and writes the values; it does not apply them. |
+| `data/settings.h` | `settings_` | The advanced-mode settings file (SETTINGS.TXT in the saves folder) and the upscale filters: their names and output factors (separate from their enum values); also the switches of the 4:3 picture, the scanlines and the fullscreen window. It reads and writes the values; it does not apply them. |
 | `data/zip.h` | `zip_` | ZIP archives: the central directory, and stored and deflated entries. |
 
 ### engine/
@@ -106,7 +106,7 @@ paragraph. A module with several `.c` files has one `<module>_internal.h` for it
 | `ui/combat_feedback.h` | `combat_` | The advanced-mode damage stars over the creatures of the dungeon view (not in the original game). |
 | `ui/dialog.h` | `dialog_` | Dialogs: message, question, and progress pictures with buttons, and the volume settings. |
 | `ui/draw.h` | `draw_` | Drawing GDAT images into the frame buffer: blits, transparency, and the interface colors. |
-| `ui/filter.h` | `upscale_` | The advanced-mode screen filter (not in the original game): the filter at the start, the filter in use, and its change with the write of SETTINGS.TXT; the same for the 4:3 picture and the scanlines. |
+| `ui/filter.h` | `upscale_` | The advanced-mode screen filter (not in the original game): the filter at the start, the filter in use, and its change with the write of SETTINGS.TXT; the same for the 4:3 picture, the scanlines and the fullscreen window, which `platform/platform.c` reports with `upscale_note_fullscreen`. |
 | `ui/fm.h` | `fm_` | The OPL2 FM music driver from HMIMDRV.386, on an emulated OPL3 chip. |
 | `ui/icon.h` | `icon_` | The window icon, built from a creature graphic. |
 | `ui/input.h` | `input_` `command_` `kbd_` `rect_` | Mouse and keyboard input: key codes, rectangles, and the command queue. |
@@ -286,6 +286,7 @@ The other hooks:
 | `g_play_frame_hook` | `ui/play.h` | `platform/main.c`, the tests | `play_wait_frames` (`ui/play.c`) | a modal loop counts the timer ticks and shows no frame |
 | `g_upscale_filter_hook` | `ui/filter.h` | `platform/main.c` (`plat_set_filter`) | `ui/filter.c` | no window: the filter is not shown |
 | `g_upscale_picture_hook` | `ui/filter.h` | `platform/main.c` (`plat_set_picture`) | `ui/filter.c` | no window: the 4:3 picture and the scanlines are not shown |
+| `g_upscale_fullscreen_hook` | `ui/filter.h` | `platform/main.c` (`plat_set_fullscreen`) | `ui/filter.c` | no window: the fullscreen window of `SETTINGS.TXT` is not shown |
 
 On Windows `g_os_log_hook` and `g_os_fatal_hook` write `dm2.log` in the data folder, because the Windows build has
 no console. In a macOS bundle `platform/main.c` sends the error output to `dm2.log` in the data folder, because a

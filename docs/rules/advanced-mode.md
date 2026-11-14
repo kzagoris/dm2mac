@@ -210,9 +210,11 @@ The object info of the inventory (an object held on the eye) compares the object
 
 The rows SCREEN FILTER, 4:3 ASPECT and SCANLINES of Options/Help keep their values in `SETTINGS.TXT` in the folder of `QUICK.DAT` (`--saves DIR`, otherwise `<data>/DATA`). The file format is in [save.md](../formats/save.md#settingstxt).
 
-The advanced mode reads the file once on startup and applies the filter, the 4:3 picture and the scanlines. `--filter` and `DM2_FILTER` have priority over the filter of the file on startup. The SCREEN FILTER row can still change the filter, and the change writes the file. The vanilla and turn-based modes do not read the file.
+The fullscreen keys (Alt+Enter, `F11`) keep the fullscreen window there too; so does a fullscreen change by the system (the green button of a macOS window).
 
-The game writes the file only when one of the three values changes. If the write fails, the value stays changed and the message area shows `UNABLE TO SAVE OPTIONS` once. It shows again only after a write works and a later write fails.
+The advanced mode reads the file once on startup and applies the filter, the 4:3 picture, the scanlines and the fullscreen window. A fullscreen change on the mode screen, before the file is read, goes before the file and is written to it. `--filter` and `DM2_FILTER` have priority over the filter of the file on startup. The SCREEN FILTER row can still change the filter, and the change writes the file. The vanilla and turn-based modes do not read the file; their fullscreen keys work but do not write it.
+
+The game writes the file only when one of its values changes. If the write fails, the value stays changed and the message area shows `UNABLE TO SAVE OPTIONS` once. It shows again only after a write works and a later write fails.
 
 ## Deviations from the original
 

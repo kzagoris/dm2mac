@@ -11,11 +11,15 @@
 
 bool (*g_upscale_filter_hook)(enum SettingsFilter filter);
 bool (*g_upscale_picture_hook)(bool aspect, bool scanlines);
+bool (*g_upscale_fullscreen_hook)(bool fullscreen);
 
 static struct {
-    Settings shown;   /* the filter, the 4:3 picture and the scanlines in use */
-    Settings saved;   /* the values of SETTINGS.TXT, or in use at the start when the file holds none */
-    bool save_failed; /* the last write failed and its message shows */
+    Settings shown;         /* the filter, the 4:3 picture and the scanlines in use */
+    Settings saved;         /* the values of SETTINGS.TXT, or in use at the start when the file holds none */
+    bool save_failed;       /* the last write failed and its message shows */
+    bool started;           /* upscale_start ran */
+    bool window_fullscreen; /* the last state of the window that upscale_note_fullscreen kept */
+    bool fullscreen_noted;  /* the window changed fullscreen before upscale_start */
 } upscale = {.shown = {.filter = SETTINGS_FILTER_NONE}, .saved = {.filter = SETTINGS_FILTER_NONE}};
 
 /* The folder of SETTINGS.TXT: the --saves folder, else the DATA folder of the game (as QUICK.DAT). */
@@ -26,6 +30,24 @@ static char *find_folder(char *folder, size_t size)
     else
         snprintf(folder, size, "%s/DATA", g_session.data_dir);
     return folder;
+}
+
+/* Writes SETTINGS.TXT when a value differs from the file; a failed write says so once per failure run. */
+static void write_change(void)
+{
+    char dir[OS_DIR_SIZE + sizeof "/DATA"];
+    if (upscale.shown.filter == upscale.saved.filter && upscale.shown.aspect == upscale.saved.aspect &&
+        upscale.shown.scanlines == upscale.saved.scanlines &&
+        upscale.shown.classic_steps == upscale.saved.classic_steps &&
+        upscale.shown.all_spells == upscale.saved.all_spells && upscale.shown.fullscreen == upscale.saved.fullscreen)
+        return;
+    if (settings_save(find_folder(dir, sizeof dir), &upscale.shown)) {
+        upscale.saved = upscale.shown;
+        upscale.save_failed = false;
+    } else if (!upscale.save_failed) {
+        upscale.save_failed = true;
+        text_print_message(UI_WHITE, "\nUNABLE TO SAVE OPTIONS");
+    }
 }
 
 /* Setup */
@@ -48,7 +70,18 @@ void upscale_start(enum SettingsFilter filter)
         upscale.shown.scanlines = false;
     }
     move_set_classic_steps(upscale.shown.classic_steps);
+    bool file_fullscreen = upscale.shown.fullscreen;
+    if (upscale.fullscreen_noted)
+        upscale.shown.fullscreen = upscale.window_fullscreen; /* the player chose before the file was read */
+    else if (g_upscale_fullscreen_hook && upscale.shown.fullscreen && !g_upscale_fullscreen_hook(true))
+        upscale.shown.fullscreen = false;
     upscale.saved = upscale.shown;
+    upscale.started = true;
+    if (upscale.fullscreen_noted && g_game_mode == GAME_MODE_ADVANCED) {
+        upscale.saved.fullscreen = file_fullscreen;
+        write_change();
+    }
+    upscale.fullscreen_noted = false;
 }
 
 /* Queries */
@@ -74,24 +107,6 @@ bool upscale_has_all_spells(void)
 }
 
 /* Commands */
-
-/* Writes SETTINGS.TXT when a value differs from the file; a failed write says so once per failure run. */
-static void write_change(void)
-{
-    char dir[OS_DIR_SIZE + sizeof "/DATA"];
-    if (upscale.shown.filter == upscale.saved.filter && upscale.shown.aspect == upscale.saved.aspect &&
-        upscale.shown.scanlines == upscale.saved.scanlines &&
-        upscale.shown.classic_steps == upscale.saved.classic_steps &&
-        upscale.shown.all_spells == upscale.saved.all_spells)
-        return;
-    if (settings_save(find_folder(dir, sizeof dir), &upscale.shown)) {
-        upscale.saved = upscale.shown;
-        upscale.save_failed = false;
-    } else if (!upscale.save_failed) {
-        upscale.save_failed = true;
-        text_print_message(UI_WHITE, "\nUNABLE TO SAVE OPTIONS");
-    }
-}
 
 void upscale_cycle_filter(void)
 {
@@ -134,4 +149,16 @@ void upscale_toggle_all_spells(void)
 {
     upscale.shown.all_spells = !upscale.shown.all_spells;
     write_change();
+}
+
+void upscale_note_fullscreen(bool fullscreen)
+{
+    upscale.window_fullscreen = fullscreen;
+    if (!upscale.started) {
+        upscale.fullscreen_noted = true;
+        return;
+    }
+    upscale.shown.fullscreen = fullscreen;
+    if (g_game_mode == GAME_MODE_ADVANCED)
+        write_change();
 }
