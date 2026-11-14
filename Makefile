@@ -1,6 +1,13 @@
 # The Dungeon Master II port: the game, the test library, and the Windows build.
-CC          = clang
-CXX         = clang++
+# The compiler is clang; a machine that has only a versioned clang (clang-18) uses the newest one. CC and CXX of the
+# environment or of the command line win: make CC=clang-17 CXX=clang++-17
+versioned = $(notdir $(lastword $(sort $(wildcard /usr/bin/$(1)-[0-9]*))))
+ifeq ($(origin CC),default)
+CC         := $(if $(shell command -v clang),clang,$(or $(call versioned,clang),clang))
+endif
+ifeq ($(origin CXX),default)
+CXX        := $(if $(shell command -v clang++),clang++,$(or $(call versioned,clang++),clang++))
+endif
 BASE_CFLAGS = -std=c11 -Wall -Wextra -Werror -Wshadow -Wmissing-prototypes -Wstrict-prototypes -Wvla \
               -Wimplicit-fallthrough -O2 -g -fwrapv
 # xBRZ uses C++20 attributes and aliases its 4x4 neighbourhood as a 3x3 view.

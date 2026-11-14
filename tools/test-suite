@@ -1,5 +1,5 @@
 #!/bin/bash
-# Runs the full test suite unless a green full run of the same clean git tree is recorded.
+# Builds the port, then runs the full test suite unless a green full run of the same clean git tree is recorded.
 cd "$(dirname "$0")/.." || exit 1
 tree=$(git rev-parse HEAD^{tree})
 if [ -z "$(git status --porcelain --untracked-files=no)" ] &&
@@ -7,6 +7,9 @@ if [ -z "$(git status --porcelain --untracked-files=no)" ] &&
     echo "tree $tree already passed the full suite; not run again"
     exit 0
 fi
-mkdir -p build
+# pytest does not build: a machine without SDL3 builds only the library, and the tests of build/dm2 are skipped
+sdl=$(pkg-config --variable=prefix sdl3 2>/dev/null || brew --prefix sdl3 2>/dev/null)
+if [ -n "$sdl" ] && [ -f "$sdl/include/SDL3/SDL.h" ]; then target=all; else target=lib; fi
+make "$target" || exit 2
 uv run pytest -n auto -q -p no:cacheprovider 2>&1 | tee build/test-suite.log
 exit "${PIPESTATUS[0]}"

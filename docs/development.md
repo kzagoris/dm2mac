@@ -14,6 +14,8 @@ The port is built in three steps:
 The port uses C11, `clang`/`clang++`, SDL3, and `uv`. Vendored xBRZ and its C adapter require C++20;
 the game code remains C11. Install the tools first.
 
+On a machine that has only a versioned compiler (`clang-18`, for example Ubuntu under WSL), `make` uses the newest one. `CC` and `CXX` of the environment or of the command line win: `make CC=clang-17 CXX=clang++-17`. A machine without SDL3 builds only the library (`make lib`).
+
 ```sh
 brew install sdl3
 uv sync
@@ -65,7 +67,9 @@ WINEPREFIX=build/wineprefix "$WINE" build/dm2.exe
 make test
 ```
 
-`make test` runs `tools/test-suite`. The script runs `uv run pytest -n auto -q` and writes the log to `build/test-suite.log`. It skips the run if the git tree is clean and a green full run of the same tree is recorded. To run one file:
+`make test` runs `tools/test-suite`. The script builds the port (`make`, or `make lib` on a machine without SDL3), runs `uv run pytest -n auto -q` and writes the log to `build/test-suite.log`. It skips the run if the git tree is clean and a green full run of the same tree is recorded.
+
+pytest itself does not build. If `build/` is missing or older than `src/`, it stops before the first test and names the `make` target to run. Only `tests/standard` runs without a build. To run one file:
 
 ```sh
 uv run pytest -q tests/<folder>/test_x.py

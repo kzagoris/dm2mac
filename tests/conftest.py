@@ -1,4 +1,3 @@
-import shutil
 import subprocess
 from pathlib import Path
 
@@ -21,21 +20,19 @@ pytest_plugins = [
 
 
 def pytest_configure(config):
-    from dm2test.markers import ROOT
+    from dm2test.markers import BUILD, ROOT
 
-    # builds once in the main process, before the xdist workers start
-    if not hasattr(config, "workerinput"):
-        have_sdl = False
-        for finder in (["pkg-config", "--variable=prefix", "sdl3"], ["brew", "--prefix", "sdl3"]):
-            if not shutil.which(finder[0]):
-                continue
-            sdl = subprocess.run(finder, capture_output=True, text=True)
-            if sdl.returncode == 0 and (Path(sdl.stdout.strip()) / "include/SDL3/SDL.h").exists():
-                have_sdl = True
-                break
-        result = subprocess.run(["make", "all" if have_sdl else "lib"], cwd=ROOT, capture_output=True, text=True)
-        if result.returncode:
-            raise pytest.UsageError("make failed:\n" + result.stderr[-4000:])
+    # pytest does not build (tools/test-suite and make do); the main process only stops a run on a missing or old
+    # build with one message, before the xdist workers start. The checks of tests/standard read no built file.
+    if hasattr(config, "workerinput") or config.option.collectonly:
+        return
+    standard = (ROOT / "tests" / "standard").resolve()
+    paths = [Path(arg.split("::")[0]).resolve() for arg in config.args]
+    if all(path == standard or standard in path.parents for path in paths):
+        return
+    target = "all" if (BUILD / "dm2").exists() else "lib"
+    if subprocess.run(["make", "-q", target], cwd=ROOT, capture_output=True).returncode:
+        raise pytest.UsageError(f"build/ is missing or older than src/: run `make {target}` first (`make test` builds by itself)")
 
 
 def pytest_sessionfinish(session, exitstatus):

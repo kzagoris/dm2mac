@@ -145,7 +145,7 @@ def FULL_PATH(path, full, size):
 
 
 def load_lib():
-    """Loads a new private copy of the library; conftest.py builds the library before the tests start."""
+    """Loads a new private copy of the library; conftest.py stops the run when the library is missing or old."""
     folder = Path(tempfile.mkdtemp(prefix="libdm2-"))
     copy = folder / LIBRARY.name
     shutil.copy2(LIBRARY, copy)
