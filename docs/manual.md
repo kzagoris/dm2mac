@@ -163,7 +163,7 @@ In low light the party sees fewer squares, so fewer squares appear on the map.
 
 ### Cheats
 
-The cheat screen (`C`) switches six cheats on and off. A save keeps them, and a new game turns them off.
+The cheat screen (`C`) switches seven cheats on and off. A save keeps them, and a new game turns them off.
 
 - **Full light:** you see the dungeon as in full light. Creatures still see the real light.
 - **Immortal:** a champion keeps at least 1 health.
@@ -172,6 +172,7 @@ The cheat screen (`C`) switches six cheats on and off. A save keeps them, and a 
 - **Walk through walls:** the party walks through walls, fake walls, and closed doors, but not through creatures or
   off the map.
 - **Reveal map:** the automap shows the whole level.
+- **No bump damage:** collisions with walls, doors, and objects do not cause the usual 1-point damage.
 
 ### Cheat screen
 
@@ -183,13 +184,14 @@ CHEATS                         CLOSE
  ONE-HIT KILL            OFF
  WALK THROUGH WALLS      OFF
  REVEAL MAP              OFF
+ NO BUMP DAMAGE          OFF
  SPELLS - FREE CAST CHEAT
 ```
 
 Click a row, or choose it with the arrow keys (or `W`, `S`) and Return. CLOSE, `C`, `Esc`, or a right click closes
 the screen.
 
-- The six cheat rows show `ON` or `OFF`.
+- The seven cheat rows show `ON` or `OFF`.
 - Options/Help (`F1`) holds SCREEN FILTER (`NONE`, `SCALE2X`, `SCALE3X`, `XBRZ2X`, `XBRZ3X`, `XBRZ4X`), 4:3 ASPECT, SCANLINES, and the ordinary
   quick-save/load actions.
 - SPELLS lists all the game's spells with their runes, for example `FUL IR (X,4,4) FIREBALL`. A number is the

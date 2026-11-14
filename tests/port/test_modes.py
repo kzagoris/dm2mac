@@ -248,7 +248,7 @@ def test_state_tells_the_game_mode(control, lib):
 def test_state_tells_the_automap_and_the_cheats(control, lib):
     path, *_ = control
     cheats = {"cheat_light": C.CHEAT_LIGHT, "cheat_immortal": C.CHEAT_IMMORTAL, "cheat_food": C.CHEAT_FOOD,
-              "cheat_kill": C.CHEAT_KILL, "cheat_walls": C.CHEAT_WALLS, "cheat_map": C.CHEAT_MAP}
+              "cheat_kill": C.CHEAT_KILL, "cheat_walls": C.CHEAT_WALLS, "cheat_map": C.CHEAT_MAP, "cheat_no_bump": C.CHEAT_NO_BUMP}
     automap = ctypes.c_int.in_dll(lib, "g_advanced_screen")
     try:
         for name, cheat in [("automap", 0), *cheats.items()]:

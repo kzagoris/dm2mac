@@ -11,17 +11,17 @@
 #include "save.h"
 #include "text.h"
 
-/* Six cheat switches and the free-cast catalog; CLOSE is the title item after the last row. */
+/* Seven cheat switches and the free-cast catalog; CLOSE is the title item after the last row. */
 #define ROW_LIGHT         0
 #define ROW_IMMORTAL      1
 #define ROW_FOOD          2
 #define ROW_KILL          3
 #define ROW_THROUGH_WALLS 4
 #define ROW_MAP           5
-#define ROW_SPELLS        6
-#define PAGE_ROW_COUNT    7
+#define ROW_SPELLS        7
+#define PAGE_ROW_COUNT    8
 #define ROW_CLOSE         PAGE_ROW_COUNT
-#define CHEAT_COUNT       6
+#define CHEAT_COUNT       7
 _Static_assert(PAGE_ROW_COUNT <= ROWS_MAX_COUNT, "the cheat page fits below the title");
 
 /* The items after the spells of a spell page. */
@@ -38,10 +38,11 @@ _Static_assert(PAGE_ROW_COUNT <= ROWS_MAX_COUNT, "the cheat page fits below the 
 #define CHEAT_LABEL_COLUMNS 23 /* the longest label and a space */
 #define ANY_POWER           "X"
 
-static const char *const cheat_labels[CHEAT_COUNT] = {"FULL LIGHT",   "IMMORTAL",           "ENDLESS FOOD AND WATER",
-                                                      "ONE-HIT KILL", "WALK THROUGH WALLS", "REVEAL MAP"};
-static const uint8_t cheat_bits[CHEAT_COUNT] = {CHEAT_LIGHT, CHEAT_IMMORTAL, CHEAT_FOOD,
-                                                CHEAT_KILL,  CHEAT_WALLS,    CHEAT_MAP};
+static const char *const cheat_labels[CHEAT_COUNT] = {"FULL LIGHT",    "IMMORTAL",           "ENDLESS FOOD AND WATER",
+                                                      "ONE-HIT KILL",  "WALK THROUGH WALLS", "REVEAL MAP",
+                                                      "NO BUMP DAMAGE"};
+static const uint8_t cheat_bits[CHEAT_COUNT] = {CHEAT_LIGHT, CHEAT_IMMORTAL, CHEAT_FOOD,   CHEAT_KILL,
+                                                CHEAT_WALLS, CHEAT_MAP,      CHEAT_NO_BUMP};
 static const char *const spell_items[SPELL_ITEM_COUNT] = {"NEXT", "BACK", "CLOSE"};
 
 static CheatsCursor screen;
