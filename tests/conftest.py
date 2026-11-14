@@ -1,4 +1,5 @@
 import subprocess
+from collections import Counter
 from pathlib import Path
 
 import pytest
@@ -45,6 +46,16 @@ def pytest_handlecrashitem(crashitem, report, sched):
             tests[crashitem] = True
             if all(tests.values()):
                 del queue[scope]
+
+
+def pytest_terminal_summary(terminalreporter):
+    # the skips by reason, so that a run shows at once which missing file or tool took how many tests out
+    reasons = Counter(report.longrepr[2].removeprefix("Skipped: ") for report in terminalreporter.stats.get("skipped", [])
+                      if isinstance(report.longrepr, tuple))
+    if reasons:
+        terminalreporter.section("skipped tests by reason")
+        for reason, count in reasons.most_common():
+            terminalreporter.write_line(f"{count:5d}  {reason}")
 
 
 def pytest_sessionfinish(session, exitstatus):

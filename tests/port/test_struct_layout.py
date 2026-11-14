@@ -11,9 +11,11 @@ import pytest
 
 import dm2test
 from dm2test import structs
-from dm2test.markers import ROOT
+from dm2test.markers import BUILD, ROOT
 
-CC = os.environ.get("CC", "clang")
+# the compiler of the build: the first word of the flags stamp that the Makefile writes
+STAMP = BUILD / "obj" / "flags.txt"
+CC = os.environ.get("CC") or (STAMP.read_text().split()[0] if STAMP.exists() else "clang")
 INCLUDES = ["-Isrc/data/include", "-Isrc/engine/include", "-Isrc/ui/include", "-Isrc/control/include",
             "-isystem", "src/third_party"]
 # Every dm2test module, so that structs.MIRRORS holds all registered mirrors before a test reads it.

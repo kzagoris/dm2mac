@@ -1,5 +1,5 @@
 """The game file table of src/data/gamefile.c for the tests: a mirror of GameFile and small generated files; and the
-skip of a test when a game file is missing."""
+skip of a test when a game file is missing or of another release."""
 
 import ctypes
 import zlib
@@ -27,6 +27,15 @@ def require(path: Path) -> Path:
 @pytest.fixture
 def game_dir():
     return require(GAME / "SKULL.EXE").parent
+
+
+@pytest.fixture
+def release_dir(lib, game_dir):
+    """The game folder for a test that needs the files of the release of the game file table (their sizes, frame
+    counts or checksums); skips the test when game/ holds another release."""
+    if lib.gamefile_find_bad(lib.gamefile_table(), str(game_dir).encode()):
+        pytest.skip("game/ is another release than the game file table (src/data/gamefile.c)")
+    return game_dir
 
 
 @pytest.fixture

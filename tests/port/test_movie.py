@@ -34,7 +34,7 @@ class MoviePicture(ctypes.Structure):
 
 
 @pytest.fixture
-def movies(lib, game_dir, tmp_path):
+def movies(lib, release_dir, tmp_path):
     """Starts scripts on a data folder of links to game/: start(script, mode, **files) with files that replace a
     link (a game/ name, bytes, or None for a missing file); yields start."""
     mode = ctypes.c_int.in_dll(lib, "g_game_mode")
@@ -46,7 +46,7 @@ def movies(lib, game_dir, tmp_path):
             if isinstance(source, bytes):
                 (folder / name).write_bytes(source)
             elif source:
-                (folder / name).symlink_to(game_dir / source)
+                (folder / name).symlink_to(release_dir / source)
         mode.value = game_mode
         return lib.movie_start(script, str(folder).encode(), 0)
 

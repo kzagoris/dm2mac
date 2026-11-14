@@ -7,6 +7,7 @@ from collections import Counter
 
 import pytest
 from dm2test import constants as C
+from dm2test.gamefiles import require
 
 
 MVE_ERROR, MVE_OK, MVE_END, MVE_AUDIO, MVE_SHOW = C.MVE_ERROR, C.MVE_OK, C.MVE_END, C.MVE_AUDIO, C.MVE_SHOW
@@ -60,8 +61,8 @@ class Movie:
 
 
 @pytest.mark.parametrize("name, frames, audio, frame_us", MOVIES)
-def test_movie_streams_have_their_frames_and_audio(lib, game_dir, name, frames, audio, frame_us):
-    movie = Movie(lib, (game_dir / name).read_bytes())
+def test_movie_streams_have_their_frames_and_audio(lib, release_dir, name, frames, audio, frame_us):
+    movie = Movie(lib, (release_dir / name).read_bytes())
     assert movie.opened == MVE_OK
     counts = movie.run()
     m = movie.m
@@ -74,7 +75,7 @@ def test_movie_streams_have_their_frames_and_audio(lib, game_dir, name, frames, 
 
 
 def test_vga_movie_sets_its_mode(lib, game_dir):
-    movie = Movie(lib, (game_dir / "FTL.VGA").read_bytes())
+    movie = Movie(lib, require(game_dir / "FTL.VGA").read_bytes())
     assert movie.opened == MVE_OK
     while movie.step() == MVE_AUDIO:
         pass
@@ -99,8 +100,8 @@ DISTINCT_COLORS_MIN = 1  # a frame that the decode does not draw stays black: 1 
 
 
 @pytest.mark.parametrize("name, frames, audio, frame_us", MOVIES)
-def test_all_pictures_decode_inside_the_frame(lib, game_dir, name, frames, audio, frame_us):
-    movie = Movie(lib, (game_dir / name).read_bytes())
+def test_all_pictures_decode_inside_the_frame(lib, release_dir, name, frames, audio, frame_us):
+    movie = Movie(lib, (release_dir / name).read_bytes())
     colors = []
     counts = movie.run(lambda mv: colors.append(len(set(mv.pixels()))) if mv.m.frames == frames // 2 else None)
     assert counts[MVE_ERROR] == 0 and movie.m.bad_blocks == 0

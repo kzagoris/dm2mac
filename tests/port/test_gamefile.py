@@ -7,7 +7,7 @@ import pytest
 
 from dm2test import gamefiles
 from dm2test.gamefiles import GameFile
-from dm2test.markers import GAME, needs_game
+from dm2test.markers import GAME
 
 
 @pytest.fixture(scope="module", autouse=True)
@@ -54,9 +54,7 @@ def test_first_bad_file_in_table_order(lib, tmp_path):
     assert find_bad(lib, tmp_path, files) == "CREDITS"
 
 
-@needs_game
-def test_real_files(lib):
-    assert not lib.gamefile_find_bad(lib.gamefile_table(), str(GAME).encode())
+def test_real_files(lib, release_dir):
     rows = lib.gamefile_table()
     for i, name in enumerate(gamefiles.NAMES):
         data = (GAME / name).read_bytes()

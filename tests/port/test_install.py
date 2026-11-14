@@ -9,7 +9,7 @@ import pytest
 from dm2test import constants as C
 from dm2test import gamefiles
 from dm2test.iso import build_iso
-from dm2test.markers import GAME, needs_game
+from dm2test.markers import GAME
 
 CONTENTS = gamefiles.contents()
 KEPT = {"DATA/SKSAVE0.DAT": b"a save", "DATA/QUICK.DAT": b"a quick save", "DATA/SETTINGS.TXT": b"filter=none\n"}
@@ -214,8 +214,7 @@ def test_unwritable_game_folder(lib, tmp_path):
         data.chmod(WRITABLE)
 
 
-@needs_game
-def test_real_files(lib, tmp_path):
+def test_real_files(lib, tmp_path, release_dir):
     for name in gamefiles.NAMES:
         link = tmp_path / "dumast2" / name
         link.parent.mkdir(parents=True, exist_ok=True)
