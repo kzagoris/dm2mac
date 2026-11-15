@@ -33,6 +33,7 @@
 #include "platform.h"
 #include "play.h"
 #include "save.h"
+#include "sc55.h"
 #include "seen.h"
 #include "session.h"
 #include "settings.h"
@@ -66,8 +67,9 @@
 #define LOG_FILE_MODE    0644       /* the permissions of dm2.log of a macOS bundle */
 #define FILTER_LIST_SIZE 64         /* the filter names of the usage message */
 
-/* The arguments that can name a path: argv[0] and the values of --data, --save, --control, and --saves. */
-#define PATH_ARGS 5
+/* The arguments that can name a path: argv[0] and the values of --data, --save, --control, --saves, --sc55-plugin,
+   and --sc55-roms. */
+#define PATH_ARGS 7
 
 #ifdef _WIN32
 /* The folder separators of a path. */
@@ -78,7 +80,22 @@
 #endif
 
 /* The command line options; each takes a value. */
-enum Option { OPTION_DATA, OPTION_FILTER, OPTION_SAVE, OPTION_CONTROL, OPTION_MODE, OPTION_SAVES, OPTION_COUNT };
+enum Option {
+    OPTION_DATA,
+    OPTION_FILTER,
+    OPTION_SAVE,
+    OPTION_CONTROL,
+    OPTION_MODE,
+    OPTION_SAVES,
+    OPTION_MUSIC,
+    OPTION_SC55_PLUGIN,
+    OPTION_SC55_ROMS,
+    OPTION_COUNT
+};
+
+/* The values of --music: the music driver. */
+#define MUSIC_FM   "fm"
+#define MUSIC_SC55 "sc55"
 
 /* The values of the command line options; NULL for an option that is not given. */
 typedef struct {
@@ -88,6 +105,9 @@ typedef struct {
     const char *control;
     const char *mode;
     const char *saves;
+    const char *music;       /* MUSIC_FM or MUSIC_SC55 */
+    const char *sc55_plugin; /* the SC-55 plugin file */
+    const char *sc55_roms;   /* the SC-55 ROM folder */
 } Options;
 
 /* An SDL key and the PC scan code of the original keyboard layer. */
@@ -97,8 +117,11 @@ typedef struct {
 
 /* The names of the command line options: read_options reads their values, a RESTART passes them on (without --save). */
 static const char *const option_names[OPTION_COUNT] = {
-    [OPTION_DATA] = "--data",       [OPTION_FILTER] = "--filter", [OPTION_SAVE] = "--save",
-    [OPTION_CONTROL] = "--control", [OPTION_MODE] = "--mode",     [OPTION_SAVES] = "--saves",
+    [OPTION_DATA] = "--data",           [OPTION_FILTER] = "--filter",
+    [OPTION_SAVE] = "--save",           [OPTION_CONTROL] = "--control",
+    [OPTION_MODE] = "--mode",           [OPTION_SAVES] = "--saves",
+    [OPTION_MUSIC] = "--music",         [OPTION_SC55_PLUGIN] = "--sc55-plugin",
+    [OPTION_SC55_ROMS] = "--sc55-roms",
 };
 
 /* The PC scan codes of the SDL keys. */
@@ -450,8 +473,11 @@ static void pump_mode_screen_events(void)
 static const char *read_options(int argc, char **argv, Options *options, const char **unknown)
 {
     const char **values[OPTION_COUNT] = {
-        [OPTION_DATA] = &options->data,       [OPTION_FILTER] = &options->filter, [OPTION_SAVE] = &options->save,
-        [OPTION_CONTROL] = &options->control, [OPTION_MODE] = &options->mode,     [OPTION_SAVES] = &options->saves,
+        [OPTION_DATA] = &options->data,           [OPTION_FILTER] = &options->filter,
+        [OPTION_SAVE] = &options->save,           [OPTION_CONTROL] = &options->control,
+        [OPTION_MODE] = &options->mode,           [OPTION_SAVES] = &options->saves,
+        [OPTION_MUSIC] = &options->music,         [OPTION_SC55_PLUGIN] = &options->sc55_plugin,
+        [OPTION_SC55_ROMS] = &options->sc55_roms,
     };
     *unknown = NULL;
     for (int i = 1; i < argc; i++) {
@@ -477,7 +503,8 @@ static bool valid_options(const char *missing, const char *unknown)
         os_log("%s needs a value", missing);
     else if (unknown) {
         os_log("unknown option %s", unknown);
-        os_log("usage: dm2 [--data DIR] [--save FILE] [--saves DIR] [--filter NAME] [--mode NAME] [--control PATH]");
+        os_log("usage: dm2 [--data DIR] [--save FILE] [--saves DIR] [--filter NAME] [--mode NAME] [--control PATH]"
+               " [--music fm|sc55] [--sc55-plugin FILE] [--sc55-roms DIR]");
     }
     return !missing && !unknown;
 }
@@ -546,7 +573,8 @@ static void enter_game_folder(int argc, char **argv)
     Options given = {0};
     const char *unknown;
     read_options(argc, argv, &given, &unknown);
-    const char *values[PATH_ARGS] = {argv[0], given.data, given.save, given.control, given.saves};
+    const char *values[PATH_ARGS] = {argv[0],     given.data,        given.save,     given.control,
+                                     given.saves, given.sc55_plugin, given.sc55_roms};
     int indices[PATH_ARGS];
     int count = 0;
     for (int i = 0; i < argc; i++)
@@ -648,11 +676,12 @@ static void open_log(const char *data)
 }
 #endif
 
-/* Closes the control socket, the music, and SDL. */
+/* Closes the control socket, the music and its driver, and SDL. */
 static void close_platform(void)
 {
     transport_close();
     music_quit();
+    sc55_close();
     draw_free();
     timeline_free();
     seen_free();
@@ -708,6 +737,8 @@ static bool open_game(const Options *options, enum SettingsFilter filter)
         os_log("cannot open the control socket %s", options->control);
         return false;
     }
+    if (!strcmp(options->music, MUSIC_SC55))
+        music_set_driver(sc55_open((Sc55Paths){options->sc55_plugin, options->sc55_roms})); /* NULL: the FM driver */
     if (!music_init(gdat_current(), options->data))
         os_log("cannot load MELODIC.BNK or DRUM.BNK in %s: playing without music", options->data);
     plat_audio_music(music_render);
@@ -769,10 +800,27 @@ static const char *list_filter_names(char *list, size_t size)
     return list;
 }
 
+/* Reads the filter of --filter or DM2_FILTER into *filter and checks --music; false with a message for an unknown
+   name. */
+static bool read_filter_and_music(const Options *options, enum SettingsFilter *filter)
+{
+    *filter = options->filter ? settings_filter_parse(options->filter) : SETTINGS_FILTER_NONE;
+    if (*filter == SETTINGS_FILTER_UNSET) {
+        char names[FILTER_LIST_SIZE];
+        os_log("unknown filter %s: use %s", options->filter, list_filter_names(names, sizeof names));
+        return false;
+    }
+    if (strcmp(options->music, MUSIC_FM) && strcmp(options->music, MUSIC_SC55)) {
+        os_log("unknown music %s: use " MUSIC_FM " or " MUSIC_SC55, options->music);
+        return false;
+    }
+    return true;
+}
+
 int main(int argc, char **argv)
 {
     enter_game_folder(argc, argv); /* before the first relative path */
-    Options options = {.filter = getenv(FILTER_ENV)};
+    Options options = {.filter = getenv(FILTER_ENV), .music = MUSIC_FM};
     const char *unknown;
     const char *missing = read_options(argc, argv, &options, &unknown);
     bool data_given = options.data != NULL;
@@ -789,12 +837,9 @@ int main(int argc, char **argv)
     int mode_status = select_runnable_mode(&options);
     if (mode_status)
         return mode_status;
-    enum SettingsFilter filter = options.filter ? settings_filter_parse(options.filter) : SETTINGS_FILTER_NONE;
-    if (filter == SETTINGS_FILTER_UNSET) {
-        char names[FILTER_LIST_SIZE];
-        os_log("unknown filter %s: use %s", options.filter, list_filter_names(names, sizeof names));
+    enum SettingsFilter filter;
+    if (!read_filter_and_music(&options, &filter))
         return EXIT_USAGE;
-    }
     if (!data_given && !first_start_install())
         return EXIT_FAILURE;
     if (!open_game(&options, filter))

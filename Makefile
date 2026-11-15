@@ -64,7 +64,7 @@ OBJ = $(B)/obj
 
 SOURCES      = $(wildcard src/*/*.c src/third_party/*/*.c)
 CXX_SOURCES  = $(wildcard src/third_party/*/*.cpp)
-SDL_SOURCES  = src/platform/main.c src/platform/platform.c
+SDL_SOURCES  = src/platform/main.c src/platform/platform.c src/platform/sc55.c
 WINDOWS_ONLY = src/platform/transport_none.c
 POSIX_ONLY   = src/platform/transport.c
 GAME_SOURCES = $(filter-out $(WINDOWS_ONLY),$(SOURCES))
