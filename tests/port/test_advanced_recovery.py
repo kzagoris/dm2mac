@@ -57,7 +57,7 @@ def test_recovery_error_returns_to_chooser_and_restores_palette(lib, tmp_path):
 
 
 def test_only_quick_save_can_be_recovered_without_a_slot(lib, advanced):
-    from dm2test.structs import Game
+    from dm2test.structs import Game, MainLoop
 
     _, data = advanced
     Session.in_dll(lib, "g_session").save_dir = b""
@@ -65,6 +65,9 @@ def test_only_quick_save_can_be_recovered_without_a_slot(lib, advanced):
     before = (data / 'QUICK.DAT').read_bytes()
     assert sorted(p.name for p in data.iterdir()) == ['QUICK.DAT']
     Game.in_dll(lib, 'g_game').game_time += 100
+    loop = MainLoop.in_dll(lib, 'g_main_loop')
+    loop.end = 1  # the party died: the recovery chooser opened
     assert lib.recovery_load_quick() == C.QUICK_LOADED
+    assert not loop.end  # else the main loop ends the loaded game again
     assert (data / 'QUICK.DAT').read_bytes() == before
     assert sorted(p.name for p in data.iterdir()) == ['QUICK.DAT']

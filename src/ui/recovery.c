@@ -100,6 +100,7 @@ enum QuickLoadResult recovery_load_quick(void)
     fclose(f);
     game_set_session_loaded(false);
     game_set_new_game(0);
+    game_clear_end(); /* as the load of a slot: else the main loop ends the loaded game again at once */
     if (!session_start_save(path))
         return QUICK_DAMAGED;
     game_clear_save_times();
