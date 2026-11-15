@@ -47,7 +47,7 @@ typedef struct {
     int exit_code;
     char save_name[SAVE_NAME_SIZE]; /* the name of the slot in the save dialog */
     char data_dir[OS_DIR_SIZE];     /* the game folder: DATA holds the dungeon and the saves */
-    char save_dir[OS_DIR_SIZE];     /* the folder of QUICK.DAT (--saves); empty: <data_dir>/DATA */
+    char save_dir[OS_DIR_SIZE];     /* the folder of the saves (--saves); empty: <data_dir>/DATA */
 } Session;
 extern Session g_session;
 

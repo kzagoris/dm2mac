@@ -132,6 +132,25 @@ def test_save_and_load_through_the_dialogs(play, lib, gdat, tmp_path):
         assert (tmp_path / "DATA" / "SKSAVE2.DAT").exists()
 
 
+def test_slots_go_to_the_save_folder(play, lib, tmp_path):
+    # --saves: the save dialog writes SKSAVE3.DAT into the save folder, not into <data>/DATA; the load dialog reads it.
+    saves = tmp_path / "saves"
+    saves.mkdir()
+    session = Session.in_dll(lib, "g_session")
+    session.save_dir = str(saves).encode()
+    try:
+        with Player(lib, [click_choice(1), click_slot(3), click_choice(2)]):
+            lib.session_save()
+        assert (saves / "SKSAVE3.DAT").exists()
+        assert not (tmp_path / "DATA" / "SKSAVE3.DAT").exists()
+        session.loaded, session.new_game = 0, 0
+        with Player(lib, [click_slot(3), click_choice(2)]):
+            assert lib.session_load() == 1
+        assert (session.loaded, session.slot) == (1, 3)
+    finally:
+        session.save_dir = b""
+
+
 def test_load_dialog_cancel_and_empty_slot(play, lib):
     # A click on an empty slot chooses nothing: LOAD then cancels the load; CANCEL too.
     session = Session.in_dll(lib, "g_session")

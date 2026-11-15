@@ -62,6 +62,7 @@
 
 /* The environment variables and the files of the program. */
 #define FILTER_ENV  "DM2_FILTER"    /* the filter when --filter is not given */
+#define SAVES_ENV   "DM2_SAVES"     /* the save folder when --saves is not given */
 #define RESTART_ENV "DM2_RESTARTED" /* set for the program that a RESTART starts: the launcher plays no start movies */
 #define LOG_FILE    "dm2.log"       /* the messages of the Windows build and of a macOS bundle, in the game folder */
 #define LOG_FILE_MODE    0644       /* the permissions of dm2.log of a macOS bundle */
@@ -696,8 +697,15 @@ static bool open_game(const Options *options, enum SettingsFilter filter)
 {
     os_log("data folder: %s, mode %s", options->data, options->mode);
     snprintf(g_session.data_dir, sizeof g_session.data_dir, "%s", options->data);
-    if (options->saves)
-        snprintf(g_session.save_dir, sizeof g_session.save_dir, "%s", options->saves);
+    if (options->saves && options->saves[0]) {
+        SDL_PathInfo info;
+        if (!SDL_GetPathInfo(options->saves, &info) || info.type != SDL_PATHTYPE_DIRECTORY) {
+            os_log("the save folder %s does not exist: the saves go to %s/DATA", options->saves, options->data);
+        } else {
+            snprintf(g_session.save_dir, sizeof g_session.save_dir, "%s", options->saves);
+            os_log("save folder: %s", options->saves);
+        }
+    }
 
     if (!load_graphics(options->data))
         return false;
@@ -774,7 +782,7 @@ static const char *list_filter_names(char *list, size_t size)
 int main(int argc, char **argv)
 {
     enter_game_folder(argc, argv); /* before the first relative path */
-    Options options = {.filter = getenv(FILTER_ENV)};
+    Options options = {.filter = getenv(FILTER_ENV), .saves = getenv(SAVES_ENV)};
     const char *unknown;
     const char *missing = read_options(argc, argv, &options, &unknown);
     bool data_given = options.data != NULL;

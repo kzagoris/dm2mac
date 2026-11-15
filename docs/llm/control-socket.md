@@ -36,7 +36,7 @@ Build the port with `make`, then start the game in one of the modes.
    SDL_AUDIO_DRIVER=dummy build/dm2 --mode turnbased --saves playthroughs/current/game
    ```
 
-   - `--saves DIR`: the folder that holds the save file `QUICK.DAT` ([manual.md](../manual.md#options)). `save` fails if the folder is missing.
+   - `--saves DIR`: the folder that holds the save file `QUICK.DAT` and the save slots ([manual.md](../manual.md#options)). If the folder is missing at the start, the game logs it and uses `<data>/DATA`.
    - `--control PATH`: the socket file. Without it, turn-based mode uses `~/.dm2/control.sock`.
    - `--save FILE`: optional. The game loads this save slot file on startup, as in the other modes.
    - Without `--save`, the game starts a new game immediately: no start menu and no movie. The new game has one champion (Torham). The player recruits the other champions at the mirrors.

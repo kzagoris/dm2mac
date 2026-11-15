@@ -86,10 +86,14 @@ static const char name_alphabet[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZ,.;: -()'?!";
 /* The headers of the save slots in the slot dialogs. */
 static uint8_t slots[SAVE_SLOT_COUNT][SAVE_HEADER_SIZE + 1];
 
-/* The path of slot in the save folder; bak: the backup file. */
+/* The path of slot in the save folder (--saves, else the DATA folder of the game); bak: the backup file. */
 static char *slot_path(char *path, int16_t slot, bool bak)
 {
-    snprintf(path, OS_PATH_SIZE, "%s/DATA/SKSAVE%d.%s", g_session.data_dir, slot, bak ? "BAK" : "DAT");
+    const char *extension = bak ? "BAK" : "DAT";
+    if (g_session.save_dir[0])
+        snprintf(path, OS_PATH_SIZE, "%s/SKSAVE%d.%s", g_session.save_dir, slot, extension);
+    else
+        snprintf(path, OS_PATH_SIZE, "%s/DATA/SKSAVE%d.%s", g_session.data_dir, slot, extension);
     return path;
 }
 

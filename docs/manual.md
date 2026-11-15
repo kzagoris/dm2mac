@@ -29,7 +29,7 @@ You need these only when you start the game from Terminal or a shortcut:
 | `--save PATH` | Loads a save and starts it immediately, in advanced mode unless `--mode` says otherwise. |
 | `--filter NAME` | The window's pixel-art filter: `none`, `scale2x`, `scale3x`, `xbrz2x`, `xbrz3x`, or `xbrz4x`. The `DM2_FILTER` environment variable does the same. |
 | `--data DIR` | Uses the game files in `DIR` instead of `game/`, and skips the check and the install. Saves go to `DIR/DATA`. |
-| `--saves DIR` | Keeps the quick save and `SETTINGS.TXT` in `DIR` instead of `game/DATA`. The folder must exist. |
+| `--saves DIR` | Keeps the save slots (`SKSAVE<n>.DAT` and `.BAK`), the quick save, and `SETTINGS.TXT` in `DIR` instead of `game/DATA`. When the folder does not exist, the game logs it and uses `game/DATA`. The `DM2_SAVES` environment variable does the same (use a full path). Point it at a synced folder (for example Google Drive) or at the `DATA` folder of a DOSBox installation to share the saves. |
 | `--control PATH` | Opens a control socket for a program (macOS and Linux). |
 
 ```sh

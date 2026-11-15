@@ -12,6 +12,7 @@ All notable changes to this project are in this file. The format follows [Keep a
 - Advanced focus-loss/minimize pause with cleared input and deliberate Return resume.
 - Visible Options/Help (`F1`), in-game control guidance and mode explanation. Display/save actions are separate from labeled cheats.
 - Linux compilation and SDL3 discovery for feasible headless regression tests.
+- `--saves DIR` and the `DM2_SAVES` environment variable also hold the save slots `SKSAVE<n>.DAT`, for a synced or DOSBox save folder; without them the saves stay in `game/DATA`.
 
 ## [1.0.0] - 2026-10-31
 
