@@ -23,7 +23,7 @@ The advanced mode adds these keys:
 | `Ctrl+Q` | QUIT of the save menu: the question before a quit when the game is not saved, then the end picture | Dungeon view and inventory, where the disk icon works |
 | `C` | Recorded spell favorites | Dungeon view only |
 | `Alt+C`, then `Alt+1` to `Alt+4` | Set or cast favorite 1 to 4 | Dungeon view only |
-| Alt held (Option on a Mac) | Show the touch highlight | Dungeon view of the standing party |
+| Ctrl held (Control on a Mac) | Show the touch highlight | Dungeon view of the standing party |
 | `F1` | Options/Help | Dungeon, inventory, sleep, pause |
 | `Esc` | Options/Help | Dungeon view only |
 | `X` or `Esc` | Close the cheat screen | Open cheat screen |
@@ -216,7 +216,7 @@ A hit on a moving creature shows the damage star of the action area, with the da
 
 ## Touch highlight
 
-While Alt is held, corner brackets frame the click zones of the dungeon view that a hand click reaches (`src/ui/highlight.c`). The zones are the ones that the view records for the clicks (`g_view_click_zones`), so a bracket marks exactly the place where a click acts; `input_zone_touch` (`src/ui/input.c`) sorts them by what the click does:
+While Ctrl is held, corner brackets frame the click zones of the dungeon view that a hand click reaches (`src/ui/highlight.c`). The zones are the ones that the view records for the clicks (`g_view_click_zones`), so a bracket marks exactly the place where a click acts; `input_zone_touch` (`src/ui/input.c`) sorts them by what the click does:
 
 | Color | Kind | Click zones |
 | --- | --- | --- |
@@ -227,8 +227,8 @@ While Alt is held, corner brackets frame the click zones of the dungeon view tha
 - `sensor_wall_touch` (`src/engine/sensor.c`) reads the things on the wall face in the order of `sensor_process_wall_click`, without a change: an alcove or a fountain decides alone; otherwise a face that wants an object wins over a face for the hand. A sensor without an ornament of its own counts, because a click reaches a face only where the view draws an ornament.
 - A wall ornament without a reacting sensor or ornament text (a decoration, a text plate, a floor or timer sensor) gets no bracket. A door ornament on a door without a button passes the click to the wall beside the door, and gets the bracket of that wall face.
 - The far squares get no bracket: the view records no click zone for them.
-- The brackets show only while the dungeon view of the standing party shows: not while the party walks, in the inventory, on an advanced screen, in a dialog or asleep. A press or a release of Alt presents the viewport again on the next timer tick; a redraw of the view draws the brackets again from the new zones.
-- The brackets are drawn on the screen after the dungeon view: they change no game state, no view pixel and no click zone. Alt alone gives no key to the game, so the key combinations with Alt keep their meaning; the brackets show while Alt is down.
+- The brackets show only while the dungeon view of the standing party shows: not while the party walks, in the inventory, on an advanced screen, in a dialog or asleep. A press or a release of Ctrl presents the viewport again on the next timer tick; a redraw of the view draws the brackets again from the new zones.
+- The brackets are drawn on the screen after the dungeon view: they change no game state, no view pixel and no click zone. Ctrl alone gives no key to the game, so `Ctrl+S`, `Ctrl+R` and `Ctrl+Q` keep their meaning; the brackets show while Ctrl is down. On Windows the game also asks the keyboard itself (`GetAsyncKeyState`), because Windows can hold back the press of a modifier key alone.
 
 ## Item compare
 

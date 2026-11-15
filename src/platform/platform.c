@@ -414,15 +414,15 @@ void plat_mouse_position(int *out_x, int *out_y)
     *out_y = platform.mouse_y;
 }
 
-bool plat_is_alt_held(void)
+bool plat_is_ctrl_held(void)
 {
     if (SDL_GetKeyboardFocus() != platform.win)
         return false;
     const bool *keys = SDL_GetKeyboardState(NULL);
-    bool held = (SDL_GetModState() & SDL_KMOD_ALT) || keys[SDL_SCANCODE_LALT] || keys[SDL_SCANCODE_RALT];
+    bool held = (SDL_GetModState() & SDL_KMOD_CTRL) || keys[SDL_SCANCODE_LCTRL] || keys[SDL_SCANCODE_RCTRL];
 #ifdef _WIN32
-    /* Windows can hold back the press of Alt alone until the next key, so the keyboard itself is asked too */
-    held = held || (GetAsyncKeyState(VK_MENU) & WIN_KEY_DOWN);
+    /* Windows can hold back the press of a modifier alone until the next key, so the keyboard itself is asked too */
+    held = held || (GetAsyncKeyState(VK_CONTROL) & WIN_KEY_DOWN);
 #endif
     return held;
 }

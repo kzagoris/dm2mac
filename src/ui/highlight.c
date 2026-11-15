@@ -18,7 +18,7 @@
 #define BRACKET_PART 3
 
 static struct {
-    bool held;  /* Alt is held in the advanced mode */
+    bool held;  /* Ctrl is held in the advanced mode */
     bool shown; /* the screen shows the brackets */
 } highlight;
 

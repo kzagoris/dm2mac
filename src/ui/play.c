@@ -278,7 +278,7 @@ static void show_projectile_flight(void)
     rand_set_seed(seed);
 }
 
-/* Advanced mode: a press or a release of Alt shows or hides the touch highlight on the standing view. */
+/* Advanced mode: a press or a release of Ctrl shows or hides the touch highlight on the standing view. */
 static void show_touch_highlight(void)
 {
     if (highlight_is_due())

@@ -1,4 +1,4 @@
-"""The touch highlight of the advanced mode (src/ui/highlight.c): while Alt is held, brackets mark the click zones of
+"""The touch highlight of the advanced mode (src/ui/highlight.c): while Ctrl is held, brackets mark the click zones of
 the view that a hand click reaches; sensor_wall_touch (src/engine/sensor.c) tells which wall faces react."""
 
 import ctypes
@@ -58,7 +58,7 @@ def face(lib, game, place):
     lib.play_present_viewport()
 
 
-def test_alt_marks_a_wall_button_and_its_release_restores_the_view(lib, advanced):
+def test_ctrl_marks_a_wall_button_and_its_release_restores_the_view(lib, advanced):
     lib_prototypes(lib)
     game, _ = advanced
     for place in reactive_walls(lib, C.WALL_TOUCH_HAND):
