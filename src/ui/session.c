@@ -86,15 +86,12 @@ static const char name_alphabet[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZ,.;: -()'?!";
 /* The headers of the save slots in the slot dialogs. */
 static uint8_t slots[SAVE_SLOT_COUNT][SAVE_HEADER_SIZE + 1];
 
-/* The path of slot in the save folder (--saves, else the DATA folder of the game); bak: the backup file. */
+/* The path of slot in the save folder; bak: the backup file. */
 static char *slot_path(char *path, int16_t slot, bool bak)
 {
-    const char *extension = bak ? "BAK" : "DAT";
-    if (g_session.save_dir[0])
-        snprintf(path, OS_PATH_SIZE, "%s/SKSAVE%d.%s", g_session.save_dir, slot, extension);
-    else
-        snprintf(path, OS_PATH_SIZE, "%s/DATA/SKSAVE%d.%s", g_session.data_dir, slot, extension);
-    return path;
+    char name[OS_FILE_PART_SIZE];
+    snprintf(name, sizeof name, "SKSAVE%d.%s", slot, bak ? "BAK" : "DAT");
+    return session_make_save_path(path, name);
 }
 
 /* Draws a GDAT picture placed in the screen zone, with its colors. */
@@ -110,6 +107,25 @@ static void render_screen_picture(int category, int index, int entry)
                                      .transparent = GFX_OPAQUE,
                                      .colormap = draw_gdat_image_palette(category, index, entry)},
                        &g_draw_screen, r);
+}
+
+/* ---- Save folder ---- */
+
+char *session_find_save_folder(char *folder, size_t size)
+{
+    if (g_session.save_dir[0])
+        snprintf(folder, size, "%s", g_session.save_dir);
+    else
+        snprintf(folder, size, "%s/DATA", g_session.data_dir);
+    return folder;
+}
+
+char *session_make_save_path(char *path, const char *name)
+{
+    char folder[OS_DIR_SIZE + sizeof "/DATA"];
+    if (snprintf(path, OS_PATH_SIZE, "%s/%s", session_find_save_folder(folder, sizeof folder), name) >= OS_PATH_SIZE)
+        os_log("the save path of %s is too long", name);
+    return path;
 }
 
 /* ---- Start menu ---- */

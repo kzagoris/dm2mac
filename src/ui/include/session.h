@@ -6,6 +6,7 @@
 /* The start menu, new games, loads and saves through the slot dialogs, and the end of the game. */
 
 #include <stdbool.h>
+#include <stddef.h>
 #include <stdint.h>
 #include "input.h"
 
@@ -22,6 +23,12 @@
 #define EXIT_PARTY_DEAD 2
 #define EXIT_RESTART    3
 #define EXIT_GAME_LOST  4
+
+/* ---- Save folder ---- */
+/* Writes the folder of the saves into folder (size bytes): the --saves folder, else the DATA folder of the game. */
+char *session_find_save_folder(char *folder, size_t size);
+/* Writes the path of the file name in the save folder into path (OS_PATH_SIZE bytes). */
+char *session_make_save_path(char *path, const char *name);
 
 /* ---- Start menu ---- */
 /* The title picture of the start menu on the screen. */

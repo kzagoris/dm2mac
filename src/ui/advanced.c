@@ -124,14 +124,12 @@ uint16_t advanced_movement_key(uint16_t key)
 
 /* Quick save and load */
 
-/* <save folder>/QUICK.<extension>: the --saves folder, else the DATA folder of the game. */
+/* <save folder>/QUICK.<extension>. */
 static char *quick_path(char *path, const char *extension)
 {
-    if (g_session.save_dir[0])
-        snprintf(path, OS_PATH_SIZE, "%s/QUICK.%s", g_session.save_dir, extension);
-    else
-        snprintf(path, OS_PATH_SIZE, "%s/DATA/QUICK.%s", g_session.data_dir, extension);
-    return path;
+    char name[OS_FILE_PART_SIZE];
+    snprintf(name, sizeof name, "QUICK.%s", extension);
+    return session_make_save_path(path, name);
 }
 
 /* A white line in the message area. */

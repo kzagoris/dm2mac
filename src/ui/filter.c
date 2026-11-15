@@ -4,6 +4,7 @@
 #include "game.h"
 #include "game_text.h"
 #include "move.h"
+#include "session.h"
 #include "text.h"
 
 /* The filters, from SETTINGS_FILTER_NONE. */
@@ -22,23 +23,13 @@ static struct {
     bool fullscreen_noted;  /* the window changed fullscreen before upscale_start */
 } upscale = {.shown = {.filter = SETTINGS_FILTER_NONE}, .saved = {.filter = SETTINGS_FILTER_NONE}};
 
-/* The folder of SETTINGS.TXT: the --saves folder, else the DATA folder of the game (as QUICK.DAT). */
-static char *find_folder(char *folder, size_t size)
-{
-    if (g_session.save_dir[0])
-        snprintf(folder, size, "%s", g_session.save_dir);
-    else
-        snprintf(folder, size, "%s/DATA", g_session.data_dir);
-    return folder;
-}
-
 /* Writes SETTINGS.TXT when a value differs from the file; a failed write says so once per failure run. */
 static void write_change(void)
 {
     char dir[OS_DIR_SIZE + sizeof "/DATA"];
     if (settings_equal(&upscale.shown, &upscale.saved))
         return;
-    if (settings_save(find_folder(dir, sizeof dir), &upscale.shown)) {
+    if (settings_save(session_find_save_folder(dir, sizeof dir), &upscale.shown)) {
         upscale.saved = upscale.shown;
         upscale.save_failed = false;
     } else if (!upscale.save_failed) {
@@ -55,7 +46,7 @@ void upscale_start(enum SettingsFilter filter)
     upscale.save_failed = false;
     upscale.shown = (Settings){.filter = SETTINGS_FILTER_NONE};
     if (g_game_mode == GAME_MODE_ADVANCED)
-        upscale.shown = settings_load(find_folder(dir, sizeof dir));
+        upscale.shown = settings_load(session_find_save_folder(dir, sizeof dir));
     if (filter != SETTINGS_FILTER_UNSET)
         upscale.shown.filter = filter; /* the window opened with it */
     else if (g_upscale_filter_hook && upscale.shown.filter != SETTINGS_FILTER_NONE &&

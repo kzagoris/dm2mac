@@ -90,11 +90,7 @@ void recovery_event(int type, int16_t x, int16_t y)
 enum QuickLoadResult recovery_load_quick(void)
 {
     char path[OS_PATH_SIZE];
-    if (g_session.save_dir[0])
-        snprintf(path, sizeof path, "%s/QUICK.DAT", g_session.save_dir);
-    else
-        snprintf(path, sizeof path, "%s/DATA/QUICK.DAT", g_session.data_dir);
-    FILE *f = fopen(path, "rb");
+    FILE *f = fopen(session_make_save_path(path, "QUICK.DAT"), "rb");
     if (!f)
         return QUICK_MISSING;
     fclose(f);
