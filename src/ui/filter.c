@@ -36,10 +36,7 @@ static char *find_folder(char *folder, size_t size)
 static void write_change(void)
 {
     char dir[OS_DIR_SIZE + sizeof "/DATA"];
-    if (upscale.shown.filter == upscale.saved.filter && upscale.shown.aspect == upscale.saved.aspect &&
-        upscale.shown.scanlines == upscale.saved.scanlines &&
-        upscale.shown.classic_steps == upscale.saved.classic_steps &&
-        upscale.shown.all_spells == upscale.saved.all_spells && upscale.shown.fullscreen == upscale.saved.fullscreen)
+    if (settings_equal(&upscale.shown, &upscale.saved))
         return;
     if (settings_save(find_folder(dir, sizeof dir), &upscale.shown)) {
         upscale.saved = upscale.shown;

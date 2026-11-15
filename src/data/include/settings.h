@@ -42,6 +42,8 @@ typedef struct {
 const char *settings_filter_name(enum SettingsFilter filter);
 /* The output pixels per input pixel on each axis, or 0 for an unknown filter. */
 int settings_filter_factor(enum SettingsFilter filter);
+/* True when a and b hold the same values. */
+bool settings_equal(const Settings *a, const Settings *b);
 /* The filter of a lower-case name, or SETTINGS_FILTER_UNSET for an unknown name. */
 enum SettingsFilter settings_filter_parse(const char *name);
 /* The values of the settings text: a missing line or a bad value gives the default (no filter, off, the known spells), an unknown key and a
