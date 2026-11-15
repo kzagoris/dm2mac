@@ -9,10 +9,21 @@
 #define HMP_SIGNATURE "HMIMIDIP013195"
 
 /* HMP header offsets. */
-#define HMP_BRANCHES    32 /* u32: offset of the loop table */
-#define HMP_TRACK_COUNT 48 /* u32 */
-#define HMP_TICK_RATE   56 /* u32: song timer ticks per second */
+#define HMP_BRANCHES    32  /* u32: offset of the loop table */
+#define HMP_TRACK_COUNT 48  /* u32 */
+#define HMP_TICK_RATE   56  /* u32: song timer ticks per second */
+#define HMP_DEVICES     128 /* the device list of each track */
 #define HMP_FIRST_TRACK 904
+
+/* Device list of a track: up to 5 u32 device IDs, ended by a 0. */
+#define DEVICE_LIST_SIZE   20
+#define DEVICE_LIST_MAX    5
+#define DEVICE_ID_SIZE     4
+#define MAPPED_TRACK_FIRST 16 /* the game gives tracks 16 and up to the driver without a look at their list */
+
+/* HMI device IDs of a device list; each stands for all drivers of its kind. */
+#define DEVICE_GM 0xa000
+#define DEVICE_FM 0xa002
 
 /* Track counts of a song. */
 #define HMP_MAX_TRACKS       32
@@ -146,7 +157,28 @@ static void silence(void)
 
 /* Song playback */
 
-enum HmpResult hmp_start(const uint8_t *data, size_t size, HmpSend send)
+/* Whether the device list of a track names the HMI device id. */
+static bool list_names(const uint8_t *list, uint32_t id)
+{
+    for (int i = 0; i < DEVICE_LIST_MAX && le32(list + i * DEVICE_ID_SIZE); i++)
+        if (le32(list + i * DEVICE_ID_SIZE) == id)
+            return true;
+    return false;
+}
+
+/* Whether track t plays on the device: mapped tracks and tracks with an empty list always, the others when their
+   list names the device. */
+static bool track_plays(const uint8_t *data, uint32_t t, enum HmpDevice device)
+{
+    const uint8_t *list = data + HMP_DEVICES + t * DEVICE_LIST_SIZE;
+    if (t >= MAPPED_TRACK_FIRST || !le32(list))
+        return true;
+    if (device == HMP_DEVICE_GM && list_names(list, DEVICE_GM))
+        return true;
+    return list_names(list, DEVICE_FM); /* fix: on General MIDI, the FM tracks of a song play too */
+}
+
+enum HmpResult hmp_start(const uint8_t *data, size_t size, HmpSend send, enum HmpDevice device)
 {
     hmp_stop();
     if (size < HMP_FIRST_TRACK || memcmp(data, HMP_SIGNATURE, strlen(HMP_SIGNATURE)) || !le32(data + HMP_TICK_RATE))
@@ -188,6 +220,10 @@ enum HmpResult hmp_start(const uint8_t *data, size_t size, HmpSend send)
     hmp.track_count = (int)count;
     hmp.active_tracks = (int)count;
     for (int t = 0; t < hmp.track_count; t++) {
+        if (!track_plays(data, (uint32_t)t, device)) {
+            hmp.active_tracks--;
+            continue;
+        }
         hmp.tracks[t].cursor = hmp.tracks[t].start;
         hmp.tracks[t].delta = read_delta(&hmp.tracks[t]);
     }

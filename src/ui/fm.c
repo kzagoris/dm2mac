@@ -69,11 +69,10 @@
 #define OPL_FB_SHIFT          1
 
 /* MIDI messages. */
-#define MIDI_DATA_MASK       0x7f
-#define MIDI_NOTE_OFF        0x80
-#define MIDI_NOTE_ON         0x90
-#define MIDI_CTRL_SUSTAIN    0x40
-#define MIDI_CTRL_BEND_RANGE 0x66 /* HMI: pitch bend range in semitones */
+#define MIDI_DATA_MASK    0x7f
+#define MIDI_NOTE_OFF     0x80
+#define MIDI_NOTE_ON      0x90
+#define MIDI_CTRL_SUSTAIN 0x40
 
 /* The drum channel and the pitch bend range at start. */
 #define MIDI_DRUM_CHANNEL  9

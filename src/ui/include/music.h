@@ -3,21 +3,31 @@
 #define DM2_UI_MUSIC_H
 /* Prefixes: music_ */
 
-/* Game music: the song of each map from SONGLIST.DAT, played by the HMP player on the FM driver. */
+/* Game music: the song of each map from SONGLIST.DAT, played by the HMP player on a music driver (the FM driver
+   unless another one is selected). */
 
 #include <stdbool.h>
 #include <stdint.h>
 #include "gdat.h"
+#include "hmp.h"
 
-/* The output rate of the music and the size of SONGLIST.DAT. */
+/* The output rate and channels of the music, and the size of SONGLIST.DAT. */
 #define MUSIC_SAMPLE_RATE 44100
+#define MUSIC_CHANNELS    2  /* stereo */
 #define SONGLIST_MAX      63 /* the game reads at most 63 bytes of SONGLIST.DAT */
 
 /* The song number of no song. */
 #define MUSIC_NO_SONG 0xff
 
+/* A music driver: it plays the MIDI messages of a song and renders their sound. */
 typedef struct {
-    bool enabled; /* the FM driver has its banks */
+    enum HmpDevice device;                    /* the tracks of a song that the driver gets */
+    HmpSend send;                             /* plays a 3-byte MIDI channel message */
+    void (*render)(int16_t *out, int frames); /* renders frames of stereo samples at MUSIC_SAMPLE_RATE */
+} MusicDriver;
+
+typedef struct {
+    bool enabled; /* the music driver can play: the FM driver has its banks */
     bool songlist_loaded;
     uint8_t songlist[SONGLIST_MAX]; /* song number of each map */
     int songlist_size;
@@ -34,8 +44,10 @@ typedef struct {
 extern Music g_music; /* exported for the tests */
 
 /* Setup */
-/* Loads the FM banks and SONGLIST.DAT from data_dir, takes songs from g, and sets volume 5. Returns false when
-   MELODIC.BNK or DRUM.BNK is missing or bad; music stays off. */
+/* Stops the song and selects the driver of the next songs; NULL selects the FM driver. Call it before music_init. */
+void music_set_driver(const MusicDriver *driver);
+/* Loads SONGLIST.DAT from data_dir and, for the FM driver, the FM banks; takes songs from g, and sets volume 5.
+   Returns false when the FM driver plays and MELODIC.BNK or DRUM.BNK is missing or bad; music stays off. */
 bool music_init(const Gdat *g, const char *data_dir);
 /* Stops the song and frees the FM banks. */
 void music_quit(void);

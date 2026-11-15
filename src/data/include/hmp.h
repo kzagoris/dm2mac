@@ -14,6 +14,12 @@ enum HmpResult {
     HMP_ERR_MEMORY = -2,
 };
 
+/* The kind of music driver that plays a song; a song gives each of its tracks to some kinds only. */
+enum HmpDevice {
+    HMP_DEVICE_FM, /* the FM drivers (OPL2, OPL3) */
+    HMP_DEVICE_GM, /* the General MIDI drivers (MPU-401) */
+};
+
 /* The bytes of a MIDI channel message. */
 #define MIDI_STATUS     0
 #define MIDI_DATA1      1
@@ -28,9 +34,10 @@ enum HmpResult {
 #define MIDI_PITCH_BEND   0xe0
 
 /* MIDI controllers. */
-#define MIDI_CTRL_VOLUME    0x07
-#define MIDI_CTRL_RESET     0x79
-#define MIDI_CTRL_NOTES_OFF 0x7b
+#define MIDI_CTRL_VOLUME     0x07
+#define MIDI_CTRL_BEND_RANGE 0x66 /* HMI: pitch bend range in semitones */
+#define MIDI_CTRL_RESET      0x79
+#define MIDI_CTRL_NOTES_OFF  0x7b
 
 /* MIDI channel count and data limits. */
 #define MIDI_CHANNELS 16
@@ -41,8 +48,8 @@ enum HmpResult {
 typedef void (*HmpSend)(const uint8_t *event);
 
 /* Song playback */
-/* Copies a song and starts it; send gets the events of tracks 1 and up. */
-enum HmpResult hmp_start(const uint8_t *data, size_t size, HmpSend send);
+/* Copies a song and starts it; send gets the events of tracks 1 and up that the song gives to device. */
+enum HmpResult hmp_start(const uint8_t *data, size_t size, HmpSend send, enum HmpDevice device);
 /* Stops the song and silences the channels of its tracks. */
 void hmp_stop(void);
 /* One tick of the song timer: plays the events that are due. */

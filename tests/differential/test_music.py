@@ -18,7 +18,8 @@ from dm2test.markers import ROOT
 @pytest.fixture(scope="module", autouse=True)
 def lib_prototypes(lib):
     lib.fm_set_write_hook.argtypes = [ctypes.c_void_p]  # function pointer parameter
-    lib.hmp_start.argtypes = [ctypes.c_char_p, ctypes.c_size_t, ctypes.c_void_p]  # function pointer parameter
+    lib.hmp_start.argtypes = [ctypes.c_char_p, ctypes.c_size_t, ctypes.c_void_p, ctypes.c_int]  # function pointer parameter
+    lib.music_set_driver.argtypes = [ctypes.c_void_p]  # MusicDriver *
 
 
 GAME = ROOT / "game"
@@ -35,6 +36,9 @@ SONGLIST = [2, 17, 14, 27, 4, 12, 12, 18, 15, 13, 12, 12, 16, 6, 21, 14, 17, 17,
 HMP_BRANCHES, HMP_TRACK_COUNT, HMP_FIRST_TRACK, TRACK_DATA, BRANCH_SIZE = 0x20, 0x30, 0x388, 12, 0x18
 EVENT_LENGTH = {0x8: 3, 0x9: 3, 0xA: 3, 0xB: 3, 0xC: 2, 0xD: 2, 0xE: 3}
 HMI_FIRST, HMI_LAST, HMI_LOOP = 0x67, 0x79, 0x6F
+HMP_DEVICES, DEVICE_LIST_SIZE, MAPPED_TRACK_FIRST = 0x80, 20, 16  # 5 u32 device IDs per track; tracks 16 and up always play
+DEVICE_GM, DEVICE_FM, DEVICE_GUS = 0xA000, 0xA002, 0xA00A
+SONG_FM_ONLY_COUNT = 1  # one song has tracks that name only the FM device
 LOOP_ID = 0x80  # the loop point id of TEST.HMP
 
 # fmmidi.com, the OPL2 driver in HMIMDRV.386 (docs/formats/music.md)
@@ -48,6 +52,12 @@ MELODIC_AT, DRUM_AT, EVENT_AT = DATA + 0x1000, DATA + 0x3000, DATA + 0x10
 u8_p = ctypes.POINTER(ctypes.c_uint8)
 SEND = ctypes.CFUNCTYPE(None, u8_p)
 WRITE_HOOK = ctypes.CFUNCTYPE(None, ctypes.c_int, ctypes.c_int)
+RENDER = ctypes.CFUNCTYPE(None, ctypes.POINTER(ctypes.c_int16), ctypes.c_int)
+
+
+class MusicDriver(ctypes.Structure):
+    """music.h MusicDriver: the device, the MIDI message function, the render function."""
+    _fields_ = [("device", ctypes.c_int), ("send", SEND), ("render", RENDER)]
 
 
 @pytest.fixture(scope="module")
@@ -151,11 +161,11 @@ _callbacks = []  # the player may call a callback after its test; keep them all 
 class Recorder:
     """Runs the song timer and records (tick, event) of each event sent."""
 
-    def __init__(self, lib, data):
+    def __init__(self, lib, data, device=C.HMP_DEVICE_FM):
         self.lib, self.events, self.tick = lib, [], 0
         self.send = SEND(lambda p: self.events.append((self.tick, normalized(ctypes.string_at(p, 3)))))
         _callbacks.append(self.send)
-        assert lib.hmp_start(data, len(data), ctypes.cast(self.send, ctypes.c_void_p)) == C.HMP_OK
+        assert lib.hmp_start(data, len(data), ctypes.cast(self.send, ctypes.c_void_p), device) == C.HMP_OK
         lib.hmp_set_master_volume(127)
         lib.hmp_set_song_volume(127)
         lib.hmp_unmute()
@@ -217,6 +227,102 @@ def test_loop_restarts_tracks_at_their_loop_points(lib, gd):
     assert later == [(tick, e) for tick, t, i, e in sorted(expected) if i >= 0 and tick > loop_tick]
 
 
+# Track selection: hmi_midi_init_song gives a track to the driver by its device list.
+
+def device_list(data, track):
+    ids = struct.unpack_from("<5I", data, HMP_DEVICES + DEVICE_LIST_SIZE * track)
+    return ids[:ids.index(0)] if 0 in ids else ids
+
+
+def with_device_list(data, track, ids):
+    at = HMP_DEVICES + DEVICE_LIST_SIZE * track
+    return data[:at] + struct.pack("<5I", *ids, *[0] * (5 - len(ids))) + data[at + DEVICE_LIST_SIZE:]
+
+
+def sending_tracks(lib, data, device, seconds=20):
+    """The tracks whose events before the first loop the player sends on device, each at its tick."""
+    rec = Recorder(lib, data, device)
+    rec.run(seconds * TICK_RATE)
+    actual = set(rec.events)
+    lib.hmp_stop()
+    expected, _ = expected_events(data, seconds * TICK_RATE + 1)
+    own = {}
+    for tick, t, e in expected:
+        own.setdefault(t, set()).add((tick, e))
+    return {t for t, events in own.items() if events <= actual}
+
+
+def tracks_with_events(data, seconds=20):
+    return {t for _, t, _ in expected_events(data, seconds * TICK_RATE + 1)[0]}
+
+
+def test_every_track_of_every_song_plays_on_both_devices(lib, gd):
+    fm_only = 0
+    for song in range(SONG_COUNT):
+        data = song_bytes(lib, gd, song)
+        lists = [device_list(data, t) for t in range(len(tracks(data)))]
+        assert all(not ids or DEVICE_FM in ids for ids in lists), song
+        fm_only += any(ids and DEVICE_GM not in ids for ids in lists)
+        for device in (C.HMP_DEVICE_FM, C.HMP_DEVICE_GM):
+            rec = Recorder(lib, data, device)
+            rec.run(5 * TICK_RATE)
+            actual = list(rec.events)
+            lib.hmp_stop()
+            expected, loop_tick = expected_events(data, 5 * TICK_RATE + 1)
+            assert [(tick, e) for tick, e in actual if tick < loop_tick] == [(tick, e) for tick, _, e in expected], song
+    assert fm_only == SONG_FM_ONLY_COUNT
+
+
+def test_track_plays_only_on_a_device_of_its_list(lib, gd):
+    data = song_bytes(lib, gd, SONG_GAME)
+    everything = tracks_with_events(data)
+    track = min(t for t in everything if DEVICE_GM in device_list(data, t))
+    mapped = min(t for t in everything if t >= MAPPED_TRACK_FIRST)
+    for ids, plays_on in [((DEVICE_FM,), {C.HMP_DEVICE_FM, C.HMP_DEVICE_GM}), ((DEVICE_GUS, DEVICE_GM), {C.HMP_DEVICE_GM}),
+                          ((DEVICE_GUS,), set()), ((), {C.HMP_DEVICE_FM, C.HMP_DEVICE_GM})]:
+        changed = with_device_list(with_device_list(data, track, ids), mapped, (DEVICE_GUS,))
+        for device in (C.HMP_DEVICE_FM, C.HMP_DEVICE_GM):
+            expected = everything if device in plays_on else everything - {track}
+            assert sending_tracks(lib, changed, device) == expected, (ids, device)
+
+
+# The music driver: the songs play on the driver that music_set_driver selects.
+
+def test_selected_driver_gets_the_song_and_renders_between_ticks(lib, gd, music):
+    events, blocks = [], []
+    driver = MusicDriver(C.HMP_DEVICE_GM, SEND(lambda p: events.append(ctypes.string_at(p, 3))),
+                         RENDER(lambda out, frames: blocks.append(frames)))
+    lib.music_quit()
+    lib.music_set_driver(ctypes.byref(driver))
+    try:
+        assert lib.music_init(gd, b"no such folder") is True  # only the FM driver needs the banks
+        lib.music_play_song(SONG_GAME)
+        out = (ctypes.c_int16 * (2 * SAMPLE_RATE))()
+        lib.music_render(out, SAMPLE_RATE)
+        assert sum(blocks) == SAMPLE_RATE
+        assert TICK_RATE <= len(blocks) <= TICK_RATE + 1 and max(blocks) <= SAMPLE_RATE // TICK_RATE + 1
+        for _ in range(5):  # the first notes of the song come after its first second
+            lib.music_render(out, SAMPLE_RATE)
+        assert any(e[0] & 0xF0 == 0x90 for e in events)
+    finally:
+        lib.music_quit()
+        lib.music_set_driver(None)
+
+
+def test_fm_render_does_not_depend_on_the_block_size(lib, gd, music):
+    def render(sizes):
+        lib.music_quit()
+        assert lib.music_init(gd, str(GAME).encode()) is True
+        lib.music_play_song(SONG_GAME)
+        out = []
+        for frames in sizes:
+            buf = (ctypes.c_int16 * (2 * frames))()
+            lib.music_render(buf, frames)
+            out += list(buf)
+        return out
+    assert render([SAMPLE_RATE]) == render([1] * 2000 + [SAMPLE_RATE - 2000])
+
+
 def rms(samples):
     return math.sqrt(sum(s * s for s in samples) / len(samples))
 
@@ -225,7 +331,7 @@ def rms(samples):
 def test_render_first_seconds_not_silent(lib, gd, music, name):
     if name == "TEST.HMP":
         data = (GAME / "TEST.HMP").read_bytes()
-        assert lib.hmp_start(data, len(data), ctypes.cast(lib.fm_send, ctypes.c_void_p)) == C.HMP_OK
+        assert lib.hmp_start(data, len(data), ctypes.cast(lib.fm_send, ctypes.c_void_p), C.HMP_DEVICE_FM) == C.HMP_OK
         lib.hmp_set_song_volume(127)
         lib.hmp_unmute()
     else:

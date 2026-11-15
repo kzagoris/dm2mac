@@ -20,13 +20,19 @@
 #define VOLUME_DEFAULT      5
 #define MASTER_VOLUME_SHIFT 4 /* the master volume repeats the level in its high bits */
 
-/* The sizes of the file reads and the channels of an output frame. */
+/* The size of the bank file reads. */
 #define BANK_MAX 65536
-#define STEREO   2
 
 Music g_music = {.requested_song = -1, .current_song = MUSIC_NO_SONG};
-static const Gdat *gdat;
-static uint32_t tick_phase;
+
+/* The FM driver of the original game. */
+static const MusicDriver fm_driver = {HMP_DEVICE_FM, fm_send, fm_render};
+
+static struct {
+    const Gdat *gdat;
+    uint32_t tick_phase;       /* the song timer: counts the tick rate up to the sample rate */
+    const MusicDriver *driver; /* never NULL */
+} music = {.driver = &fm_driver};
 
 /* Stops the song and its fade; a paused song does not resume. */
 static void stop_song(void)
@@ -64,16 +70,29 @@ static bool load_bank(const char *data_dir, const char *name, int bank)
     return ok;
 }
 
+/* Resets the FM driver and loads its two banks; false when one is missing or bad. */
+static bool load_fm(const char *data_dir)
+{
+    fm_reset(MUSIC_SAMPLE_RATE);
+    if (load_bank(data_dir, "MELODIC.BNK", FM_BANK_MELODIC) && load_bank(data_dir, "DRUM.BNK", FM_BANK_DRUM))
+        return true;
+    fm_free_banks();
+    return false;
+}
+
+void music_set_driver(const MusicDriver *driver)
+{
+    stop_song();
+    music.driver = driver ? driver : &fm_driver;
+}
+
 bool music_init(const Gdat *g, const char *data_dir)
 {
     g_music = (Music){.requested_song = -1, .current_song = MUSIC_NO_SONG};
-    tick_phase = 0;
-    gdat = g;
-    fm_reset(MUSIC_SAMPLE_RATE);
-    if (!load_bank(data_dir, "MELODIC.BNK", FM_BANK_MELODIC) || !load_bank(data_dir, "DRUM.BNK", FM_BANK_DRUM)) {
-        fm_free_banks();
+    music.tick_phase = 0;
+    music.gdat = g;
+    if (music.driver == &fm_driver && !load_fm(data_dir))
         return false;
-    }
     g_music.enabled = true;
     size_t size;
     if (read_file(data_dir, "DATA/SONGLIST.DAT", g_music.songlist, SONGLIST_MAX, &size)) {
@@ -97,10 +116,10 @@ void music_play_song(int16_t song)
 {
     if (g_music.enabled && song && g_music.volume > 0) {
         stop_song();
-        int item = gdat_find(gdat, CAT_MUSIC, song, SONG_TYPE, SONG_ENTRY);
+        int item = gdat_find(music.gdat, CAT_MUSIC, song, SONG_TYPE, SONG_ENTRY);
         uint32_t size;
-        const uint8_t *data = item < 0 ? NULL : gdat_item(gdat, item, &size);
-        if (!data || hmp_start(data, size, fm_send) != HMP_OK)
+        const uint8_t *data = item < 0 ? NULL : gdat_item(music.gdat, item, &size);
+        if (!data || hmp_start(data, size, music.driver->send, music.driver->device) != HMP_OK)
             return;
         hmp_set_song_volume(SONG_VOLUME_FULL);
         hmp_unmute();
@@ -169,15 +188,20 @@ void music_set_volume(int level)
 void music_render(int16_t *out, int frames)
 {
     if (!g_music.enabled) {
-        memset(out, 0, (size_t)frames * STEREO * sizeof *out);
+        memset(out, 0, (size_t)frames * MUSIC_CHANNELS * sizeof *out);
         return;
     }
+    int rendered = 0; /* the driver renders the frames between two song timer ticks in one call */
     for (int i = 0; i < frames; i++) {
-        tick_phase += (uint32_t)hmp_tick_rate();
-        if (tick_phase >= MUSIC_SAMPLE_RATE) {
-            tick_phase -= MUSIC_SAMPLE_RATE;
-            hmp_tick();
-        }
-        fm_render(out + STEREO * i, 1);
+        music.tick_phase += (uint32_t)hmp_tick_rate();
+        if (music.tick_phase < MUSIC_SAMPLE_RATE)
+            continue;
+        music.tick_phase -= MUSIC_SAMPLE_RATE;
+        if (i > rendered)
+            music.driver->render(out + MUSIC_CHANNELS * rendered, i - rendered);
+        rendered = i;
+        hmp_tick();
     }
+    if (frames > rendered)
+        music.driver->render(out + MUSIC_CHANNELS * rendered, frames - rendered);
 }
