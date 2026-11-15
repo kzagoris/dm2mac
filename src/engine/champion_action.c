@@ -1034,12 +1034,30 @@ static bool is_weapon_attack(int command)
     return command == COMMAND_MELEE || command == COMMAND_MELEE_2 || command == COMMAND_SHOOT;
 }
 
+/* True when the hand of the champion has no action delay and no repeats left. */
+static bool is_hand_ready(int16_t champion_index, int16_t hand)
+{
+    return !champion(champion_index)->action_delay[hand] && !g_action_repeats[champion_index][hand].left;
+}
+
+/* Spends a charge of the action that the champion just ran, with r the repeats of its hand (NULL: not a hand): a
+   repeated action spends one only by chance, and a spent charge ends the repeats. */
+static void spend_action_charge(int16_t champion_index, ChampionAction action, ActionRepeat *r)
+{
+    bool use = !r || !r->left || (r->fresh && !rand_below((uint16_t)(r->count + 1)));
+    if (use && champ_use_action_charge(champion_index, action) && r) {
+        r->count = 0;
+        r->left = 0;
+        r->fresh = false;
+    }
+}
+
 /* The caller saves/restores the shared action list. No rolls or combat side effects here. */
 static int party_attack_index(int16_t index, uint16_t group, Location at, bool require_ready, const PartyAttack *p)
 {
     Champion *c = champion(index);
     if (!p->valid || !c->health || c->dir != g_game.party_dir || c->slots[p->hand] != p->thing ||
-        (require_ready && (c->action_delay[p->hand] || g_action_repeats[index][p->hand].left)))
+        (require_ready && !is_hand_ready(index, p->hand)))
         return -1;
     champ_list_actions(index, p->thing, p->hand);
     int action_index = -1;
@@ -1100,7 +1118,7 @@ static int select_party_attack(int16_t index, uint16_t group, Location at, bool 
             int found = party_attack_index(index, group, at, false, picked);
             if (found < 0)
                 continue;
-            if (!champion(index)->action_delay[hand] && !g_action_repeats[index][hand].left)
+            if (is_hand_ready(index, hand))
                 return found;
             if (!waiting.valid)
                 waiting = *picked;
@@ -1138,9 +1156,7 @@ enum PartyAttackState champ_party_attack_state(uint16_t group, Location at)
         PartyAttack picked;
         if (select_party_attack(i, group, at, false, &picked) < 0)
             continue;
-        int hand = picked.hand;
-        state = champion(i)->action_delay[hand] || g_action_repeats[i][hand].left ? PARTY_ATTACK_WAITING
-                                                                                  : PARTY_ATTACK_READY;
+        state = is_hand_ready(i, picked.hand) ? PARTY_ATTACK_READY : PARTY_ATTACK_WAITING;
     }
     champ_action_list_restore(&saved);
     return state;
@@ -1167,15 +1183,8 @@ bool champ_party_attack(uint16_t group, Location at)
         party_attacks[i] = picked;
         ChampionAction action = g_champ_actions[action_index];
         bool ran = champ_perform_action(i, action_index, false);
-        if (ran) {
-            ActionRepeat *r = &g_action_repeats[i][g_action.hand];
-            bool use = !r->left || (r->fresh && !rand_below((uint16_t)(r->count + 1)));
-            if (use && champ_use_action_charge(i, action)) {
-                r->count = 0;
-                r->left = 0;
-                r->fresh = false;
-            }
-        }
+        if (ran)
+            spend_action_charge(i, action, &g_action_repeats[i][g_action.hand]);
         champion(i)->redraw |= REDRAW_BARS;
         done |= ran;
     }
@@ -1210,13 +1219,9 @@ bool champ_execute_selected_action(int index)
                 (PartyAttack){true, g_action.hand, champion(champion_index)->slots[g_action.hand], action};
         done = champ_perform_action(champion_index, index, false);
         g_champ_action_result = g_action.result;
-        ActionRepeat *r = action_is_hand_slot(g_action.hand) ? &g_action_repeats[champion_index][g_action.hand] : NULL;
-        bool use = !r || !r->left || (r->fresh && !rand_below((uint16_t)(r->count + 1)));
-        if (use && champ_use_action_charge(champion_index, action) && r) {
-            r->count = 0;
-            r->left = 0;
-            r->fresh = false;
-        }
+        spend_action_charge(champion_index, action,
+                            action_is_hand_slot(g_action.hand) ? &g_action_repeats[champion_index][g_action.hand]
+                                                               : NULL);
     }
     if (!g_action.flags)
         action_area_close();
