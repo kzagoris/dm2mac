@@ -471,8 +471,7 @@ static void map_event(int type, int16_t x, int16_t y)
         advanced.drag.active = false;
         if (click)
             click_map(x, y);
-    } else if (type & INPUT_BUTTON_LEFT && zone_get_viewport_rect(r) && x >= r[RECT_X] && x < r[RECT_X] + r[RECT_W] &&
-               y >= r[RECT_Y] && y < r[RECT_Y] + r[RECT_H]) {
+    } else if (type & INPUT_BUTTON_LEFT && zone_get_viewport_rect(r) && rect_contains_point(r, x, y)) {
         advanced.drag.active = true;
         advanced.drag.moved = false;
         advanced.drag.x = x;

@@ -327,9 +327,7 @@ int dialog_run_cancel(int id, int cancel)
 
 bool dialog_close_button_contains(int16_t x, int16_t y)
 {
-    const int16_t *r = g_dialog.close_rect;
-    return g_dialog.close_button && x >= r[RECT_X] && x < r[RECT_X] + r[RECT_W] && y >= r[RECT_Y] &&
-           y < r[RECT_Y] + r[RECT_H];
+    return g_dialog.close_button && rect_contains_point(g_dialog.close_rect, x, y);
 }
 
 /* Volume */

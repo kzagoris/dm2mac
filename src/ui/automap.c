@@ -9,6 +9,7 @@
 #include "dungeon.h"
 #include "game.h"
 #include "game_text.h"
+#include "input.h"
 #include "item.h"
 #include "minion.h"
 #include "minion_map.h"
@@ -614,6 +615,12 @@ void automap_draw_legend_mark(AutomapMark mark, int16_t x, int16_t y, int scale)
 
 /* Inspection */
 
+/* True when the screen point (x, y) is in the viewport, whose rect goes to rect. */
+static bool in_viewport(int16_t x, int16_t y, int16_t *rect)
+{
+    return zone_get_viewport_rect(rect) && rect_contains_point(rect, x, y);
+}
+
 /* Divides a screen offset into whole map cells, rounding toward negative infinity on the left/top. */
 static int cell_offset(int offset)
 {
@@ -624,8 +631,7 @@ static int cell_offset(int offset)
 bool automap_square_at(int16_t x, int16_t y, Location *level_at)
 {
     int16_t rect[RECT_SIZE];
-    if (!zone_get_viewport_rect(rect) || x < rect[RECT_X] || x >= rect[RECT_X] + rect[RECT_W] || y < rect[RECT_Y] ||
-        y >= rect[RECT_Y] + rect[RECT_H])
+    if (!in_viewport(x, y, rect))
         return false;
     Location middle = middle_square();
     *level_at = (Location){middle.x + cell_offset(x - middle_origin(rect[RECT_X], rect[RECT_W], zoom_pan_x)),
@@ -665,8 +671,7 @@ bool automap_items_event(int type, int16_t x, int16_t y)
             step = -1;
         else if (row == ITEM_ROW_NEXT && page.texts[ITEM_ROW_NEXT][0])
             step = 1;
-        else if (zone_get_viewport_rect(rect) && x >= rect[RECT_X] && x < rect[RECT_X] + rect[RECT_W] &&
-                 y >= rect[RECT_Y] && y < rect[RECT_Y] + rect[RECT_H])
+        else if (in_viewport(x, y, rect))
             inspection.open = false;
     }
     inspection.page = clamp_int(0, inspection.page + step, page.page_count - 1);
@@ -678,8 +683,7 @@ bool automap_items_event(int type, int16_t x, int16_t y)
 bool automap_zoom(int16_t x, int16_t y, int steps)
 {
     int16_t rect[RECT_SIZE];
-    if (!steps || inspection.open || !zone_get_viewport_rect(rect) || x < rect[RECT_X] ||
-        x >= rect[RECT_X] + rect[RECT_W] || y < rect[RECT_Y] || y >= rect[RECT_Y] + rect[RECT_H])
+    if (!steps || inspection.open || !in_viewport(x, y, rect))
         return false;
     int next = clamp_int(1, zoom + clamp_int(1 - ZOOM_MAX, steps, ZOOM_MAX - 1), ZOOM_MAX);
     if (next == zoom)

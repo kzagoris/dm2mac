@@ -388,9 +388,8 @@ int spellbook_hovered_rune(void)
         return -1;
     int16_t rect[RECT_SIZE];
     for (int rune = 0; rune < SPELL_RUNES_PER_SET; rune++)
-        if (input_command_rect((uint16_t)(CMD_RUNE_FIRST + rune), rect) && g_input_mouse_x >= rect[RECT_X] &&
-            g_input_mouse_x < rect[RECT_X] + rect[RECT_W] && g_input_mouse_y >= rect[RECT_Y] &&
-            g_input_mouse_y < rect[RECT_Y] + rect[RECT_H])
+        if (input_command_rect((uint16_t)(CMD_RUNE_FIRST + rune), rect) &&
+            rect_contains_point(rect, g_input_mouse_x, g_input_mouse_y))
             return rune;
     return -1;
 }

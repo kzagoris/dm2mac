@@ -91,8 +91,6 @@ extern const CursorZone g_input_cursor_zones[CURSOR_ZONE_COUNT];
 int input_party_cell_champion(int16_t cell);
 /* The screen rectangle of an input zone. */
 bool input_get_zone_rect(uint16_t zone, int16_t *rect);
-/* True when the point is inside the rectangle. */
-bool rect_contains_point(const int16_t *r, int16_t x, int16_t y);
 /* The command entry of command in the input tree under node, NULL for none. As in the original, the walk of an entry
    list ends at the first entry without a command; a list needs that end entry. */
 const InputCommand *input_find_command_entry(const InputNode *node, uint16_t command);

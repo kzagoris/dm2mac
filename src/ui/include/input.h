@@ -144,6 +144,8 @@ bool input_is_idle(void);
 
 /* ---- The input tree ---- */
 
+/* True when the point (x, y) is inside the rect r. */
+bool rect_contains_point(const int16_t *r, int16_t x, int16_t y);
 /* In the advanced mode a right click, Esc (type INPUT_KEY with the key in x) or a click on the close button at (x, y)
    in a dialog with a cancel button chooses that button; true when it did. */
 bool input_cancels_dialog(int type, int16_t x, int16_t y);
