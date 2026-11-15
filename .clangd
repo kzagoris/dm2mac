@@ -1,3 +1,7 @@
+If:
+  PathMatch: 'src/(data|engine|ui|control|platform)/.*\.c'
+CompileFlags:
+  Compiler: gcc
 ---
 If:
   PathMatch: src/data/.*

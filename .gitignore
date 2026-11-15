@@ -19,3 +19,4 @@ Build-Windows.ps1
 Play-Advanced.cmd
 Play-Vanilla.cmd
 WINDOWS-LOCAL.md
+.zed/settings.json
