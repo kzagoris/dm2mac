@@ -1487,11 +1487,6 @@ static bool shows_held_object(void)
            !g_ui.candidate;
 }
 
-void ui_toggle_pinned_stats(void)
-{
-    stats_pinned = !stats_pinned;
-}
-
 /* True when the skills panel stays in place of the food and water gauges: in the advanced mode, when it is pinned,
    with an empty leader hand, and not with the mouth or for a recruit candidate. */
 static bool shows_pinned_stats(void)
@@ -1810,4 +1805,9 @@ void ui_toggle_inventory(int16_t champion_index)
     game_set_inventory_buttons(0);
     ui_draw_champion_state(champion_index);
     input_set_mode(INPUT_MODE_INVENTORY);
+}
+
+void ui_toggle_pinned_stats(void)
+{
+    stats_pinned = !stats_pinned;
 }

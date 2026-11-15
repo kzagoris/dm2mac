@@ -867,6 +867,37 @@ static bool execute_party_command(const Command *c, bool idle)
     return true;
 }
 
+/* Runs a button of the advanced mode: the options, the spellbook, a favorite, a quick save or load, the automap or
+   the cheats. False when the command is none of them. */
+static bool execute_advanced_command(int command, bool idle)
+{
+    bool ready = g_game.champion_count && !g_ui.candidate && idle;
+    if (command == CMD_OPTIONS) {
+        if (g_game_mode == GAME_MODE_ADVANCED && !g_ui.candidate && idle)
+            advanced_open_options();
+    } else if (command == CMD_SPELLBOOK) {
+        if (g_game_mode == GAME_MODE_ADVANCED && ready)
+            advanced_open_spellbook();
+    } else if (command >= CMD_FAVORITE_FIRST && command <= CMD_FAVORITE_LAST) {
+        if (g_game_mode == GAME_MODE_ADVANCED && ready)
+            spellbook_run_favorite((int16_t)(command - CMD_FAVORITE_FIRST));
+    } else if (command >= CMD_QUICK_SAVE && command <= CMD_CHEATS) {
+        if (!ready)
+            return true;
+        if (command == CMD_QUICK_SAVE)
+            advanced_quick_save();
+        else if (command == CMD_QUICK_LOAD)
+            advanced_quick_load();
+        else if (command == CMD_AUTOMAP)
+            advanced_open_automap();
+        else
+            advanced_open_cheats();
+    } else {
+        return false;
+    }
+    return true;
+}
+
 /* The commands of the champion actions, the hands, the slots, the money box, the drag, the recruiting, and the
    advanced mode; true when command is one of them. */
 static bool execute_champion_command(int command, bool idle)
@@ -907,31 +938,11 @@ static bool execute_champion_command(int command, bool idle)
             champ_drag_click(command - CMD_DRAG_FIRST);
         input_refresh_mode();
         area_update(false);
-    } else if (command == CMD_OPTIONS) {
-        if (g_game_mode == GAME_MODE_ADVANCED && !g_ui.candidate && idle)
-            advanced_open_options();
-    } else if (command == CMD_SPELLBOOK) {
-        if (g_game_mode == GAME_MODE_ADVANCED && g_game.champion_count && !g_ui.candidate && idle)
-            advanced_open_spellbook();
-    } else if (command >= CMD_FAVORITE_FIRST && command <= CMD_FAVORITE_LAST) {
-        if (g_game_mode == GAME_MODE_ADVANCED && g_game.champion_count && !g_ui.candidate && idle)
-            spellbook_run_favorite((int16_t)(command - CMD_FAVORITE_FIRST));
-    } else if (command >= CMD_QUICK_SAVE && command <= CMD_CHEATS) {
-        if (g_game.champion_count && !g_ui.candidate && idle) {
-            if (command == CMD_QUICK_SAVE)
-                advanced_quick_save();
-            else if (command == CMD_QUICK_LOAD)
-                advanced_quick_load();
-            else if (command == CMD_AUTOMAP)
-                advanced_open_automap();
-            else
-                advanced_open_cheats();
-        }
     } else if (command == CMD_EDIT_CHAMPION_NAME) {
         if (g_ui.inventory)
             session_edit_champion_name(g_ui.inventory - 1);
     } else {
-        return false;
+        return execute_advanced_command(command, idle);
     }
     return true;
 }

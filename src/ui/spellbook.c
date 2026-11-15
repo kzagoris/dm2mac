@@ -38,10 +38,12 @@ _Static_assert(LIST_ROWS <= ROWS_MAX_COUNT, "the spell list fits below the title
 
 /* The texts of a row. */
 #define BOOK_TEXT_SIZE  48
-#define RUNE_NAMES_SIZE 16   /* three rune names, the spaces between them, and the end */
-#define NAME_COLUMNS    17   /* the longest spell name */
-#define SLOT_LABEL_SIZE 24   /* LAST ATTEMPT or FAVORITE and its number */
-#define SCAN_1          0x02 /* the keys 1 to 4 follow each other: the favorite slots */
+#define RUNE_NAMES_SIZE 16 /* three rune names, the spaces between them, and the end */
+#define NAME_COLUMNS    17 /* the longest spell name */
+#define SLOT_LABEL_SIZE 24 /* LAST ATTEMPT or FAVORITE and its number */
+
+/* The scan code of the key 1; the keys 1 to 4 follow each other and choose the favorite slots. */
+#define SCAN_1 0x02
 
 /* Compact capitals keep even NETA inside a rune button. */
 #define LABEL_WIDTH       3
@@ -448,15 +450,6 @@ static void choose_caster(void)
     }
 }
 
-void spellbook_open(void)
-{
-    choose_caster();
-    if (book.power < 1)
-        book.power = 1;
-    book.slot = 0;
-    open_list();
-}
-
 /* Why the caster cannot enter the runes of a spell now. */
 static const char *find_refusal(void)
 {
@@ -497,6 +490,15 @@ void spellbook_run_favorite(int16_t slot)
     snprintf(text, sizeof text, "\nCAST FAVORITE %d: %s", slot + 1, name);
     text_print_message(UI_CYAN, text);
     game_set_command_stop(magic_cast_entered_runes_failed());
+}
+
+void spellbook_open(void)
+{
+    choose_caster();
+    if (book.power < 1)
+        book.power = 1;
+    book.slot = 0;
+    open_list();
 }
 
 /* Runs the selected row of the favorites page. Recording does not charge mana or remove entered runes. */
