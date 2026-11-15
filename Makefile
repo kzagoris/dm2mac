@@ -166,9 +166,10 @@ $(SDL_MINGW):
 # LABEL names the log of the run: make test LABEL=before-refactor
 test: ; tools/test-suite $(LABEL)
 
-# Release zips: dist (macOS arm64), dist-win (Windows x64; DM_DIR names the dm folder).
+# Release archives: dist (macOS arm64), dist-win (Windows x64; DM_DIR names the dm folder), dist-linux (Linux x64).
 dist: ; tools/dist/make-dist.sh
 dist-win: ; tools/dist/make-dist-win.sh
+dist-linux: ; tools/dist/make-dist-linux.sh
 
 # The quick check after an edit, without a build: formats the C files, then the lint and the coding standard check.
 check-fast: format
@@ -188,7 +189,7 @@ clean:
 
 FORCE:
 
-.PHONY: all lib windows dist dist-win test check check-fast check-sdl clean format FORCE
+.PHONY: all lib windows dist dist-win dist-linux test check check-fast check-sdl clean format FORCE
 
 format:
 	uv run clang-format -i $(C_FILES)

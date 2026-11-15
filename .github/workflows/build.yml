@@ -1,0 +1,118 @@
+name: Build
+
+# Manual only: one run builds the macOS, Windows and Linux release archives and names them after the commit it runs on.
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  # The name of the build comes from the commit the run starts on: its short SHA and the slug of its subject.
+  meta:
+    runs-on: ubuntu-24.04
+    outputs:
+      name: ${{ steps.name.outputs.name }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Name the build after the latest commit
+        id: name
+        run: |
+          name="$(printf '%s-%s' "$(git rev-parse --short=7 HEAD)" "$(git log -1 --pretty=%s)" \
+            | tr '[:upper:]' '[:lower:]' | sed -E 's/[^a-z0-9]+/-/g; s/^-+//' \
+            | cut -c1-60 | sed -E 's/-+$//')"
+          echo "name=$name" >> "$GITHUB_OUTPUT"
+          {
+            echo "### Build name"
+            echo
+            echo '`'"$name"'`'
+            echo
+            echo "$(git log -1 --pretty='%h %s')"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  macos:
+    needs: meta
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install SDL3
+        run: brew install sdl3
+      - name: Build DM2Mac.app
+        run: make dist
+      - name: Name the archive
+        run: mv build/DM2Mac-macos-arm64.zip "build/DM2Mac-macos-arm64-${{ needs.meta.outputs.name }}.zip"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: DM2Mac-macos-arm64-${{ needs.meta.outputs.name }}
+          path: build/DM2Mac-macos-arm64-${{ needs.meta.outputs.name }}.zip
+          if-no-files-found: error
+
+  # MinGW-w64 cross-build on macOS, as docs/development.md describes. The version comes from the Makefile.
+  windows:
+    needs: meta
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install MinGW-w64
+        run: brew install mingw-w64
+      - name: Fetch SDL3 for MinGW
+        run: |
+          mkdir -p build/sdl-mingw
+          curl -fL https://github.com/libsdl-org/SDL/releases/download/release-3.4.18/SDL3-devel-3.4.18-mingw.tar.gz \
+            -o build/sdl-mingw/SDL3-mingw.tar.gz
+          echo '049b9dd711e3fb3f8d84feb998dfec54a75e17cf539c4a80ff4d058d839771cf  build/sdl-mingw/SDL3-mingw.tar.gz' \
+            | shasum -a 256 -c -
+          tar -xzf build/sdl-mingw/SDL3-mingw.tar.gz -C build/sdl-mingw
+      - name: Build the Windows game
+        run: make dist-win
+      - name: Name the archive
+        run: mv build/DM2Mac-windows-x64.zip "build/DM2Mac-windows-x64-${{ needs.meta.outputs.name }}.zip"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: DM2Mac-windows-x64-${{ needs.meta.outputs.name }}
+          path: build/DM2Mac-windows-x64-${{ needs.meta.outputs.name }}.zip
+          if-no-files-found: error
+
+  # SDL3 is built from the source, as in the upstream Linux workflow: Ubuntu 24.04 has no SDL3 package.
+  linux:
+    needs: meta
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y clang make cmake pkg-config libasound2-dev libpulse-dev \
+            libx11-dev libxext-dev libxcursor-dev libxi-dev libxfixes-dev \
+            libxrandr-dev libxss-dev libxtst-dev libgl1-mesa-dev
+      # The key changes with this file, so a new SDL3 version or new build options build SDL3 again.
+      - name: Restore SDL3
+        id: sdl
+        uses: actions/cache@v4
+        with:
+          path: build/deps/sdl
+          key: sdl-${{ runner.os }}-${{ hashFiles('.github/workflows/build.yml') }}
+      - name: Build SDL3
+        if: steps.sdl.outputs.cache-hit != 'true'
+        run: |
+          mkdir -p build/deps
+          curl -fL https://github.com/libsdl-org/SDL/releases/download/release-3.4.18/SDL3-3.4.18.tar.gz \
+            -o build/deps/SDL3.tar.gz
+          echo '9c75cf16330322c217dedd2e0609f1124f1b54b8633e763467b4684d0f4334a3  build/deps/SDL3.tar.gz' | sha256sum -c -
+          tar -xzf build/deps/SDL3.tar.gz -C build/deps
+          cmake -S build/deps/SDL3-3.4.18 -B build/deps/sdl-build \
+            -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX="$PWD/build/deps/sdl" \
+            -DSDL_SHARED=ON -DSDL_STATIC=OFF -DSDL_TESTS=OFF -DSDL_EXAMPLES=OFF -DSDL_WAYLAND=OFF
+          cmake --build build/deps/sdl-build -j2
+          cmake --install build/deps/sdl-build
+      - name: Build the Linux game
+        env:
+          SDL_PREFIX: ${{ github.workspace }}/build/deps/sdl
+        run: make dist-linux
+      - name: Name the archive
+        run: mv build/DM2Mac-linux-x64.tar.gz "build/DM2Mac-linux-x64-${{ needs.meta.outputs.name }}.tar.gz"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: DM2Mac-linux-x64-${{ needs.meta.outputs.name }}
+          path: build/DM2Mac-linux-x64-${{ needs.meta.outputs.name }}.tar.gz
+          if-no-files-found: error
