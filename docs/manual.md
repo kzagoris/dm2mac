@@ -88,10 +88,10 @@ changes a few things:
   swords, bright when a champion is ready and grey while the party recovers. Each ready champion repeats their last
   melee or shooting action, or uses a basic one. Spells and throwing are excluded. Your hand must be empty.
 - A damage star with the damage shows for a moment over a creature that takes a hit.
-- Hold Ctrl (Control on a Mac) in the dungeon view to see what your hand can reach: corner marks frame each spot where
-  a click does something. White: an object to pick up. Cyan: a button, lever, door button, ladder, fountain or mirror
+- Hold Ctrl (Control on a Mac) in the dungeon view to see what your hand can reach: a colored outline follows the shape
+  of each thing where a click does something. White: an object to pick up. Cyan: a button, lever, door button, ladder, fountain or mirror
   for an empty hand. Yellow: a keyhole, slot, holder or alcove that wants an object. Plain decorations stay unmarked.
-  Release Ctrl and the marks go.
+  Release Ctrl and the outlines go.
 - Projectiles fly smoothly from square to square in the dungeon view.
 - An object in your hand shows its details in the open inventory at once, without holding it on the eye.
 - An object held on the eye in the inventory is compared with the item that the champion wears in that slot or holds

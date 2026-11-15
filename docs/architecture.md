@@ -108,7 +108,7 @@ paragraph. A module with several `.c` files has one `<module>_internal.h` for it
 | `ui/dialog.h` | `dialog_` | Dialogs: message, question, and progress pictures with buttons, and the volume settings. |
 | `ui/draw.h` | `draw_` | Drawing GDAT images into the frame buffer: blits, transparency, and the interface colors. |
 | `ui/filter.h` | `upscale_` | The advanced-mode screen filter (not in the original game): the filter at the start, the filter in use, and its change with the write of SETTINGS.TXT; the same for the 4:3 picture, the scanlines and the fullscreen window, which `platform/platform.c` reports with `upscale_note_fullscreen`. |
-| `ui/highlight.h` | `highlight_` | The advanced-mode touch highlight (not in the original game): while Ctrl is held, brackets over the click zones of the dungeon view that a hand click reaches. |
+| `ui/highlight.h` | `highlight_` | The advanced-mode touch highlight (not in the original game): while Ctrl is held, outlines around the pictures of the dungeon view that a hand click reaches. |
 | `ui/fm.h` | `fm_` | The OPL2 FM music driver from HMIMDRV.386, on an emulated OPL3 chip. |
 | `ui/icon.h` | `icon_` | The window icon, built from a creature graphic. |
 | `ui/input.h` | `input_` `command_` `kbd_` `rect_` | Mouse and keyboard input: key codes, rectangles, and the command queue. |

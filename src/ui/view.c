@@ -211,6 +211,8 @@ ViewSquare g_view_squares[VIEW_SQUARE_COUNT];
 Bitmap g_view_viewport = {g_view_state.viewport_pixels, VIEWPORT_WIDTH, VIEWPORT_HEIGHT, IMAGE_8BPP};
 ViewClickZone g_view_click_zones[VIEW_CLICK_ZONE_MAX];
 int g_view_click_zone_count;
+/* The click zone (index + 1, 0 none) whose picture shows each pixel of the viewport; a later picture wins. */
+static uint8_t click_zone_pixels[VIEWPORT_HEIGHT][VIEWPORT_WIDTH];
 uint8_t g_view_creature_grid[VIEW_GRID_SIZE];
 bool g_view_arrows_enabled;
 uint8_t g_view_object_grid[VIEW_GRID_SIZE];
@@ -230,6 +232,27 @@ static struct {
     uint16_t picture_group; /* the creature of the picture that view_setup_picture prepared, or THING_NONE */
     Location picture_at;
 } attack = {.picture_group = THING_NONE};
+
+/* True when picture c has a pixel other than key at (x, y) of the viewport. */
+static bool picture_shows_pixel(const DrawCtx *c, int16_t x, int16_t y, int key)
+{
+    const int16_t *r = c->rect;
+    if (x < r[RECT_X] || x > r[RECT_X] + r[RECT_W] - 1 || y < r[RECT_Y] || y > r[RECT_Y] + r[RECT_H] - 1)
+        return false;
+    int sx = c->flip & MIRROR_H ? r[RECT_X] + r[RECT_W] - 1 - x + c->src_x : x - r[RECT_X] + c->src_x;
+    int sy = y - r[RECT_Y] + c->src_y;
+    const Bitmap *image = c->image;
+    if (!image || sx < 0 || sy < 0 || sx >= image->width || sy >= image->height)
+        return false;
+    int pixel;
+    if (image->bpp == IMAGE_8BPP) {
+        pixel = image->pixels[sy * image->width + sx];
+    } else {
+        int i = sy * ((image->width + 1) & ~1) + sx;
+        pixel = i & 1 ? image->pixels[i >> 1] & NIBBLE_MASK : image->pixels[i >> 1] >> NIBBLE_BIT_COUNT;
+    }
+    return pixel != key;
+}
 
 int view_lateral_of(int pos)
 {
@@ -688,10 +711,28 @@ void view_flush_picture_or_measure(bool draw)
     view_flush_picture();
 }
 
+/* Marks the pixels that the last picture shows as pixels of click zone index. */
+static void mark_click_zone_pixels(int index)
+{
+    const DrawCtx *c = &g_view_state.ctx;
+    const int16_t *r = c->rect;
+    if (c->mode == DRAW_RECT_ONLY || !c->image)
+        return;
+    int x1 = max_int(r[RECT_X], 0);
+    int y1 = max_int(r[RECT_Y], 0);
+    int x2 = min_int(r[RECT_X] + r[RECT_W], VIEWPORT_WIDTH);
+    int y2 = min_int(r[RECT_Y] + r[RECT_H], VIEWPORT_HEIGHT);
+    for (int y = y1; y < y2; y++)
+        for (int x = x1; x < x2; x++)
+            if (picture_shows_pixel(c, (int16_t)x, (int16_t)y, c->transparent))
+                click_zone_pixels[y][x] = (uint8_t)(index + 1);
+}
+
 void view_add_click_zone(const int16_t *rect, enum ClickKind kind, int pos)
 {
     if (g_view_click_zone_count >= VIEW_CLICK_ZONE_MAX)
         return; /* fix: the original has no limit */
+    mark_click_zone_pixels(g_view_click_zone_count);
     ViewClickZone *z = &g_view_click_zones[g_view_click_zone_count++];
     memcpy(z->rect, rect, sizeof z->rect);
     z->kind = (uint8_t)kind;
@@ -703,6 +744,7 @@ void view_set_click_zone(int index, uint16_t thing, enum ClickKind kind, int pos
 {
     ViewClickZone *z = &g_view_click_zones[index];
     const int16_t *r = g_view_state.ctx.rect;
+    mark_click_zone_pixels(index);
     if (z->thing == THING_NONE) {
         memcpy(z->rect, r, sizeof z->rect);
         int16_t h = z->rect[RECT_H];
@@ -1141,6 +1183,7 @@ void view_draw_dungeon(Location at, int16_t dir)
     g_view_state.walking = g_party.move_steps != 0;
     start_tracks(dir, at.x, at.y);
     g_view_click_zone_count = VIEW_CLICK_ZONE_FIXED;
+    memset(click_zone_pixels, 0, sizeof click_zone_pixels);
     for (int i = 0; i < VIEW_CLICK_ZONE_FIXED; i++) {
         g_view_click_zones[i].thing = THING_NONE;
         g_view_click_zones[i].kind = CLICK_NONE;
@@ -1211,21 +1254,18 @@ static bool hit_test_picture(int16_t x, int16_t y, int key)
     const int16_t *r = c->rect;
     if (x < r[RECT_X] || x > r[RECT_X] + r[RECT_W] - 1 || y < r[RECT_Y] || y > r[RECT_Y] + r[RECT_H] - 1)
         return false;
-    int sx = c->flip & MIRROR_H ? r[RECT_X] + r[RECT_W] - 1 - x + c->src_x : x - r[RECT_X] + c->src_x;
     int sy = y - r[RECT_Y] + c->src_y;
     const Bitmap *image = c->image;
     if (image && image->height >= 2)
         g_view_hit_offset_y = (int16_t)((sy - (image->height >> 1)) * PERCENT / (image->height >> 1));
-    if (!image || sx < 0 || sy < 0 || sx >= image->width || sy >= image->height)
-        return false;
-    int pixel;
-    if (image->bpp == IMAGE_8BPP) {
-        pixel = image->pixels[sy * image->width + sx];
-    } else {
-        int i = sy * ((image->width + 1) & ~1) + sx;
-        pixel = i & 1 ? image->pixels[i >> 1] & NIBBLE_MASK : image->pixels[i >> 1] >> NIBBLE_BIT_COUNT;
-    }
-    return pixel != key;
+    return picture_shows_pixel(c, x, y, key);
+}
+
+int view_click_zone_at(int16_t x, int16_t y)
+{
+    if (x < 0 || y < 0 || x >= VIEWPORT_WIDTH || y >= VIEWPORT_HEIGHT)
+        return -1;
+    return click_zone_pixels[y][x] - 1;
 }
 
 bool view_hit_test_creature(int16_t x, int16_t y, Location at, int *out_side)

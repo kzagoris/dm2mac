@@ -1,0 +1,32 @@
+---
+If:
+  PathMatch: src/data/.*
+CompileFlags:
+  Add: [-Iinclude, -isystem, ../third_party]
+---
+If:
+  PathMatch: src/engine/.*
+CompileFlags:
+  Add: [-Iinclude, -I../data/include, -isystem, ../third_party]
+---
+If:
+  PathMatch: src/ui/.*
+CompileFlags:
+  Add: [-Iinclude, -I../engine/include, -I../data/include, -isystem, ../third_party]
+---
+If:
+  PathMatch: src/control/.*
+CompileFlags:
+  Add: [-Iinclude, -I../ui/include, -I../engine/include, -I../data/include, -isystem, ../third_party]
+---
+If:
+  PathMatch: src/platform/.*
+CompileFlags:
+  Add:
+    - -Iinclude
+    - -I../control/include
+    - -I../ui/include
+    - -I../engine/include
+    - -I../data/include
+    - -isystem
+    - ../third_party

@@ -1,5 +1,5 @@
-"""The touch highlight of the advanced mode (src/ui/highlight.c): while Ctrl is held, brackets mark the click zones of
-the view that a hand click reaches; sensor_wall_touch (src/engine/sensor.c) tells which wall faces react."""
+"""The touch highlight of the advanced mode (src/ui/highlight.c): while Ctrl is held, outlines mark the pictures of the
+click zones of the view that a hand click reaches; sensor_wall_touch (src/engine/sensor.c) tells which wall faces react."""
 
 import ctypes
 
@@ -79,6 +79,35 @@ def test_ctrl_marks_a_wall_button_and_its_release_restores_the_view(lib, advance
     assert lib.highlight_is_due()
     lib.play_present_viewport()
     assert viewport_pixels(lib) == plain
+
+
+def test_the_outline_rings_the_picture_of_the_zone(lib, advanced):
+    # the cyan ring touches the picture of a hand zone from outside and leaves the picture itself as it is
+    lib_prototypes(lib)
+    game, _ = advanced
+    for place in reactive_walls(lib, C.WALL_TOUCH_HAND):
+        face(lib, game, place)
+        if C.TOUCH_HAND in zone_touches(lib):
+            break
+    else:
+        raise AssertionError("no wall face in the view reacts to the hand")
+    hand = {i for i, t in enumerate(zone_touches(lib)) if t == C.TOUCH_HAND}
+    w, h = C.VIEWPORT_WIDTH, C.VIEWPORT_HEIGHT
+    zone = [[lib.view_click_zone_at(x, y) for x in range(w)] for y in range(h)]
+    picture = {(x, y) for y in range(h) for x in range(w) if zone[y][x] in hand}
+    assert picture, "the hand zone has no picture pixels"
+    plain = viewport_pixels(lib)
+    lib.highlight_set_held(True)
+    lib.play_present_viewport()
+    marked = viewport_pixels(lib)
+    lib.highlight_set_held(False)
+    cyan = ctypes.c_uint8.from_address(ctypes.c_void_p.in_dll(lib, "g_ui_colors").value + C.UI_CYAN).value
+    ring = {(i % w, i // w) for i in range(w * h) if marked[i] != plain[i] and marked[i] == cyan}
+    assert ring
+    for x, y in picture:
+        assert marked[y * w + x] == plain[y * w + x]
+    for x, y in ring:
+        assert any((x + dx, y + dy) in picture for dx in (-1, 0, 1) for dy in (-1, 0, 1)), (x, y)
 
 
 def test_the_vanilla_mode_shows_no_highlight(lib, advanced):

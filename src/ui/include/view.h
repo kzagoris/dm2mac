@@ -155,6 +155,9 @@ bool view_has_moving_projectiles(void);
 
 extern ViewClickZone g_view_click_zones[VIEW_CLICK_ZONE_MAX];
 extern int g_view_click_zone_count;
+/* The click zone whose picture the last view drew at pixel (x, y) of the viewport, or -1. The picture of a later click
+   zone takes the pixels of an earlier one; a zone without a picture of its own has no pixels. */
+int view_click_zone_at(int16_t x, int16_t y);
 /* The vertical place of the last hit test of a view picture, in percent of half the picture height from its center:
    a shop click above the center shows the next item, else the last item. */
 extern int16_t g_view_hit_offset_y; /* exported for the tests */
