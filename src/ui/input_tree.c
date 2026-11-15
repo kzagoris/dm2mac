@@ -899,10 +899,11 @@ const InputCommand *input_find_command_entry(const InputNode *node, uint16_t com
     return NULL;
 }
 
-bool input_right_click_cancels_dialog(int type)
+bool input_cancels_dialog(int type, int16_t x, int16_t y)
 {
-    if (type != INPUT_BUTTON_RIGHT || g_game_mode != GAME_MODE_ADVANCED || g_input.mode != INPUT_MODE_DIALOG ||
-        !g_dialog.right_choice)
+    bool cancel = type == INPUT_BUTTON_RIGHT || (type == INPUT_KEY && x == SCAN_ESCAPE) ||
+                  (type == INPUT_BUTTON_LEFT && dialog_close_button_contains(x, y));
+    if (!cancel || g_game_mode != GAME_MODE_ADVANCED || g_input.mode != INPUT_MODE_DIALOG || !g_dialog.right_choice)
         return false;
     g_input_match.choice = (int16_t)g_dialog.right_choice;
     return true;

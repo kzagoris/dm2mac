@@ -28,8 +28,9 @@ The advanced mode adds these keys:
 | `X` or `Esc` | Close the cheat screen | Open cheat screen |
 | `Tab` or `Esc` | Close the inventory | Open inventory; not in the name editor or the recruit dialog |
 | `Esc` | Send the candidate back to its mirror | Recruit dialog |
+| `Esc` | Close the save menu (resume), CANCEL in the slot lists and in the question before a quit | Those dialogs |
 
-A right click closes the automap and the cheat screen; on an automap item list it returns to the map, and on a spell page of the cheat screen it shows the cheat page. In the save menu a right click is RESUME, in the save menu's slot list CANCEL, and in the question before a quit CANCEL. The other dialogs keep the original right click.
+A right click closes the automap and the cheat screen; on an automap item list it returns to the map, and on a spell page of the cheat screen it shows the cheat page. In the save menu a right click closes the menu (resume), in the slot lists CANCEL, and in the question before a quit CANCEL; `Esc` does the same there. The other dialogs keep the original right click.
 
 A letter key moves the party only if the letter has no command of its own. In the slot name of the save dialog and in the name editor, the letters type text.
 
@@ -57,6 +58,12 @@ A quick save is not a saved game for the save menu. The QUIT question uses the s
 - `NO QUICK SAVE`: the file does not exist. The game continues.
 - `QUICK SAVE DAMAGED`: the file does not load. The game continues unchanged. If the game cannot restore the running game either, the program ends ([save.md](../formats/save.md#quick-save-files)).
 - `UNABLE TO SAVE`: the game cannot keep a copy of the running game before the load, so it does not load. The game continues.
+
+## Save menu
+
+The save menu (the disk icon, `Ctrl+S`, `Alt+S`) shows SAVE, QUIT, RESTART and LOAD: LOAD takes the place of RESUME. The exit button of the inventory (its picture without the black outline, 9 by 9) replaces the version text in the stone bar above the message panel, right of the panel. A click on it, `Esc` or a right click shows it pressed, as the inventory shows its pressed exit button, closes the menu, and the game continues. A focus loss while the menu or another dialog waits keeps it waiting; it chooses no button.
+
+LOAD opens the load dialog with the save slots. CANCEL, `Esc` or a right click there returns to the save menu. After the choice of a slot, the question before a quit comes when the game is not saved, as for QUIT; its CANCEL also returns to the save menu. Then the game loads the slot as `F9` loads `QUICK.DAT`: the running game waits in `QUICK.TMP` until the load works, and the message area shows `GAME LOADED`, `SAVE DAMAGED` (the game continues unchanged) or `UNABLE TO SAVE` (the game does not load). The loaded slot becomes the slot of the next save, and a QUIT right after the load needs no question.
 
 ## Changes to the original rules
 

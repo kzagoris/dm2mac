@@ -161,16 +161,12 @@ bool advanced_quick_save(void)
     return ok;
 }
 
-enum QuickLoadResult advanced_quick_load(void)
+/* Loads the save at path in place of the running game, which waits in QUICK.TMP and comes back when the load fails.
+   The session (the slot, the QUIT question) stays as before the load. */
+static enum QuickLoadResult load_in_place(const char *path)
 {
-    char path[OS_PATH_SIZE], keep[OS_PATH_SIZE];
-    FILE *f = fopen(quick_path(path, "DAT"), "rb");
-    if (!f) {
-        print_line("NO QUICK SAVE");
-        return QUICK_MISSING;
-    }
-    fclose(f);
-    /* the running game goes to QUICK.TMP first: a damaged quick save loads it back (the same path: no backup) */
+    char keep[OS_PATH_SIZE];
+    /* the running game goes to QUICK.TMP first: a damaged save loads it back (the same path: no backup) */
     quick_path(keep, "TMP");
     if (!advanced.lost && !write_game(keep, keep)) {
         print_line("UNABLE TO SAVE");
@@ -197,13 +193,39 @@ enum QuickLoadResult advanced_quick_load(void)
     }
     advanced.lost = false;
     if (loaded) {
-        /* a quick load is not a saved game for the QUIT question */
-        game_clear_save_times();
         sound_set_volume(g_game.sound_volume);
         music_set_volume(g_game.music_volume);
     }
-    print_line(loaded ? "GAME LOADED" : "QUICK SAVE DAMAGED");
     return loaded ? QUICK_LOADED : QUICK_DAMAGED;
+}
+
+enum QuickLoadResult advanced_quick_load(void)
+{
+    char path[OS_PATH_SIZE];
+    FILE *f = fopen(quick_path(path, "DAT"), "rb");
+    if (!f) {
+        print_line("NO QUICK SAVE");
+        return QUICK_MISSING;
+    }
+    fclose(f);
+    enum QuickLoadResult result = load_in_place(path);
+    if (result == QUICK_LOADED)
+        game_clear_save_times(); /* a quick load is not a saved game for the QUIT question */
+    if (result == QUICK_LOADED || result == QUICK_DAMAGED)
+        print_line(result == QUICK_LOADED ? "GAME LOADED" : "QUICK SAVE DAMAGED");
+    return result;
+}
+
+enum QuickLoadResult advanced_load_slot(int16_t slot, const char *path)
+{
+    enum QuickLoadResult result = load_in_place(path);
+    if (result == QUICK_LOADED) {
+        game_set_save_slot(slot);
+        game_note_slot_loaded();
+    }
+    if (result == QUICK_LOADED || result == QUICK_DAMAGED)
+        print_line(result == QUICK_LOADED ? "GAME LOADED" : "SAVE DAMAGED");
+    return result;
 }
 
 /* The automap */
@@ -581,7 +603,9 @@ void advanced_focus_changed(bool focused)
     repeats_blocked = true;
     memset(repeat_armed, 0, sizeof repeat_armed);
     advanced.drag.active = false;
+    int16_t choice = g_input_match.choice;
     input_cancel_pending();
+    g_input_match.choice = choice; /* an open dialog keeps waiting: a choice of 0 is its first button */
 }
 
 bool advanced_focus_key(uint16_t key, bool repeat)

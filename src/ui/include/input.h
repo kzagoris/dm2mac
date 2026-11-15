@@ -141,6 +141,9 @@ bool input_is_idle(void);
 
 /* ---- The input tree ---- */
 
+/* In the advanced mode a right click, Esc (type INPUT_KEY with the key in x) or a click on the close button at (x, y)
+   in a dialog with a cancel button chooses that button; true when it did. */
+bool input_cancels_dialog(int type, int16_t x, int16_t y);
 /* The command of a click with buttons at (x, y) in mode, and the rectangle of its zone; 0 for none. In the advanced
    mode a left click on a status box outside the hands is a click on the bars when the leader hand holds an object
    (it stores the object), else a click on the name (it opens the inventory of the champion); a left click with an

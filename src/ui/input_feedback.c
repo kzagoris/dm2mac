@@ -487,11 +487,12 @@ static uint16_t next_event_command(void)
             else if (type & EVENT_CLICK_TYPES) {
                 if (type == INPUT_BUTTON_LEFT)
                     area_end_damage_hold(x, y);
-                if (!input_right_click_cancels_dialog(type))
+                if (!input_cancels_dialog(type, x, y))
                     command = input_click_command(g_input.mode, x, y, type, rect);
             }
         } else if (type == INPUT_KEY) {
-            command = input_key_command(g_input.mode, (uint16_t)x, rect);
+            if (!input_cancels_dialog(type, x, y))
+                command = input_key_command(g_input.mode, (uint16_t)x, rect);
         } else if (type == EVENT_ENTER_AREA) {
             command = CMD_DRAG_CANCEL;
         } else if (type == EVENT_LEAVE_AREA) {

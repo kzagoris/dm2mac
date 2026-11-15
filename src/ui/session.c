@@ -6,6 +6,7 @@
 #include <string.h>
 #include "action.h"
 #include "action_area.h"
+#include "advanced.h"
 #include "champion.h"
 #include "creature.h"
 #include "dialog.h"
@@ -233,6 +234,7 @@ static int16_t choose_load_slot(void)
     if (g_session.loaded)
         return g_session.slot;
     session_open_slot_dialog(DIALOG_LOAD_SLOTS, SLOT_BUTTONS_LOAD);
+    g_dialog.right_choice = SLOT_CANCEL;
     session_draw_slot_selection(SAVE_SLOT_NONE);
     dialog_present();
     dialog_screen_mode(false);
@@ -422,6 +424,16 @@ static bool read_save(const char *path)
     return true;
 }
 
+/* The path of the file of slot: its backup when only the backup is there. */
+static char *existing_slot_path(char *path, int16_t slot)
+{
+    char bak[OS_PATH_SIZE];
+    slot_path(path, slot, false);
+    if (!file_exists(path) && file_exists(slot_path(bak, slot, true)))
+        snprintf(path, OS_PATH_SIZE, "%s", bak);
+    return path;
+}
+
 /* Loads the slot file at path into the game; returns false on an error. */
 static bool load_slot(const char *path)
 {
@@ -499,13 +511,33 @@ static bool confirm_quit(void)
            dialog_run_cancel(dialog_draw(DIALOG_NOT_SAVED, MESSAGE_NONE), NOT_SAVED_CANCEL) != NOT_SAVED_CANCEL;
 }
 
-/* The save menu until the player saves (returns the slot), quits (*quit true), or resumes (SAVE_SLOT_NONE). */
-static int16_t run_save_menu(bool *quit)
+/* LOAD of the advanced save menu: the slot that the player loads, after the question when the game is not saved;
+   SAVE_SLOT_NONE when cancelled. */
+static int16_t choose_menu_load_slot(void)
 {
+    bool loaded = g_session.loaded;
+    game_set_session_loaded(false); /* else the load dialog takes the last slot without a question */
+    int16_t slot = choose_load_slot();
+    game_set_session_loaded(loaded);
+    return slot >= 0 && confirm_quit() ? slot : SAVE_SLOT_NONE;
+}
+
+/* The save menu until the player saves (returns the slot), quits (*quit true), chooses a slot to load (*load, the
+   advanced mode), or resumes (SAVE_SLOT_NONE). */
+static int16_t run_save_menu(bool *quit, int16_t *load)
+{
+    bool advanced = g_game_mode == GAME_MODE_ADVANCED;
     for (;;) {
         int choice = dialog_run_cancel(dialog_draw(DIALOG_SAVE_MENU, MESSAGE_NONE), SAVE_MENU_RESUME);
-        if (g_main_loop.quit || choice == SAVE_MENU_RESUME)
+        if (g_main_loop.quit || choice == DIALOG_CLOSED || (choice == SAVE_MENU_RESUME && !advanced))
             return SAVE_SLOT_NONE;
+        if (choice == SAVE_MENU_RESUME) {
+            /* the advanced mode shows LOAD on the RESUME button */
+            *load = choose_menu_load_slot();
+            if (*load >= 0)
+                return SAVE_SLOT_NONE;
+            continue;
+        }
         if (choice == SAVE_MENU_QUIT || choice == SAVE_MENU_RESTART) {
             if (choice == SAVE_MENU_RESTART)
                 game_set_restart(true); /* a cancel below keeps it, as in the original */
@@ -531,8 +563,9 @@ static void run_save_or_quit(bool quit_only)
     play_hide_view();
     timeline_rebuild_free_list();
     int16_t slot = SAVE_SLOT_NONE;
+    int16_t load = SAVE_SLOT_NONE;
     if (!quit_only) {
-        slot = run_save_menu(&quit);
+        slot = run_save_menu(&quit, &load);
     } else if (confirm_quit()) {
         game_set_offer_restore(false);
         quit = true;
@@ -549,6 +582,10 @@ static void run_save_or_quit(bool quit_only)
         return;
     }
     play_show_view();
+    if (load >= 0) {
+        char path[OS_PATH_SIZE];
+        advanced_load_slot(load, existing_slot_path(path, load));
+    }
 }
 
 void session_save(void)
@@ -637,12 +674,8 @@ bool session_recover_slot(void)
     int16_t slot = choose_load_slot();
     if (slot < 0)
         return false;
-    char path[OS_PATH_SIZE], bak[OS_PATH_SIZE];
-    slot_path(path, slot, false);
-    slot_path(bak, slot, true);
-    if (!file_exists(path) && file_exists(bak))
-        snprintf(path, sizeof path, "%s", bak);
-    if (!load_slot(path))
+    char path[OS_PATH_SIZE];
+    if (!load_slot(existing_slot_path(path, slot)))
         return false;
     game_set_save_slot(slot);
     game_clear_end();

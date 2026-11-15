@@ -118,7 +118,7 @@ Four-letter syllables wrap onto two lines to fit the button.
 | `W` `A` `S` `D` | Move forward, left, back, right |
 | `Q`, `E` | Turn left, turn right |
 | `F5`, `F9` | Quick save, quick load |
-| `Ctrl+S` | Open the disk menu (same as the disk icon) |
+| `Ctrl+S` | Open the disk menu (same as the disk icon); `Esc`, a right click or the red cross closes it |
 | `Ctrl+R` | Rest (same as the Zzz icon) |
 | `Ctrl+Q` | Quit (same as QUIT in the disk menu, with its question when the game is not saved) |
 | `Tab` or `M` | Automap |
@@ -132,6 +132,12 @@ Four-letter syllables wrap onto two lines to fit the button.
 
 The keys work only in the dungeon view. In the inventory, a dialog, or a menu they do nothing, except `Tab`, which
 closes the inventory, `Esc`, which closes the inventory (the original pauses there) and resumes from the pause, and `F1`, which opens Options/Help in inventory, sleep, and pause. Save/cast options require the dungeon view. `Esc` and a right click close the automap and the cheat screen.
+
+### Save menu
+
+In advanced mode the save menu shows **LOAD** in place of RESUME: it opens the list of saved games, and the chosen
+game replaces the running one (with the question first when the game is not saved). To resume, click the red cross in
+the top right corner, press `Esc`, or right-click.
 
 ### Quick save and quick load
 

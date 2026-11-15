@@ -78,6 +78,9 @@ bool advanced_quick_save(void);
 /* Loads QUICK.DAT of the save folder without a dialog and prints the result. A missing or damaged file keeps the game;
    when the running game cannot come back either (QUICK_LOST), the program ends outside the turn-based mode. */
 enum QuickLoadResult advanced_quick_load(void);
+/* LOAD of the advanced save menu: loads the save file at path of slot as advanced_quick_load loads QUICK.DAT, and
+   prints the result. A loaded slot becomes the slot of the session, loaded a moment ago for the QUIT question. */
+enum QuickLoadResult advanced_load_slot(int16_t slot, const char *path);
 
 /* The automap */
 /* Opens the automap in the viewport. */

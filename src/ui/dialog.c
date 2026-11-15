@@ -2,6 +2,7 @@
 /* Dialogs: messages, questions, progress, and the volume settings. */
 #include "dialog.h"
 #include <stdbool.h>
+#include <stdio.h>
 #include <string.h>
 #include "draw.h"
 #include "game.h"
@@ -39,6 +40,18 @@
 /* The cancel of a dialog without a button for a right click. */
 #define DIALOG_NO_CANCEL (-1)
 
+/* The advanced save menu: the button of text entry 3 shows LOAD. */
+#define SAVE_MENU_LOAD_ENTRY 3
+
+/* The choice of the close button of the advanced save menu: no button has it. */
+#define DIALOG_CLOSE_CHOICE 0x7f
+
+/* The close button: the exit button picture of the inventory without its black outline, in the stone bar above the
+   message panel, in the corner right of the panel (its distance from the top and the right edge). */
+#define CLOSE_BUTTON_OUTLINE 1
+#define CLOSE_BUTTON_TOP     0
+#define CLOSE_BUTTON_RIGHT   0
+
 /* The zones of the button texts (table of SKULL.EXE), and the first zone of the texts by button count; a dialog with
    more than DIALOG_BUTTONS_MAX buttons starts at the first zone. */
 static const uint16_t button_text_zones[BUTTON_TEXT_ZONES] = {
@@ -51,7 +64,58 @@ static const uint8_t button_zone_first[DIALOG_BUTTONS_MAX + 1] = {0, 0, 1, 3, 6}
 
 DialogState g_dialog = {.screen_mode = 1};
 
+/* Whether dialog id is the save menu of the advanced mode, with LOAD and the close button. */
+static bool is_advanced_save_menu(int id)
+{
+    return id == DIALOG_SAVE_MENU && g_game_mode == GAME_MODE_ADVANCED;
+}
+
 /* Drawing */
+
+/* The screen position of the top left corner of the dialog viewport. */
+static ScreenPoint viewport_origin(void)
+{
+    int16_t r[RECT_SIZE];
+    ScreenSize size = {0, 0};
+    if (!g_dialog.screen_mode)
+        return zone_get_viewport_rect(r) ? (ScreenPoint){r[RECT_X], r[RECT_Y]} : (ScreenPoint){0, 0};
+    if (!zone_compute_rect(&g_view_viewport, r, ZONE_DIALOG_SCREEN, &size))
+        return (ScreenPoint){0, 0};
+    return (ScreenPoint){(int16_t)(r[RECT_X] - size.w), (int16_t)(r[RECT_Y] - size.h)};
+}
+
+/* Draws the close button of the advanced save menu, released or pressed, and keeps its screen rect for the clicks. */
+static void render_close_button(bool pressed)
+{
+    int entry = pressed ? GFX_PANEL_BUTTON_EXIT + 1 : GFX_PANEL_BUTTON_EXIT;
+    const Bitmap *image = draw_gdat_image(CAT_PANEL, 0, entry);
+    int16_t r[RECT_SIZE];
+    if (!image || image->width <= 2 * CLOSE_BUTTON_OUTLINE || image->height <= 2 * CLOSE_BUTTON_OUTLINE ||
+        !zone_get_rect(ZONE_DIALOG_BACK, r))
+        return;
+    int16_t w = (int16_t)(image->width - 2 * CLOSE_BUTTON_OUTLINE);
+    int16_t h = (int16_t)(image->height - 2 * CLOSE_BUTTON_OUTLINE);
+    r[RECT_X] = (int16_t)(r[RECT_X] + r[RECT_W] - w - CLOSE_BUTTON_RIGHT);
+    r[RECT_Y] = (int16_t)(r[RECT_Y] + CLOSE_BUTTON_TOP);
+    r[RECT_W] = w;
+    r[RECT_H] = h;
+    Blit blit = {.src = image->pixels,
+                 .dst = g_view_viewport.pixels,
+                 .src_x = CLOSE_BUTTON_OUTLINE,
+                 .src_y = CLOSE_BUTTON_OUTLINE,
+                 .src_width = image->width,
+                 .dst_width = g_view_viewport.width,
+                 .src_bpp = image->bpp,
+                 .dst_bpp = IMAGE_8BPP,
+                 .transparent = GFX_OPAQUE,
+                 .mirror = MIRROR_NONE,
+                 .colormap = draw_gdat_image_palette(CAT_PANEL, 0, entry)};
+    gfx_blit(&blit, r);
+    ScreenPoint origin = viewport_origin();
+    r[RECT_X] = (int16_t)(r[RECT_X] + origin.x);
+    r[RECT_Y] = (int16_t)(r[RECT_Y] + origin.y);
+    memcpy(g_dialog.close_rect, r, sizeof r);
+}
 
 void dialog_screen_mode(bool begin)
 {
@@ -135,7 +199,13 @@ int dialog_draw(int id, int message)
     if (zone_get_rect(ZONE_DIALOG_BACK, r))
         gfx_blit_to_bitmap(draw_gdat_image(CAT_DIALOG, id, GFX_DIALOG_PICTURE), &g_view_viewport, r, GFX_OPAQUE,
                            draw_gdat_image_palette(CAT_DIALOG, id, GFX_DIALOG_PICTURE));
-    text_draw_in_zone(ZONE_DIALOG_VERSION, g_ui_colors[UI_DARKEST_GRAY], DIALOG_VERSION_TEXT);
+    if (is_advanced_save_menu(id)) {
+        render_close_button(false);
+        if (count > SAVE_MENU_LOAD_ENTRY)
+            snprintf(texts[SAVE_MENU_LOAD_ENTRY], TEXT_SIZE, "%s", DIALOG_LOAD_TEXT);
+    } else {
+        text_draw_in_zone(ZONE_DIALOG_VERSION, g_ui_colors[UI_DARKEST_GRAY], DIALOG_VERSION_TEXT);
+    }
     int first = count <= DIALOG_BUTTONS_MAX ? button_zone_first[count] : 0;
     /* fix: the texts stop at the end of the zone table; the original reads past it with more than 10 texts */
     for (int i = 0; i < count && first + i < BUTTON_TEXT_ZONES; i++)
@@ -218,8 +288,10 @@ int dialog_run_cancel(int id, int cancel)
         values[count++] = value ? value : (uint8_t)e;
     }
     int right_choice = g_dialog.right_choice;
-    g_dialog.right_choice = 0;
-    for (int i = 0; i < count; i++)
+    bool close_button = g_dialog.close_button;
+    g_dialog.close_button = is_advanced_save_menu(id);
+    g_dialog.right_choice = g_dialog.close_button ? DIALOG_CLOSE_CHOICE : 0;
+    for (int i = 0; i < count && !g_dialog.close_button; i++)
         if (values[i] == cancel)
             g_dialog.right_choice = i + 1;
     g_dialog.button_count = id == DIALOG_VOLUME ? DIALOG_VOLUME_BUTTONS : count;
@@ -228,15 +300,36 @@ int dialog_run_cancel(int id, int cancel)
     do {
         command_process_queue();
         play_wait_frames(1);
-        if (g_input_match.choice == DIALOG_NO_CHOICE && input_read_key() == KEY_ENTER)
+        /* the keys that come before the input reads them: Return chooses the first button, Esc cancels */
+        uint16_t key = g_input_match.choice == DIALOG_NO_CHOICE ? input_read_key() : 0;
+        if (key == KEY_ENTER)
             input_simulate_command_click(CMD_DIALOG_BUTTON_FIRST);
+        else if (key)
+            input_cancels_dialog(INPUT_KEY, (int16_t)key, 0);
     } while (g_input_match.choice == DIALOG_NO_CHOICE && !g_main_loop.quit);
     int choice = g_input_match.choice;
-    int result = id == DIALOG_VOLUME ? g_input_match.value : choice >= 1 && choice <= count ? values[choice - 1] : 0;
+    if (choice == DIALOG_CLOSE_CHOICE) {
+        /* the pressed close button, as a pressed button of the inventory */
+        render_close_button(true);
+        dialog_present();
+        play_wait_frames(BUTTON_PRESS_VBLANKS);
+    }
+    int result = id == DIALOG_VOLUME              ? g_input_match.value
+                 : choice == DIALOG_CLOSE_CHOICE  ? DIALOG_CLOSED
+                 : choice >= 1 && choice <= count ? values[choice - 1]
+                                                  : 0;
     game_set_screen_refresh(true);
     input_pop_mode();
     g_dialog.right_choice = right_choice;
+    g_dialog.close_button = close_button;
     return result;
+}
+
+bool dialog_close_button_contains(int16_t x, int16_t y)
+{
+    const int16_t *r = g_dialog.close_rect;
+    return g_dialog.close_button && x >= r[RECT_X] && x < r[RECT_X] + r[RECT_W] && y >= r[RECT_Y] &&
+           y < r[RECT_Y] + r[RECT_H];
 }
 
 /* Volume */

@@ -8,6 +8,7 @@
 #include <stdbool.h>
 #include <stdint.h>
 #include "gdat.h"
+#include "gfx.h"
 
 /* Dialogs: a picture of CAT_DIALOG in the viewport with up to 4 buttons and a message. */
 #define DIALOG_ERROR      0x00
@@ -32,15 +33,22 @@
 
 /* The texts of a dialog picture. */
 #define DIALOG_VERSION_TEXT "V1.0"
-#define DIALOG_TEXT_COUNT   20 /* text entries 0 to 19: the buttons */
+#define DIALOG_LOAD_TEXT    "LOAD" /* the advanced save menu: the button of text entry 3 (RESUME) */
+
+/* The result of dialog_run_cancel when the player closes the advanced save menu: its close button, Esc, or a right
+   click. */
+#define DIALOG_CLOSED     (-2)
+#define DIALOG_TEXT_COUNT 20 /* text entries 0 to 19: the buttons */
 
 typedef struct {
     int screen_mode;  /* 1: the dialogs draw on a black screen; 0: in the game viewport */
     int button_count; /* the buttons of the open dialog (7 for the volume dialog) */
     bool progress_enabled;
     int16_t progress_width;
-    int id;           /* the dialog of the last dialog_draw */
-    int right_choice; /* the advanced mode: the choice of a right click in the open dialog, 0 for none */
+    int id;            /* the dialog of the last dialog_draw */
+    int right_choice;  /* the advanced mode: the choice of a right click or Esc in the open dialog, 0 for none */
+    bool close_button; /* the open dialog has the close button of the advanced save menu */
+    int16_t close_rect[RECT_SIZE]; /* the screen rect of the close button */
 } DialogState;
 extern DialogState g_dialog;
 
@@ -60,8 +68,12 @@ void dialog_draw_progress_bar(int permille); /* exported for the tests */
 /* Waits until the player clicks a button of dialog id; returns the text entry of the button (the volume dialog: the
    command). */
 int dialog_run(int id);
-/* dialog_run, and in the advanced mode a right click chooses the button of text entry cancel. */
+/* dialog_run, and in the advanced mode a right click or Esc chooses the button of text entry cancel. The advanced
+   save menu instead shows LOAD in place of RESUME and returns DIALOG_CLOSED for its close button, Esc and a right
+   click. */
 int dialog_run_cancel(int id, int cancel);
+/* Whether the screen point (x, y) is on the close button of the open dialog. */
+bool dialog_close_button_contains(int16_t x, int16_t y);
 
 /* Volume */
 /* The dialog of the sound and music volumes. */

@@ -96,8 +96,6 @@ bool rect_contains_point(const int16_t *r, int16_t x, int16_t y);
 /* The command entry of command in the input tree under node, NULL for none. As in the original, the walk of an entry
    list ends at the first entry without a command; a list needs that end entry. */
 const InputCommand *input_find_command_entry(const InputNode *node, uint16_t command);
-/* In the advanced mode a right click in a dialog with a cancel button chooses that button; true when it did. */
-bool input_right_click_cancels_dialog(int type);
 
 /* Queues the click that came while the events were locked. */
 void input_flush_deferred_click(void);
