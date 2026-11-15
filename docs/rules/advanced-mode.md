@@ -68,7 +68,7 @@ LOAD opens the load dialog with the save slots. CANCEL, `Esc` or a right click t
 
 ## Changes to the original rules
 
-- A left click on a status box outside the hands puts the leader hand object into the champion's inventory, as a click on the bars does. With an empty leader hand it opens the inventory, as a click on the name does. The hands keep their click.
+- A left click on the name of a status box opens the champion's inventory, also while the leader hand holds an object: the object stays in the hand, as with the keys 1 to 4. A left click elsewhere on the box outside the hands puts the leader hand object into the champion's inventory, as a click on the bars does; with an empty leader hand it opens the inventory. The hands keep their click.
 - A held key repeats only when the game waits for input, so the party stops when you release the key. In the vanilla mode the party continues to walk for the queued repeats, as in the original ([movement.md](movement.md#deviations-from-the-original)).
 - An antidote always cures the poison. In the vanilla mode it can miss the poison, as in the original ([champions.md](champions.md#deviations-from-the-original)).
 - A slot save and the quick save keep the seen squares and the cheats.

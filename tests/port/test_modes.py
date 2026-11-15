@@ -448,9 +448,10 @@ def test_damage_of_a_hit_stays_one_extra_step_in_the_advanced_mode(lib, advanced
 
 
 def test_left_click_on_a_status_box_stores_or_opens_the_inventory_in_the_advanced_mode(lib, session):
-    # In the advanced mode a left click on a status box outside the hands stores the leader hand object in the
-    # inventory of the champion, or with an empty leader hand opens the inventory; the hands keep their commands, and a
-    # right click gives the same command as in vanilla.
+    # In the advanced mode a left click on the name of a status box opens the inventory of the champion, and a left
+    # click elsewhere on the box outside the hands stores the leader hand object in the inventory of the champion, or
+    # with an empty leader hand opens the inventory; the hands keep their commands, and a right click gives the same
+    # command as in vanilla.
     from dm2test.interface import GAME_LEADER_HAND
     hand = ctypes.c_uint16.from_address(ctypes.addressof(session[0]) + GAME_LEADER_HAND)
     rect, box = (ctypes.c_int16 * 4)(), (ctypes.c_int16 * 4)()
@@ -469,7 +470,8 @@ def test_left_click_on_a_status_box_stores_or_opens_the_inventory_in_the_advance
                         if vanilla in hands or buttons != C.INPUT_BUTTON_LEFT:
                             assert mine == vanilla, (champ, x, y, buttons)
                         elif champ < session[0].champion_count:
-                            want = C.CMD_INVENTORY_FIRST if thing == C.THING_NONE else C.CMD_STORE_FIRST
+                            opens = thing == C.THING_NONE or vanilla == C.CMD_INVENTORY_FIRST + champ  # the name
+                            want = C.CMD_INVENTORY_FIRST if opens else C.CMD_STORE_FIRST
                             assert mine == want + champ, (champ, x, y, thing)
     hand.value = C.THING_NONE
 

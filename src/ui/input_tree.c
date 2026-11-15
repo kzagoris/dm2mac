@@ -926,8 +926,8 @@ uint16_t input_click_command(enum InputMode mode, int16_t x, int16_t y, int butt
             continue;
         if (command && command != open && command != store)
             return command;
-        const InputCommand *e =
-            input_find_command_entry(&g_input_mode_roots[mode], g_game.leader_hand != THING_NONE ? store : open);
+        bool opens = g_game.leader_hand == THING_NONE || command == open; /* a click on the name opens */
+        const InputCommand *e = input_find_command_entry(&g_input_mode_roots[mode], opens ? open : store);
         if (e && input_get_zone_rect(e->zone, target))
             return find_click_command(&g_input_mode_roots[mode], target[RECT_X], target[RECT_Y], buttons, rect);
         return command;

@@ -148,8 +148,9 @@ bool input_is_idle(void);
    in a dialog with a cancel button chooses that button; true when it did. */
 bool input_cancels_dialog(int type, int16_t x, int16_t y);
 /* The command of a click with buttons at (x, y) in mode, and the rectangle of its zone; 0 for none. In the advanced
-   mode a left click on a status box outside the hands is a click on the bars when the leader hand holds an object
-   (it stores the object), else a click on the name (it opens the inventory of the champion); a left click with an
+   mode a left click on the name of a status box opens the inventory of the champion, and a left click elsewhere on
+   the box outside the hands is a click on the bars when the leader hand holds an object (it stores the object),
+   else a click on the name; a left click with an
    empty leader hand on the inventory panel that shows the food and water gauges or the skills gives CMD_PIN_STATS;
    exported for the tests. */
 uint16_t input_click_command(enum InputMode mode, int16_t x, int16_t y, int buttons, int16_t *rect);

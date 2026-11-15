@@ -21,7 +21,6 @@
 - Esc (the pause) cancels a champion drag, a right click does not.
 - Cheat screen spell names that are port guesses: HASTE (OH IR ROS), MISSILE WALL (ZO BRO ROS), YA EW ITEM, SCOUT, CARRIER, ARMY MINION (ZO EW KU/NETA/ROS). Check them against the DM2 manual.
 - Creature names in the control replies: `state_json_creature_name` writes the creature type number, because the game data has no creature names; a name table needs names from the manual.
-- Item handling (proposal): while the leader hand holds an item, a click on the name of a champion opens the inventory of that champion, and the item stays in the leader hand. Check first what the click does in the original and in the port, and decide if the change is an advanced-mode feature.
 
 ## Code style
 
