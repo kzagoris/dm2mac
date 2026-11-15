@@ -15,6 +15,7 @@
 #include "game.h"
 #include "game_text.h"
 #include "gdat.h"
+#include "highlight.h"
 #include "ids.h"
 #include "input.h"
 #include "interface_state.h"
@@ -66,6 +67,7 @@ void play_present_viewport(void)
             dst[x] = src[g_zone_walk_view_rect[RECT_X] + x * g_zone_walk_view_rect[RECT_W] / VIEWPORT_WIDTH];
     }
     combat_draw_feedback();
+    highlight_draw();
     if (!steps && g_party.new_map == -1 && !g_main_loop.view_hidden && !g_ui.inventory && !g_ui.candidate &&
         !g_party_sleeping && !g_dialog.screen_mode && !g_advanced_screen && view_shows_party())
         sndreq_hold_deferred(false);
@@ -276,6 +278,13 @@ static void show_projectile_flight(void)
     rand_set_seed(seed);
 }
 
+/* Advanced mode: a press or a release of Alt shows or hides the touch highlight on the standing view. */
+static void show_touch_highlight(void)
+{
+    if (highlight_is_due())
+        play_present_viewport();
+}
+
 void play_tick(void)
 {
     if (g_main_loop.end || g_main_loop.quit)
@@ -292,4 +301,5 @@ void play_tick(void)
     area_update_rune_hover();
     show_classic_step();
     show_projectile_flight();
+    show_touch_highlight();
 }

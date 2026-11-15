@@ -1,6 +1,13 @@
 /* SPDX-License-Identifier: GPL-3.0-or-later */
 #include "platform.h"
 #include <SDL3/SDL.h>
+#ifdef _WIN32
+#define WIN32_LEAN_AND_MEAN
+#define NOMINMAX
+#include <windows.h>
+/* The bit of GetAsyncKeyState that tells that the key is down now. */
+#define WIN_KEY_DOWN 0x8000
+#endif
 #include "filter.h"
 #include "movie.h"
 #include "music.h"
@@ -405,6 +412,19 @@ void plat_mouse_position(int *out_x, int *out_y)
 {
     *out_x = platform.mouse_x;
     *out_y = platform.mouse_y;
+}
+
+bool plat_is_alt_held(void)
+{
+    if (SDL_GetKeyboardFocus() != platform.win)
+        return false;
+    const bool *keys = SDL_GetKeyboardState(NULL);
+    bool held = (SDL_GetModState() & SDL_KMOD_ALT) || keys[SDL_SCANCODE_LALT] || keys[SDL_SCANCODE_RALT];
+#ifdef _WIN32
+    /* Windows can hold back the press of Alt alone until the next key, so the keyboard itself is asked too */
+    held = held || (GetAsyncKeyState(VK_MENU) & WIN_KEY_DOWN);
+#endif
+    return held;
 }
 
 /* Timer and sound */

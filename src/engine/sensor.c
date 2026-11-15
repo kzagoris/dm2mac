@@ -1971,3 +1971,75 @@ bool sensor_process_wall_click(Location at, int side, uint16_t actor, uint16_t h
     }
     return c.stop;
 }
+
+/* What a wall sensor t asks of the hand, by its type and state. */
+static enum WallTouch touch_of_sensor(uint16_t t)
+{
+    switch (sensor_type(t)) {
+    case WALL_CLICK_EMPTY_HAND:
+        return sensor_flag(t, SENSOR_INVERTED) ? WALL_TOUCH_ITEM : WALL_TOUCH_HAND;
+    case WALL_CLICK_ANY:
+    case WALL_CLICK_TOGGLE:
+    case WALL_CLICK_BUTTON:
+    case WALL_CLICK_BUTTON_2:
+    case WALL_CLICK_DOOR_BUTTON:
+    case WALL_CLICK_TELEPORT:
+    case WALL_CLICK_PORTRAIT:
+        return WALL_TOUCH_HAND;
+    case WALL_ITEM_HOLDER:
+        return sensor_flag(t, SENSOR_STATE) ? WALL_TOUCH_HAND : WALL_TOUCH_ITEM;
+    case WALL_CLICK_ITEM:
+    case WALL_CLICK_CHARGED_ITEM:
+    case WALL_CLICK_COUNTED_ITEM:
+    case WALL_ANY_ITEM:
+    case WALL_ITEM:
+    case WALL_NOT_ITEM:
+        return WALL_TOUCH_ITEM;
+    }
+    return WALL_TOUCH_NONE;
+}
+
+/* What an ornament text t asks of the hand: switches and ladders an empty hand, item holders an item or a take. */
+static enum WallTouch touch_of_text(uint16_t t)
+{
+    if (textrec_kind(t) != TEXT_KIND_ORNAMENT)
+        return WALL_TOUCH_NONE;
+    bool visible = textrec_is_visible(t);
+    switch (textrec_subtype(t)) {
+    case SUBTYPE_ITEM_HOLDER:
+    case SUBTYPE_ITEM_HOLDER_MARKER:
+        return visible ? WALL_TOUCH_HAND : WALL_TOUCH_ITEM;
+    case SUBTYPE_LADDER_HIDDEN:
+        return visible ? WALL_TOUCH_NONE : WALL_TOUCH_HAND;
+    case SUBTYPE_LADDER:
+    case SUBTYPE_HAND_SWITCH:
+        return WALL_TOUCH_HAND;
+    }
+    return WALL_TOUCH_NONE;
+}
+
+enum WallTouch sensor_wall_touch(Location at, int side)
+{
+    enum WallTouch touch = WALL_TOUCH_NONE;
+    uint16_t first = dungeon_first_thing_at(at);
+    for (uint16_t t = first; t != THING_ENDOFLIST; t = dungeon_next_thing(t)) {
+        if (thing_cell(t) != side)
+            continue;
+        if (sensor_is_alcove_shown(first, t))
+            return WALL_TOUCH_ITEM;
+        if (ornament_value(t, ORNAMENT_KEY_TOUCH))
+            return WALL_TOUCH_HAND;
+        int type = thing_type(t);
+        enum WallTouch found = WALL_TOUCH_NONE;
+        if (type == THING_SENSOR)
+            found = touch_of_sensor(t);
+        else if (type == THING_TEXT)
+            found = touch_of_text(t);
+        else if (type > THING_SENSOR)
+            break;
+        /* a face that takes an item tells more than a face that only reacts to the hand */
+        if (found > touch)
+            touch = found;
+    }
+    return touch;
+}

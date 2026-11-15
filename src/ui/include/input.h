@@ -102,6 +102,9 @@ typedef struct {
     int16_t rect[RECT_SIZE];
 } Command;
 
+/* What a hand click on a click zone of the view does: take an object, press with the hand, or use an item. */
+enum TouchKind { TOUCH_NONE, TOUCH_TAKE, TOUCH_HAND, TOUCH_ITEM };
+
 /* The choice value while a dialog waits. */
 #define DIALOG_NO_CHOICE 0xff
 
@@ -227,6 +230,12 @@ void input_cancel_push_mode(void);
 void input_release_move_arrow(void);
 /* The push arrow under the mouse in the viewport while the party can push a creature (g_party.push_arrow). */
 void input_update_viewport_arrow(void);
+
+/* ---- Click targets ---- */
+
+/* What a click on click zone index of the last drawn view reaches: an object to take (on the party square or the
+   square in front), a door button, or a wall face that reacts (sensor_wall_touch); TOUCH_NONE for a plain ornament. */
+enum TouchKind input_zone_touch(int index);
 
 /* ---- Commands ---- */
 

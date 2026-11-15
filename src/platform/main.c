@@ -22,6 +22,7 @@
 #include "game.h"
 #include "gamefile.h"
 #include "gdat.h"
+#include "highlight.h"
 #include "icon.h"
 #include "input.h"
 #include "install.h"
@@ -303,6 +304,7 @@ static void pump_events(void)
             input_mouse_up(e.x, e.y, e.button == SDL_BUTTON_RIGHT ? INPUT_BUTTON_RIGHT : INPUT_BUTTON_LEFT);
         }
     }
+    highlight_set_held(plat_is_alt_held());
     plat_mouse_position(&x, &y);
     if (x != program.window_x || y != program.window_y) {
         program.window_x = x;

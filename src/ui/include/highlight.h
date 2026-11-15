@@ -1,0 +1,18 @@
+/* SPDX-License-Identifier: GPL-3.0-or-later */
+#ifndef DM2_UI_HIGHLIGHT_H
+#define DM2_UI_HIGHLIGHT_H
+/* Prefixes: highlight_ */
+
+/* The touch highlight of the advanced mode: while Alt is held, brackets mark what a hand click in the view reaches. */
+
+#include <stdbool.h>
+
+/* The platform tells whether Alt is held; only the advanced mode shows the highlight. */
+void highlight_set_held(bool held);
+/* True when the shown highlight differs from the held key while the view of the party shows, so that the viewport
+   needs a new present. */
+bool highlight_is_due(void);
+/* Draws the brackets on the screen after the dungeon view has been copied there, when Alt is held. */
+void highlight_draw(void);
+
+#endif /* DM2_UI_HIGHLIGHT_H */

@@ -64,6 +64,8 @@ void plat_present_movie(const MoviePicture *p);
 bool plat_poll(PlatEvent *e);
 /* Mouse position in game screen pixels. */
 void plat_mouse_position(int *out_x, int *out_y);
+/* True while an Alt key (Option on macOS) is held in the focused window. */
+bool plat_is_alt_held(void);
 
 /* Timer and sound */
 

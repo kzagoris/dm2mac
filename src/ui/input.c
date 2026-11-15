@@ -372,8 +372,15 @@ static bool point_in_zone(int16_t zone, int16_t x, int16_t y)
     return zone_get_rect(zone, r) && rect_contains_point(r, x, y);
 }
 
-/* A click on a wall ornament of the view (cell: a WALL_CELL_* square). */
-static void click_wall_sensor(int16_t cell)
+/* The wall face of a wall ornament click zone (cell: a WALL_CELL_* square): its square and the side the party sees. */
+typedef struct {
+    Location at;
+    int16_t side;
+    bool valid; /* false: the square is outside the map */
+} WallFace;
+
+/* The wall face that a wall ornament click zone of cell shows. */
+static WallFace wall_face_of_cell(int16_t cell)
 {
     /* the turn from the party direction to the wall face it sees, by wall cell */
     static const int8_t wall_side_turn[WALL_CELL_COUNT] = {TURN_RIGHT, TURN_RIGHT, TURN_LEFT, TURN_BACK};
@@ -390,10 +397,20 @@ static void click_wall_sensor(int16_t cell)
         x += g_dir_dx[dir];
         y += g_dir_dy[dir];
     }
-    if (x < 0 || x >= dungeon_map_width(g_game.party_map) || y < 0 || y >= dungeon_map_height(g_game.party_map))
-        return;
-    game_set_command_stop(sensor_process_wall_click((Location){x, y}, dir_turn(dir, wall_side_turn[cell]), THING_NONE,
-                                                    g_game.leader_hand));
+    bool valid =
+        x >= 0 && x < dungeon_map_width(g_game.party_map) && y >= 0 && y < dungeon_map_height(g_game.party_map);
+    return (WallFace){
+        {x, y},
+        (int16_t)dir_turn(dir, wall_side_turn[cell]), valid
+    };
+}
+
+/* A click on a wall ornament of the view (cell: a WALL_CELL_* square). */
+static void click_wall_sensor(int16_t cell)
+{
+    WallFace face = wall_face_of_cell(cell);
+    if (face.valid)
+        game_set_command_stop(sensor_process_wall_click(face.at, face.side, THING_NONE, g_game.leader_hand));
 }
 
 /* A click on a static creature in front: a push of its middle starts the push arrows, a side turns it. */
@@ -533,15 +550,26 @@ static void click_throw_object(int16_t x, int16_t y)
         game_set_command_stop(true);
 }
 
+/* The door square of a door button zone. */
+static Location button_square(const ViewSquares *v, const ViewClickZone *z)
+{
+    return z->pos == POS_FRONT ? v->front : v->party;
+}
+
+/* The wall beside a door without a button, which takes the clicks on the door ornament. */
+static WallFace wall_beside_door(const ViewSquares *v, Location door_at)
+{
+    return (WallFace){dungeon_step(door_at, dir_turn(v->dir, TURN_RIGHT)), (int16_t)dir_turn(v->dir, TURN_LEFT), true};
+}
+
 /* A click on a door button zone: a door without a button passes the click to the wall beside it. */
 static void click_door_button_zone(const ViewSquares *v, const ViewClickZone *z, uint16_t hand)
 {
-    Location at = z->pos == POS_FRONT ? v->front : v->party;
+    Location at = button_square(v, z);
     uint16_t door = dungeon_square_first_thing(g_game.party_map, at.x, at.y);
     if (!door_flag(door, DOOR_BUTTON)) {
-        int16_t side = dir_turn(v->dir, TURN_RIGHT);
-        game_set_command_stop(
-            sensor_process_wall_click(dungeon_step(at, side), dir_turn(v->dir, TURN_LEFT), THING_NONE, hand));
+        WallFace wall = wall_beside_door(v, at);
+        game_set_command_stop(sensor_process_wall_click(wall.at, wall.side, THING_NONE, hand));
     } else if (hand == THING_NONE) {
         click_door_button(at, door);
     }
@@ -664,6 +692,39 @@ static void click_in_viewport(int16_t x, int16_t y)
     uint16_t g = creature_group_at((Position){g_game.party_map, v.front.x, v.front.y});
     if (g != THING_NONE && creature_group_info(g)->flags & CREATURE_STATIC)
         click_creature(g, x, y, v.front);
+}
+
+/* The touch kind of what a wall face reacts to. */
+static enum TouchKind touch_of_wall(enum WallTouch touch)
+{
+    return touch == WALL_TOUCH_ITEM ? TOUCH_ITEM : touch == WALL_TOUCH_HAND ? TOUCH_HAND : TOUCH_NONE;
+}
+
+enum TouchKind input_zone_touch(int index)
+{
+    const ViewClickZone *z = &g_view_click_zones[index];
+    switch (z->kind) {
+    case CLICK_OBJECT:
+    case CLICK_POSSESSIONS:
+    case CLICK_ALCOVE:
+        /* as click_take_object: only the objects of the party square and of the square in front */
+        return z->thing != THING_NONE && (z->pos == POS_PARTY || z->pos == POS_FRONT) ? TOUCH_TAKE : TOUCH_NONE;
+    case CLICK_DOOR_BUTTON: {
+        int16_t dir = (int16_t)g_game.party_dir;
+        Location party = {(int16_t)g_game.party_x, (int16_t)g_game.party_y};
+        ViewSquares v = {dir, party, dungeon_step(party, dir)};
+        Location at = button_square(&v, z);
+        if (door_flag(dungeon_square_first_thing(g_game.party_map, at.x, at.y), DOOR_BUTTON))
+            return TOUCH_HAND;
+        WallFace wall = wall_beside_door(&v, at);
+        return touch_of_wall(sensor_wall_touch(wall.at, wall.side));
+    }
+    case CLICK_WALL_ORNAMENT: {
+        WallFace face = wall_face_of_cell(z->pos);
+        return face.valid ? touch_of_wall(sensor_wall_touch(face.at, face.side)) : TOUCH_NONE;
+    }
+    }
+    return TOUCH_NONE;
 }
 
 /* ---- Commands ---- */

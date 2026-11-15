@@ -230,10 +230,12 @@ static inline uint16_t sensor_area_class(uint16_t sensor)
 #define WALL_CLICK_DOOR_BUTTON  0x46
 #define WALL_CLICK_BUTTON_2     0x4a
 #define WALL_CLICK_PORTRAIT     0x7e
+/* What a wall face reacts to when the hand touches it; a higher value tells more. */
+enum WallTouch { WALL_TOUCH_NONE, WALL_TOUCH_HAND, WALL_TOUCH_ITEM };
 /* The ornament value of a fountain: touching the ornament fills the water. */
-#define ORNAMENT_KEY_TOUCH      0x0b
+#define ORNAMENT_KEY_TOUCH 0x0b
 /* The ornament value of a ladder or stairs marker that goes up: the linked twin is on the level above. */
-#define ORNAMENT_KEY_UP         0x11
+#define ORNAMENT_KEY_UP    0x11
 
 /* Doors and square events. */
 /* A GDAT value of the door type of a door thing. */
@@ -285,5 +287,10 @@ int sensor_wall_ornament_value(uint16_t first, uint16_t thing, int key);
    with held (the object in the hand, THING_NONE: empty): buttons, alcoves, item holders, ladders. True when a sensor
    reacts, so that the command stops. */
 bool sensor_process_wall_click(Location at, int side, uint16_t actor, uint16_t held);
+/* What the wall face side of the square at of the current map reacts to: an empty hand (a button, a lever, a
+   fountain, a mirror, a ladder, a full holder), an item (a keyhole, a slot, an empty holder, an alcove), or nothing
+   (a plain ornament). A click reaches a face only where the view draws an ornament, so a sensor without an ornament
+   of its own counts on a face that shows one. */
+enum WallTouch sensor_wall_touch(Location at, int side);
 
 #endif /* DM2_ENGINE_SENSOR_H */
