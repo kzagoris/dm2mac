@@ -158,6 +158,8 @@ An item with "Covered by" has no box: automated tests check it against the origi
 - [ ] I3. Open the volume dialog (see J11). Set the music volume to 0, then to a higher value. Expected: 0 stops the music; a higher value starts it again.
 - [ ] I4. Listen to a song in the port and in DOSBox (Sound Blaster 16 with OPL). Expected: the same notes, instruments, and tempo.
 - [ ] I5. Let a song play to its end. Expected: the song loops.
+- [ ] I6. Install DOSBox Staging with its SC-55 ROMs and start with `--music sc55`. Expected: the log names the plugin, the ROM folders and the model; the songs play on the SC-55, with the same tempo as in DOSBox with `mididevice = soundcanvas`; I2, I3 and the pause of C6 work as with the FM music.
+- [ ] I7. Start with `--music sc55 --sc55-roms` and an empty folder, then without DOSBox Staging. Expected: the log says that the plugin finds no ROMs, or that the plugin is missing; the FM music plays.
 
 ## J. Start menu, new game, save and load, end of game
 

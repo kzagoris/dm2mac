@@ -31,6 +31,9 @@ You need these only when you start the game from Terminal or a shortcut:
 | `--data DIR` | Uses the game files in `DIR` instead of `game/`, and skips the check and the install. Saves go to `DIR/DATA`. |
 | `--saves DIR` | Keeps the quick save and `SETTINGS.TXT` in `DIR` instead of `game/DATA`. The folder must exist. |
 | `--control PATH` | Opens a control socket for a program (macOS and Linux). |
+| `--music fm`, `--music sc55` | The music: the FM music of the original sound card (the default), or a Roland SC-55 ([Roland SC-55 music](#roland-sc-55-music)). |
+| `--sc55-plugin FILE` | The SC-55 plugin `Nuked-SC55.clap`, when it is not in a `plugins` folder that the game searches. |
+| `--sc55-roms DIR` | The folder of the SC-55 ROMs (the folder of the model folders), when it is not a `soundcanvas-roms` folder that the game searches. |
 
 ```sh
 build/dm2 --mode vanilla
@@ -39,6 +42,133 @@ build/dm2 --save game/DATA/SKSAVE0.DAT
 
 A relative path in an option is relative to the folder where you start the game, even when the game changes to the
 folder of the program. An invalid option prints a message that says what is wrong. You can resize the window to any size.
+
+### Roland SC-55 music
+
+The music of the game is also written for General MIDI. With `--music sc55` it plays on an emulated Roland Sound
+Canvas SC-55, the way DOSBox Staging plays it with `mididevice = soundcanvas`. The game does not include the
+emulator. You need two things:
+
+- **The plugin** `Nuked-SC55.clap`: the [Nuked-SC55 CLAP plugin](https://github.com/johnnovak/Nuked-SC55-CLAP),
+  the SC-55 emulator that DOSBox Staging uses. DOSBox Staging includes it; you can also download it alone. Its license
+  does not allow it inside this game, so the game loads it at startup. Do not add it to the game's repository.
+- **The ROMs**: dumps of the chips of a real SC-55. Roland owns them; neither the game, nor DOSBox Staging, nor the
+  plugin includes them. Get them from your own SC-55.
+
+Both ways below give the game the same plugin and ROMs; take the one that suits you.
+
+#### The ROM folder
+
+The ROMs go into a folder `soundcanvas-roms` with one subfolder for each SC-55 model. The names of the subfolders
+and of the files must be exactly these; the plugin checks each file by its SHA-256 sum. One model is enough.
+
+```text
+soundcanvas-roms/
+  SC-55-v1.21/          (also SC-55-v1.00, SC-55-v1.10, SC-55-v1.20, SC-55-v2.00)
+    sc55_rom1.bin           32 KB
+    sc55_rom2.bin          256 KB
+    sc55_waverom1.bin     1024 KB
+    sc55_waverom2.bin     1024 KB
+    sc55_waverom3.bin     1024 KB
+  SC-55mk2-v1.01/
+    rom1.bin                32 KB
+    rom2.bin               512 KB
+    rom_sm.bin               4 KB
+    waverom1.bin          2048 KB
+    waverom2.bin          1024 KB
+```
+
+The game plays the first model whose ROMs it finds, in the order of DOSBox Staging: SC-55 v1.21, v1.20, v1.10,
+v1.00, v2.00, then SC-55mk2 v1.01.
+
+#### With DOSBox Staging
+
+If you already play DOS games with [DOSBox Staging](https://www.dosbox-staging.org/) and its Sound Canvas, the game
+finds both on its own:
+
+1. Install DOSBox Staging with its installer. It puts the plugin into its `plugins` folder.
+2. Put the ROM folder into the DOSBox configuration folder:
+   - Windows: `%LOCALAPPDATA%\DOSBox\soundcanvas-roms` (paste `%LOCALAPPDATA%\DOSBox` into the address bar of the
+     Explorer).
+   - macOS: `~/Library/Preferences/DOSBox/soundcanvas-roms`.
+   - Linux: `~/.local/share/dosbox/soundcanvas-roms` or `~/.config/dosbox/soundcanvas-roms`.
+3. Start the game with `--music sc55`, for example `dm2.exe --music sc55` on Windows.
+
+The game looks for the plugin in these folders, in this order, and takes the first one:
+
+| System | Plugin folders of DOSBox Staging |
+|---|---|
+| Windows | `%LOCALAPPDATA%\Programs\DOSBox Staging\plugins`, `%ProgramFiles%\DOSBox Staging\plugins`, `%LOCALAPPDATA%\DOSBox\plugins` |
+| macOS | `/Applications/DOSBox Staging.app/Contents/PlugIns`, `~/Applications/DOSBox Staging.app/Contents/PlugIns`, `~/Library/Preferences/DOSBox/plugins` |
+| Linux | `~/.local/share/dosbox-staging/plugins`, `/usr/local/share/dosbox-staging/plugins`, `/usr/share/dosbox-staging/plugins`, `~/.config/dosbox/plugins` |
+
+A DOSBox Staging that comes inside another program (a game launcher, for example) keeps the plugin in its own
+`plugins` folder, which the game does not know. Copy `Nuked-SC55.clap` from there into one of the folders of the
+next section, or name it with `--sc55-plugin`.
+
+#### Without DOSBox Staging
+
+You can use the plugin alone and keep everything next to the game:
+
+1. Download the zip archive of your system from the
+   [releases of the plugin](https://github.com/johnnovak/Nuked-SC55-CLAP/releases): `windows-x64` for most Windows
+   computers, `windows-arm64` for Windows on ARM, `macos`, or `linux-x86_64` / `linux-arm64`.
+2. In the folder that holds `game/` (the folder where you start the game, or the folder of the program; see
+   [Run the game](#run-the-game)), create a folder `plugins`.
+3. Unzip the archive and copy `Nuked-SC55.clap` into `plugins`. On macOS it is a bundle (a folder); copy all of it.
+4. In the same folder, create the [ROM folder](#the-rom-folder) `soundcanvas-roms` with your ROMs.
+5. Start the game with `--music sc55`.
+
+The folder then looks like this:
+
+```text
+game/
+plugins/
+  Nuked-SC55.clap
+soundcanvas-roms/
+  SC-55-v1.21/
+    sc55_rom1.bin
+    ...
+```
+
+The game looks in these folders before those of DOSBox Staging, so they also win over an installed DOSBox Staging.
+The game also finds the plugin in a `plugins` folder next to the program (`dm2.exe`, `dm2`, or `DM2Mac.app`).
+
+The game does not look in the usual CLAP folders (`C:\Program Files\Common Files\CLAP`,
+`~/Library/Audio/Plug-Ins/CLAP`, `~/.clap`), nor in the `Nuked-SC55-Resources` folder that the plugin's own
+documentation describes. If the plugin or the ROMs are elsewhere, name them:
+
+```sh
+dm2.exe --music sc55 --sc55-plugin "D:\Audio\Nuked-SC55.clap" --sc55-roms "D:\Audio\soundcanvas-roms"
+build/dm2 --music sc55 --sc55-plugin ~/clap/Nuked-SC55.clap --sc55-roms ~/sc55/soundcanvas-roms
+```
+
+`--sc55-roms` names the folder that holds the model folders, and the game then looks only there.
+
+On macOS, Gatekeeper may stop a downloaded plugin. Allow it in Terminal:
+
+```sh
+xattr -rd com.apple.quarantine plugins/Nuked-SC55.clap
+```
+
+#### Check that it works
+
+`dm2.log` in the game folder (or the terminal on macOS and Linux) names the plugin, the ROM folders, and the model:
+
+```text
+SC-55: ROM folders C:\Users\you\AppData\Local/DOSBox/soundcanvas-roms
+SC-55: plugin C:\Users\you\AppData\Local/Programs/DOSBox Staging/plugins/Nuked-SC55.clap
+SC-55: playing on Roland SC-55 v1.21
+```
+
+If something is missing, the log says what, and the FM music plays:
+
+| Message | What to do |
+|---|---|
+| `no ROM folder soundcanvas-roms or …` | Create the [ROM folder](#the-rom-folder) in one of the places above. |
+| `no Nuked-SC55.clap in the plugins folder …` | Install DOSBox Staging, or put the plugin into a `plugins` folder ([Without DOSBox Staging](#without-dosbox-staging)). |
+| `cannot load …` | The plugin is for another system or processor (take the right zip archive), or macOS Gatekeeper blocks it. |
+| `the plugin finds no ROMs of an SC-55 model` | A folder or file name is wrong, a file is missing, or a ROM is a bad dump. Compare with [The ROM folder](#the-rom-folder). |
 
 ## Start screens
 

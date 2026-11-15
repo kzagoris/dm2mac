@@ -33,7 +33,7 @@ The compiler therefore rejects an include from a higher layer:
 | `control/` | the path of `ui/`, `src/control/include` |
 | `platform/` | the path of `control/`, `src/platform/include` |
 
-Outside the layers, `src/third_party/` holds the vendored `opl3/` (the OPL3 emulator) and `tinf/` (the deflate decompressor for ZIP archives). Every layer reaches it through
+Outside the layers, `src/third_party/` holds the vendored `opl3/` (the OPL3 emulator), `tinf/` (the deflate decompressor for ZIP archives), and `clap/` (the headers of the CLAP plugin interface, for the SC-55 driver). Every layer reaches it through
 `-isystem src/third_party`.
 
 Other folders: `tools/dm2tools/` holds the Python tools, `tools/ghidra/` the decompile scripts, `tests/` the tests ([Tests](development.md#tests)), and `docs/` the documentation. Git ignores `game/` (the original files), `reference/` (the Ghidra output and original material), and `tests/saves/`; link them into a new worktree.
@@ -114,7 +114,7 @@ paragraph. A module with several `.c` files has one `<module>_internal.h` for it
 | `ui/minion_map.h` | `mmap_` | The minion map panel of the action area. |
 | `ui/mode_screen.h` | `mode_screen_` | The mode screen on program start: the cursor on VANILLA or ADVANCED, its keys, clicks, and picture. |
 | `ui/movie.h` | `movie_` | The movie script from the DOS launcher IBMIOP.EXE. |
-| `ui/music.h` | `music_` | Game music: the song of each map from SONGLIST.DAT, played by the HMP player on the FM driver. |
+| `ui/music.h` | `music_` | Game music: the song of each map from SONGLIST.DAT, played by the HMP player on a music driver (the FM driver unless another one is selected). |
 | `ui/play.h` | `play_` | The main loop: timer ticks, game steps, the party's view, and sleep. |
 | `ui/rows.h` | `rows_` | Text rows for the advanced-mode viewport screens (not in the original game): a title line with an optional item at the right, rows, and subtitle rows. |
 | `ui/session.h` | `session_` `args_` `menu_` | The start menu, new games, loads and saves through the slot dialogs, and the end of the game. |
@@ -142,6 +142,7 @@ paragraph. A module with several `.c` files has one `<module>_internal.h` for it
 |---|---|---|
 | `platform/install.h` | `install_` | Installing the game files on the first start: checking the game folder and copying from a source. |
 | `platform/platform.h` | `plat_` | The window, the sound output, and the input events: the SDL3 side of the game screen. |
+| `platform/sc55.h` | `sc55_` | The Roland SC-55 music driver: the Nuked-SC55 CLAP plugin of DOSBox Staging on its own render thread ([music.md](formats/music.md#music-drivers)). |
 | `platform/scale.h` | `scale` | The window's pixel upscale filters: Scale2x and Scale3x on palette indices, and xBRZ 2x/3x/4x on opaque RGB colours. |
 | `platform/source.h` | `source_` | Game file sources: a folder, a ZIP archive, or a CD image; read-only. |
 | `platform/transport.h` | `transport_` | The control socket: a Unix domain socket with one request line in and one reply line out (POSIX). |
@@ -160,7 +161,7 @@ scanlines still run afterwards. Movies keep their own rendering path. Windows li
 
 1. It reads the options and selects the game mode (`--mode`; otherwise the advanced mode).
 2. It checks the game files and installs them from a source if needed ([install.md](formats/install.md#startup)). It loads GRAPHICS.DAT and the `--save` file, and opens the window, the `--control` socket, and the
-   music. It sets the platform hooks: `g_os_full_path_hook`, `g_upscale_filter_hook`, `g_upscale_picture_hook`, and
+   music (with `--music sc55` on the SC-55 driver of `platform/sc55.c`, otherwise on the FM driver). It sets the platform hooks: `g_os_full_path_hook`, `g_upscale_filter_hook`, `g_upscale_picture_hook`, and
    `g_play_frame_hook`.
 3. Without `--mode` and `--save`, it shows the mode screen.
 4. Without `--save`, it plays the start movies and starts the game: the start menu, or a new game in the
