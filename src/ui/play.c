@@ -47,6 +47,13 @@ void play_wait_frames(int count)
 
 /* The view of the party */
 
+bool play_is_view_clear(void)
+{
+    return g_game_mode == GAME_MODE_ADVANCED && g_main_loop.running && !g_main_loop.end && !g_advanced_screen &&
+           !g_main_loop.view_hidden && !g_ui.inventory && !g_ui.candidate && !g_dialog.screen_mode &&
+           !g_party_sleeping && !g_party.move_steps;
+}
+
 void play_present_viewport(void)
 {
     int steps = g_party.move_steps;
@@ -242,9 +249,7 @@ void play_start_session(void)
    game-step timing; the extra drawing does not consume game random numbers. */
 static void show_classic_step(void)
 {
-    if (g_game_mode != GAME_MODE_ADVANCED || !move_has_classic_steps() || !g_main_loop.running || g_main_loop.end ||
-        g_main_loop.quit || g_advanced_screen || g_main_loop.view_hidden || g_ui.inventory || g_ui.candidate ||
-        g_dialog.screen_mode || g_party_sleeping || g_party.move_steps || g_party.new_map != -1 ||
+    if (!play_is_view_clear() || !move_has_classic_steps() || g_main_loop.quit || g_party.new_map != -1 ||
         g_current_map.map != g_game.party_map || view_shows_party())
         return;
     uint32_t seed = g_random_seed;
@@ -258,10 +263,7 @@ static void show_classic_step(void)
    standing party with no redraw due, no screen over it, and a moving projectile in it. */
 static bool flight_view_shows(void)
 {
-    return g_game_mode == GAME_MODE_ADVANCED && g_main_loop.running && !g_main_loop.end && !g_advanced_screen &&
-           !g_main_loop.view_hidden && !g_ui.inventory && !g_ui.candidate && !g_dialog.screen_mode &&
-           !g_party_sleeping && !g_party.move_steps && !g_party.redraw && view_shows_party() &&
-           view_has_moving_projectiles();
+    return play_is_view_clear() && !g_party.redraw && view_shows_party() && view_has_moving_projectiles();
 }
 
 /* Advanced mode: the view of a timer tick draws each projectile part of the way from its place of the game step before.

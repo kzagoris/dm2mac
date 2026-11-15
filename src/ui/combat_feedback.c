@@ -2,14 +2,13 @@
 #include "combat_feedback.h"
 #include <stdio.h>
 #include <string.h>
-#include "advanced.h"
 #include "creature.h"
 #include "draw.h"
 #include "game.h"
 #include "game_text.h"
 #include "ids.h"
-#include "move.h"
 #include "num.h"
+#include "play.h"
 #include "text.h"
 #include "ui.h"
 #include "view.h"
@@ -132,8 +131,7 @@ void combat_draw_feedback(void)
 {
     if (!same_eye())
         combat_reset_feedback();
-    if (g_game_mode != GAME_MODE_ADVANCED || !view_shows_party() || g_party.move_steps || g_ui.inventory ||
-        g_main_loop.view_hidden || g_advanced_screen != ADVANCED_SCREEN_NONE)
+    if (!play_is_view_clear() || !view_shows_party())
         return;
     int16_t viewport[RECT_SIZE];
     if (!zone_get_viewport_rect(viewport))

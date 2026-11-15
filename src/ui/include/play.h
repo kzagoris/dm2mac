@@ -5,6 +5,8 @@
 
 /* The main loop: timer ticks, game steps, the view of the party and sleep. */
 
+#include <stdbool.h>
+
 /* The game step rate of a sleeping party. */
 #define SLEEP_STEP_TICKS 1 /* a sleeping party runs a step on each tick */
 
@@ -15,6 +17,9 @@ extern void (*g_play_frame_hook)(void);
 void play_wait_frames(int count);
 
 /* The view of the party */
+/* True when the advanced mode shows the view of the standing party in a running game, with no viewport screen,
+   inventory, recruit, dialog screen or sleep over it and no message in its place. */
+bool play_is_view_clear(void);
 /* Copies the view picture to the screen. */
 void play_present_viewport(void);
 /* Shows the dungeon view again after a pause, sleep, or the inventory. */

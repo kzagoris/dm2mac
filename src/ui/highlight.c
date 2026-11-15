@@ -2,15 +2,12 @@
 /* The touch highlight: outlines around the pictures of the click zones of the view that a hand click reaches. */
 #include "highlight.h"
 #include <stdlib.h>
-#include "advanced.h"
-#include "champion.h"
-#include "dialog.h"
 #include "draw.h"
 #include "game.h"
 #include "game_text.h"
 #include "input.h"
-#include "move.h"
 #include "num.h"
+#include "play.h"
 #include "view.h"
 #include "zone.h"
 
@@ -29,9 +26,7 @@ static struct {
 /* The view of the standing party shows on the screen with no screen over it. */
 static bool is_party_view_shown(void)
 {
-    return g_game_mode == GAME_MODE_ADVANCED && g_main_loop.running && !g_main_loop.end && !g_advanced_screen &&
-           !g_main_loop.view_hidden && !g_ui.inventory && !g_ui.candidate && !g_dialog.screen_mode &&
-           !g_party_sleeping && !g_party.move_steps && g_current_map.map == g_game.party_map && view_shows_party();
+    return play_is_view_clear() && g_current_map.map == g_game.party_map && view_shows_party();
 }
 
 void highlight_set_held(bool held)
