@@ -5,40 +5,17 @@ import struct
 import pytest
 
 from dm2test import constants as C
+from dm2test.modes import ADVANCED, set_mode
 from dm2test.scenario import champion_bytes, champion_records
-from dm2test.structs import Game, ActionArea
-from dm2test.modes import set_mode, ADVANCED
+from dm2test.spells import CH_MANA, prepare_casters
+from dm2test.structs import ActionArea
 
 
-@pytest.fixture(scope="module", autouse=True)
-def no_dungeon_drawing(lib):
-    # This engine-only fixture has no dungeon/GDAT. Stub only the drawing hook;
-    # rune charging, action state, input refresh, and casting remain real.
-    hook = ctypes.CFUNCTYPE(None, ctypes.c_bool)(lambda tick: None)
-    draw = ctypes.CFUNCTYPE(None, ctypes.c_int16)(lambda caster: None)
-    hooks = (ctypes.c_void_p * 24).in_dll(lib, 'g_hooks')
-    old = hooks[5], hooks[23]
-    hooks[5] = ctypes.cast(hook, ctypes.c_void_p).value
-    hooks[23] = ctypes.cast(draw, ctypes.c_void_p).value
-    yield
-    hooks[5], hooks[23] = old
-
-
-def prepare(lib):
-    set_mode(lib, ADVANCED)
-    Game.in_dll(lib, 'g_game').champion_count = 2
-    lib.magic_reset_favorites()
-    for i in range(2):
-        champion_bytes(lib, i, 0, bytes(C.CHAMPION_SIZE))
-        champion_bytes(lib, i, 0x36, struct.pack('<h', 100))
-        champion_bytes(lib, i, 0x3e, struct.pack('<h', 100))
-    a = ActionArea.in_dll(lib, 'g_action')
-    a.champion, a.hand = 1, C.ACTION_HAND_SPELL
-    a.open_container = C.THING_NONE
+pytestmark = pytest.mark.usefixtures("no_dungeon_drawing")
 
 
 def test_recorded_combination_is_private_and_replayed_at_chosen_power(lib):
-    prepare(lib)
+    prepare_casters(lib)
     lib.magic_add_rune(0)
     lib.magic_add_rune(0)
     assert lib.magic_record_favorite(0, 0)
@@ -49,23 +26,23 @@ def test_recorded_combination_is_private_and_replayed_at_chosen_power(lib):
     assert lib.magic_favorite_mana(0, 0, 6) == 13
     lib.magic_remove_last_rune()
     lib.magic_remove_last_rune()
-    before = struct.unpack_from('<h', bytes(champion_records(lib)), 0x3e)[0]
+    before = struct.unpack_from('<h', bytes(champion_records(lib)), CH_MANA)[0]
     assert lib.magic_prepare_favorite(0, 0, 6)
     raw = bytes(champion_records(lib))
-    assert struct.unpack_from('<h', raw, 0x3e)[0] == before - 13
+    assert struct.unpack_from('<h', raw, CH_MANA)[0] == before - 13
     assert raw[0x1e] == 2
     assert raw[0x22:0x24] == bytes([0x65, 0x66])
 
 
 def test_favorites_reject_busy_partial_dead_and_unaffordable_without_spending(lib):
-    prepare(lib)
+    prepare_casters(lib)
     lib.magic_add_rune(0)
     lib.magic_add_rune(0)
     assert lib.magic_record_favorite(0, 0)
     assert not lib.magic_prepare_favorite(0, 0, 1)  # existing runes
     lib.magic_remove_last_rune()
     lib.magic_remove_last_rune()
-    for offset, value in [(0x2c, b'\x01'), (0x36, b'\0\0'), (0x3e, b'\x01\0')]:
+    for offset, value in [(0x2c, b'\x01'), (0x36, b'\0\0'), (CH_MANA, b'\x01\0')]:
         old = bytes(champion_records(lib))[offset:offset + len(value)]
         champion_bytes(lib, 0, offset, value)
         before = bytes(champion_records(lib))
@@ -78,7 +55,7 @@ def test_favorites_reject_busy_partial_dead_and_unaffordable_without_spending(li
 
 
 def test_repeat_last_keeps_normal_unknown_spell_failure(lib):
-    prepare(lib)
+    prepare_casters(lib)
     # YA + EE has no spell. Manual and recorded attempts must fail normally.
     lib.magic_add_rune(0)
     lib.magic_add_rune(0)
@@ -91,7 +68,7 @@ def test_repeat_last_keeps_normal_unknown_spell_failure(lib):
 
 
 def test_favorites_versioned_round_trip_and_reject_invalid_tail(lib, tmp_path):
-    prepare(lib)
+    prepare_casters(lib)
     lib.magic_add_rune(0)
     lib.magic_add_rune(0)
     assert lib.magic_record_favorite(0, 0)
@@ -117,7 +94,7 @@ def test_favorites_versioned_round_trip_and_reject_invalid_tail(lib, tmp_path):
 
 
 def test_record_ignores_stale_glyphs_after_removed_runes(lib):
-    prepare(lib)
+    prepare_casters(lib)
     for rune in (0, 0, 0, 0):
         lib.magic_add_rune(rune)
     lib.magic_remove_last_rune()
@@ -139,7 +116,7 @@ def test_favorite_cast_matches_manual_mana_rng_experience_delay_and_save(lib, se
     assert lib.magic_record_favorite(0, 0)
     for _ in range(len(runes) + 1):
         lib.magic_remove_last_rune()
-    champion_bytes(lib, 0, 0x3e, struct.pack('<h', 100))
+    champion_bytes(lib, 0, CH_MANA, struct.pack('<h', 100))
     snapshot = tmp_path / 'before.DAT'
     assert lib.save_write(str(snapshot).encode(), str(snapshot.with_suffix('.BAK')).encode(), b'BEFORE', gdat) == C.SAVE_OK
     results = []

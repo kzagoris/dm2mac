@@ -6,26 +6,18 @@ import ctypes
 import pytest
 
 from dm2test import constants as C
-from dm2test.structs import Game, Location, Position, Session
+from dm2test.modes import advanced_new_game, screen_key
+from dm2test.structs import Game, Location, Position
 
-INPUT_KEY, SCAN_Q, SCAN_E, SCAN_SPACE, SCAN_ESCAPE = C.INPUT_KEY, C.SCAN_Q, C.SCAN_E, C.SCAN_SPACE, C.SCAN_ESCAPE
+SCAN_Q, SCAN_E, SCAN_SPACE, SCAN_ESCAPE = C.SCAN_Q, C.SCAN_E, C.SCAN_SPACE, C.SCAN_ESCAPE
 
 
 @pytest.fixture
 def new_game(lib, gdat, game_dir):
     """A fresh advanced game with an empty automap, without requiring the private start.DAT fixture."""
-    lib.gdat_select(gdat)
-    assert lib.zone_load(gdat) and lib.pal_load_color_ramps(gdat) and lib.text_init(gdat)
-    lib.draw_init(gdat)
-    Session.in_dll(lib, "g_session").data_dir = str(game_dir).encode()
-    ctypes.c_int.in_dll(lib, "g_game_mode").value = C.GAME_MODE_ADVANCED
-    assert lib.session_start_new_game()
-    lib.seen_reset()
-    lib.game_set_cheats(0)
-    yield Game.in_dll(lib, "g_game")
-    lib.advanced_reset()
-    lib.game_set_cheats(0)
-    ctypes.c_int.in_dll(lib, "g_game_mode").value = C.GAME_MODE_VANILLA
+    with advanced_new_game(lib, gdat, game_dir) as game:
+        lib.seen_reset()
+        yield game
 
 
 def level_maps(lib, level):
@@ -39,9 +31,6 @@ def level_maps(lib, level):
 def levels_with_maps(lib):
     return [level for level in range(C.LEVEL_COUNT) if level_maps(lib, level)]
 
-
-def key(lib, scan):
-    lib.advanced_screen_event(INPUT_KEY, scan, 0)
 
 
 def see_a_square(lib, level):
@@ -63,10 +52,10 @@ def test_only_the_party_level_is_visited_on_an_empty_automap(lib, new_game):
     fb = (ctypes.c_uint8 * (C.SCREEN_W * C.SCREEN_H)).in_dll(lib, "g_video_fb")
     before = bytes(fb)
     for scan in (SCAN_Q, SCAN_E):
-        key(lib, scan)
+        screen_key(lib, scan)
         assert lib.automap_level() == party
         assert bytes(fb) != before, "the readout tells that there is no visited level"
-    key(lib, C.SCAN_SPACE)
+    screen_key(lib, C.SCAN_SPACE)
     assert bytes(fb) == before, "the next key clears the notice"
 
 
@@ -85,19 +74,19 @@ def test_q_and_e_skip_unvisited_levels_and_space_shows_the_party(lib, new_game):
     see_a_square(lib, target)
     step, back = (SCAN_E, SCAN_Q) if target > party else (SCAN_Q, SCAN_E)
     lib.advanced_open_automap()
-    key(lib, back)
+    screen_key(lib, back)
     assert lib.automap_level() == party, "no visited level on the other side"
-    key(lib, step)
+    screen_key(lib, step)
     assert lib.automap_level() == target
-    key(lib, step)
+    screen_key(lib, step)
     assert lib.automap_level() == target, "no visited level past it"
-    key(lib, back)
+    screen_key(lib, back)
     assert lib.automap_level() == party
-    key(lib, step)
-    key(lib, SCAN_SPACE)
+    screen_key(lib, step)
+    screen_key(lib, SCAN_SPACE)
     assert lib.automap_level() == party
-    key(lib, step)
-    key(lib, SCAN_ESCAPE)
+    screen_key(lib, step)
+    screen_key(lib, SCAN_ESCAPE)
     assert not ctypes.c_int.in_dll(lib, "g_advanced_screen").value
     assert lib.automap_level() == party, "a closed automap opens on the party level"
 
@@ -111,7 +100,7 @@ def test_squares_of_the_shown_level_are_drawn(lib, new_game):
     at = Location(lib.dungeon_map_offset_x(map_) + seen[0], lib.dungeon_map_offset_y(map_) + seen[1])
     assert not lib.automap_level_seen(at), "the party level does not show the square"
     lib.advanced_open_automap()
-    key(lib, SCAN_E if target > party else SCAN_Q)
+    screen_key(lib, SCAN_E if target > party else SCAN_Q)
     assert lib.automap_level() == target
     assert lib.automap_level_seen(at)
     square = Position()
@@ -137,16 +126,16 @@ def test_arrows_and_letters_scroll_the_map_one_square(lib, new_game):
     lib.advanced_open_automap()
     assert party_frame(lib) == red
     for left, right in ((C.KEYPAD_TURN_LEFT, C.KEYPAD_TURN_RIGHT), (C.SCAN_A, C.SCAN_D)):
-        key(lib, left)  # the middle moves one square left: the party shows one square right
+        screen_key(lib, left)  # the middle moves one square left: the party shows one square right
         assert party_frame(lib, 1) == red and party_frame(lib) != red
-        key(lib, right)
+        screen_key(lib, right)
         assert party_frame(lib) == red
-    key(lib, C.KEYPAD_FORWARD)
+    screen_key(lib, C.KEYPAD_FORWARD)
     assert party_frame(lib) != red
     for scan in (C.KEYPAD_BACK, C.SCAN_S, C.SCAN_W):
-        key(lib, scan)
+        screen_key(lib, scan)
     assert party_frame(lib) == red
-    key(lib, C.KEYPAD_TURN_RIGHT)
-    key(lib, SCAN_SPACE)
+    screen_key(lib, C.KEYPAD_TURN_RIGHT)
+    screen_key(lib, SCAN_SPACE)
     assert party_frame(lib) == red, "Space shows the party again"
     assert (new_game.game_time, new_game.party_x, new_game.party_y, new_game.party_dir) == state

@@ -5,5 +5,5 @@ modules of its own level, in this order. No function-level import.
 1. save, gdat, view, oracle, audio
 2. scenario
 3. interface, input
-4. dialog, modes, control, creature
+4. dialog, modes, spells, control, creature
 """

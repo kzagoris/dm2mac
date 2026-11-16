@@ -17,6 +17,7 @@ pytest_plugins = [
     "dm2test.lib",
     "dm2test.modes",
     "dm2test.scenario",
+    "dm2test.spells",
 ]
 
 

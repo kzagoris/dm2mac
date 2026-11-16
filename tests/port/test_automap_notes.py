@@ -7,7 +7,8 @@ import pytest
 
 from dm2test import constants as C
 from dm2test.interface import c_screen
-from dm2test.structs import Game, MainLoop, Position, Session
+from dm2test.modes import advanced_new_game, map_party_icon, screen_key
+from dm2test.structs import MainLoop, Position
 
 NOTE_MARK = "111111010010000"  # the pin, three pixels per row
 SCAN_BYTES = range(0x100)  # every scan code byte of a key
@@ -16,20 +17,10 @@ SCAN_BYTES = range(0x100)  # every scan code byte of a key
 @pytest.fixture
 def new_game(lib, gdat, game_dir):
     """A fresh advanced game whose party square is seen, without notes."""
-    lib.gdat_select(gdat)
-    assert lib.zone_load(gdat) and lib.pal_load_color_ramps(gdat) and lib.text_init(gdat)
-    lib.draw_init(gdat)
-    Session.in_dll(lib, "g_session").data_dir = str(game_dir).encode()
-    ctypes.c_int.in_dll(lib, "g_game_mode").value = C.GAME_MODE_ADVANCED
-    assert lib.session_start_new_game()
-    lib.seen_reset()
-    lib.game_set_cheats(0)
-    game = Game.in_dll(lib, "g_game")
-    lib.seen_mark(party(game), game.party_dir)
-    yield game
-    lib.advanced_reset()
-    lib.game_set_cheats(0)
-    ctypes.c_int.in_dll(lib, "g_game_mode").value = C.GAME_MODE_VANILLA
+    with advanced_new_game(lib, gdat, game_dir) as game:
+        lib.seen_reset()
+        lib.seen_mark(party(game), game.party_dir)
+        yield game
 
 
 def party(game):
@@ -44,13 +35,6 @@ def screen_open(lib):
     return ctypes.c_int.in_dll(lib, "g_advanced_screen").value
 
 
-def party_icon(lib):
-    rect = (ctypes.c_int16 * C.RECT_SIZE)()
-    assert lib.zone_get_viewport_rect(rect)
-    x, y, width, height = tuple(rect)
-    return x + (width - C.MAP_CELL_SIZE) // 2 + 1, y + (height - C.MAP_CELL_SIZE) // 2 + 1
-
-
 def press(lib, x, y):
     lib.advanced_screen_event(C.INPUT_BUTTON_LEFT, x, y)
     lib.advanced_screen_event(C.INPUT_LEFT_RELEASED, x, y)
@@ -59,9 +43,6 @@ def press(lib, x, y):
 def wait_out_double_click(lib):
     MainLoop.in_dll(lib, "g_main_loop").timer_ticks += C.DOUBLE_CLICK_TICKS + 1
 
-
-def key(lib, scan):
-    lib.advanced_screen_event(C.INPUT_KEY, scan, 0)
 
 
 def type_text(lib, text):
@@ -73,7 +54,7 @@ def type_text(lib, text):
             if ch > 0:
                 keys[chr(ch)] = scan | shift
     for ch in text:
-        key(lib, keys[ch])
+        screen_key(lib, keys[ch])
 
 
 def write_note(lib, x, y, text):
@@ -81,7 +62,7 @@ def write_note(lib, x, y, text):
     press(lib, x, y)
     press(lib, x, y)
     type_text(lib, text)
-    key(lib, C.KEY_ENTER)
+    screen_key(lib, C.KEY_ENTER)
     wait_out_double_click(lib)
 
 
@@ -128,7 +109,7 @@ def test_the_note_list_is_full_at_the_most_notes(lib, new_game):
 
 def test_double_click_types_a_note_with_the_letters_that_move_the_map(lib, new_game):
     lib.advanced_open_automap()
-    x, y = party_icon(lib)
+    x, y = map_party_icon(lib)
     level = lib.automap_level()
     write_note(lib, x, y, "doors: wasd qe m!")
     assert note(lib, party(new_game)) == b"DOORS: WASD QE M!"
@@ -139,11 +120,11 @@ def test_double_click_types_a_note_with_the_letters_that_move_the_map(lib, new_g
 def test_escape_cancels_and_an_emptied_note_is_removed(lib, new_game):
     at = party(new_game)
     lib.advanced_open_automap()
-    x, y = party_icon(lib)
+    x, y = map_party_icon(lib)
     press(lib, x, y)
     press(lib, x, y)
     type_text(lib, "LOST")
-    key(lib, C.SCAN_ESCAPE)
+    screen_key(lib, C.SCAN_ESCAPE)
     assert note(lib, at) is None
     assert screen_open(lib) == C.ADVANCED_SCREEN_AUTOMAP, "Esc leaves the editor, not the map"
     wait_out_double_click(lib)
@@ -151,8 +132,8 @@ def test_escape_cancels_and_an_emptied_note_is_removed(lib, new_game):
     press(lib, x, y)
     press(lib, x, y)
     for _ in range(3):
-        key(lib, C.KEY_BACKSPACE)
-    key(lib, C.KEY_ENTER)
+        screen_key(lib, C.KEY_BACKSPACE)
+    screen_key(lib, C.KEY_ENTER)
     assert note(lib, at) is None
     lib.seen_set_note(at, b"KEEP")
     wait_out_double_click(lib)
@@ -165,25 +146,25 @@ def test_escape_cancels_and_an_emptied_note_is_removed(lib, new_game):
 
 def test_two_slow_clicks_do_not_open_the_editor(lib, new_game):
     lib.advanced_open_automap()
-    x, y = party_icon(lib)
+    x, y = map_party_icon(lib)
     press(lib, x, y)
     wait_out_double_click(lib)
     press(lib, x, y)
-    key(lib, C.KEY_AUTOMAP_M)
+    screen_key(lib, C.KEY_AUTOMAP_M)
     assert screen_open(lib) == C.ADVANCED_SCREEN_NONE, "M closes the map outside the editor"
 
 
 def test_double_click_on_an_unseen_square_types_no_note(lib, new_game):
     lib.seen_reset()
     lib.advanced_open_automap()
-    x, y = party_icon(lib)
+    x, y = map_party_icon(lib)
     write_note(lib, x, y, "Q")
     assert note(lib, party(new_game)) is None
 
 
 def test_the_pin_marks_a_noted_square(lib, new_game):
     lib.advanced_open_automap()
-    x, y = party_icon(lib)
+    x, y = map_party_icon(lib)
     colors = ctypes.POINTER(ctypes.c_uint8).in_dll(lib, "g_ui_colors")
     screen = c_screen(lib)
     without = [screen[(y + dy) * C.SCREEN_W + x + dx] for dy in range(5) for dx in range(3)]
@@ -199,13 +180,13 @@ def test_a_click_shows_the_note_in_the_readout(lib, new_game):
     blank = c_screen(lib)
     lib.seen_set_note(party(new_game), b"NEEDS GOLD KEY")
     lib.advanced_draw_automap()
-    x, y = party_icon(lib)
+    x, y = map_party_icon(lib)
     before = c_screen(lib)
     press(lib, x, y)
     shown = c_screen(lib)
     assert shown != before
     wait_out_double_click(lib)
-    key(lib, C.SCAN_SPACE)
+    screen_key(lib, C.SCAN_SPACE)
     assert c_screen(lib) == shown, "the note stays in the readout"
     lib.seen_set_note(party(new_game), b"")
     lib.advanced_draw_automap()
@@ -217,13 +198,13 @@ def test_double_click_on_an_item_square_closes_the_list_and_types(lib, new_game)
     thing = lib.dungeon_unused_thing(C.THING_MISC)
     assert lib.dungeon_link_thing_to_square(thing, at.map, at.x, at.y)
     lib.advanced_open_automap()
-    x, y = party_icon(lib)
+    x, y = map_party_icon(lib)
     press(lib, x, y)
     assert lib.automap_items_open()
     lib.advanced_screen_event(C.INPUT_BUTTON_LEFT, x, y)
     assert not lib.automap_items_open()
     type_text(lib, "LOOT")
-    key(lib, C.KEY_ENTER)
+    screen_key(lib, C.KEY_ENTER)
     assert note(lib, at) == b"LOOT"
 
 

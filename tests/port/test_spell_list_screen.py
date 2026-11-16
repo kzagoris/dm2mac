@@ -6,7 +6,8 @@ import struct
 import pytest
 
 from dm2test import constants as C
-from dm2test.modes import VANILLA, press, set_mode
+from dm2test.modes import VANILLA, press, screen_key, set_mode
+from dm2test.spells import CH_MANA, FULL_MANA, mana
 from dm2test.scenario import champion_bytes, champion_records
 
 LIGHT, MAGIC_TORCH, FIREBALL = 0, 5, 16  # spell table indices: OH IR RA; FUL; FUL IR
@@ -16,8 +17,7 @@ OPTIONS_ROW_SPELLS = 3
 SCAN_1 = 0x02  # the keys 1 to 4 of the spell list
 KEY_ALT_C, KEY_ALT_1 = 0x082E, 0x0802  # the favorite keys: Alt+C, then Alt+1 to Alt+4
 # Champion record offsets (the Champion struct of engine/champion.h).
-CH_RUNE_COUNT, CH_MANA = 0x1E, 0x3E
-FULL_MANA = 100
+CH_RUNE_COUNT = 0x1E
 
 
 @pytest.fixture
@@ -37,13 +37,6 @@ def screen(lib):
     return ctypes.c_int.in_dll(lib, 'g_advanced_screen').value
 
 
-def mana(lib):
-    return struct.unpack_from('<h', bytes(champion_records(lib)), CH_MANA)[0]
-
-
-def key(lib, scan):
-    lib.advanced_screen_event(C.INPUT_KEY, scan, 0)
-
 
 def messages(lib):
     return [lib.text_message_row(row) for row in range(C.MESSAGE_ROWS)]
@@ -54,7 +47,7 @@ def test_return_casts_the_marked_known_spell_with_the_normal_costs(lib, book):
     lib.magic_learn_spell(torch)
     lib.advanced_open_spellbook()
     assert screen(lib) == C.ADVANCED_SCREEN_SPELLBOOK
-    key(lib, C.KEY_ENTER)
+    screen_key(lib, C.KEY_ENTER)
     assert screen(lib) == C.ADVANCED_SCREEN_NONE, "the cast closes the spell list"
     assert mana(lib) == FULL_MANA - lib.magic_spell_mana(torch, 1)
     # the normal cast of entered runes ran: it took the runes and recorded them as the last attempt
@@ -66,15 +59,15 @@ def test_return_casts_the_marked_known_spell_with_the_normal_costs(lib, book):
 def test_a_spell_is_listed_after_its_cast_or_when_the_option_lists_all(lib, book):
     lib.advanced_open_spellbook()
     for _ in range(book[0].champion_count):
-        key(lib, C.KEY_ENTER)  # no spell is listed: the caster row is selected and goes through the casters
+        screen_key(lib, C.KEY_ENTER)  # no spell is listed: the caster row is selected and goes through the casters
     assert screen(lib) == C.ADVANCED_SCREEN_SPELLBOOK
     assert mana(lib) == FULL_MANA
-    key(lib, C.SCAN_ESCAPE)
+    screen_key(lib, C.SCAN_ESCAPE)
     assert screen(lib) == C.ADVANCED_SCREEN_NONE
     lib.upscale_toggle_all_spells()
     assert (book[1] / 'SETTINGS.TXT').read_text().endswith('spells=all\nfullscreen=off\n')
     lib.advanced_open_spellbook()
-    key(lib, C.KEY_ENTER)  # the first spell of the spell table is marked
+    screen_key(lib, C.KEY_ENTER)  # the first spell of the spell table is marked
     assert screen(lib) == C.ADVANCED_SCREEN_NONE
     assert mana(lib) == FULL_MANA - lib.magic_spell_mana(lib.magic_get_spell(LIGHT), 1)
     assert lib.magic_favorite_rune(0, C.MAGIC_FAVORITE_LAST, 1) == GLYPH_OH
@@ -84,12 +77,12 @@ def test_the_favorites_page_goes_back_to_the_spell_list(lib, book):
     lib.magic_learn_spell(lib.magic_get_spell(MAGIC_TORCH))
     lib.advanced_open_spellbook()
     for _ in range(C.ROWS_MAX_COUNT):
-        key(lib, C.SCAN_S)  # down to the title item, CLOSE
-    key(lib, C.SCAN_W)  # FAVORITES
-    key(lib, C.KEY_ENTER)
-    key(lib, C.SCAN_ESCAPE)  # back to the spell list with the marked spell selected
+        screen_key(lib, C.SCAN_S)  # down to the title item, CLOSE
+    screen_key(lib, C.SCAN_W)  # FAVORITES
+    screen_key(lib, C.KEY_ENTER)
+    screen_key(lib, C.SCAN_ESCAPE)  # back to the spell list with the marked spell selected
     assert screen(lib) == C.ADVANCED_SCREEN_SPELLBOOK
-    key(lib, C.KEY_ENTER)
+    screen_key(lib, C.KEY_ENTER)
     assert screen(lib) == C.ADVANCED_SCREEN_NONE
     assert lib.magic_favorite_rune(0, C.MAGIC_FAVORITE_LAST, 1) == GLYPH_FUL
 
@@ -130,11 +123,11 @@ def test_the_rune_panel_names_listed_spells_and_marks_their_next_runes(lib, book
 def test_the_options_row_changes_the_listed_spells(lib, book):
     lib.advanced_open_options()
     for _ in range(OPTIONS_ROW_SPELLS):
-        key(lib, C.SCAN_S)
-    key(lib, C.KEY_ENTER)
+        screen_key(lib, C.SCAN_S)
+    screen_key(lib, C.KEY_ENTER)
     assert lib.upscale_has_all_spells()
     assert (book[1] / 'SETTINGS.TXT').read_text().endswith('spells=all\nfullscreen=off\n')
-    key(lib, C.KEY_ENTER)
+    screen_key(lib, C.KEY_ENTER)
     assert not lib.upscale_has_all_spells()
     assert (book[1] / 'SETTINGS.TXT').read_text().endswith('spells=known\nfullscreen=off\n')
 
@@ -169,16 +162,16 @@ def test_the_favorite_keys_set_the_entered_runes_and_cast_the_favorite(lib, book
 def test_a_number_key_sets_the_marked_spell_as_a_favorite_and_backspace_clears_it(lib, book):
     lib.magic_learn_spell(lib.magic_get_spell(MAGIC_TORCH))
     lib.advanced_open_spellbook()
-    key(lib, SCAN_1 + 1)
+    screen_key(lib, SCAN_1 + 1)
     assert screen(lib) == C.ADVANCED_SCREEN_SPELLBOOK
     assert lib.magic_favorite_rune(0, 1, 0) == 0x60, "the shown power, LO"
     assert lib.magic_favorite_rune(0, 1, 1) == GLYPH_FUL
     assert lib.magic_favorite_rune(0, 1, 2) == 0
     assert mana(lib) == FULL_MANA and bytes(champion_records(lib))[CH_RUNE_COUNT] == 0
     for _ in range(C.ROWS_MAX_COUNT):
-        key(lib, C.SCAN_S)
-    key(lib, C.SCAN_W)  # FAVORITES
-    key(lib, C.KEY_ENTER)  # the favorites page, on favorite 1
-    key(lib, C.SCAN_S)  # favorite 2
-    key(lib, C.KEY_BACKSPACE)
+        screen_key(lib, C.SCAN_S)
+    screen_key(lib, C.SCAN_W)  # FAVORITES
+    screen_key(lib, C.KEY_ENTER)  # the favorites page, on favorite 1
+    screen_key(lib, C.SCAN_S)  # favorite 2
+    screen_key(lib, C.KEY_BACKSPACE)
     assert lib.magic_favorite_rune(0, 1, 1) == 0

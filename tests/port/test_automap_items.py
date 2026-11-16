@@ -7,28 +7,20 @@ import pytest
 from dm2test import constants as C
 from dm2test.interface import c_screen
 from dm2test.scenario import square_things
-from dm2test.structs import Game, Location, MainLoop, Position, Session
+from dm2test.modes import advanced_new_game, map_party_icon, viewport
+from dm2test.structs import Location, MainLoop, Position
 
 
 @pytest.fixture
 def item_map(lib, gdat, game_dir):
     """A fresh dungeon, with real graphics, without requiring the private start.DAT fixture."""
-    lib.gdat_select(gdat)
-    assert lib.zone_load(gdat) and lib.pal_load_color_ramps(gdat) and lib.text_init(gdat)
-    lib.draw_init(gdat)
-    Session.in_dll(lib, "g_session").data_dir = str(game_dir).encode()
-    ctypes.c_int.in_dll(lib, "g_game_mode").value = C.GAME_MODE_ADVANCED
-    assert lib.session_start_new_game()
-    game = Game.in_dll(lib, "g_game")
-    at = Position(game.party_map, game.party_x, game.party_y)
-    for thing in square_things(lib, at.map, at.x, at.y):
-        if C.THING_WEAPON <= thing >> C.THING_TYPE_SHIFT & C.THING_TYPE_MASK <= C.THING_MISC:
-            lib.dungeon_unlink_thing_from_square(thing, at.map, at.x, at.y)
-    lib.seen_reset()
-    yield at
-    lib.advanced_reset()
-    lib.game_set_cheats(0)
-    ctypes.c_int.in_dll(lib, "g_game_mode").value = C.GAME_MODE_VANILLA
+    with advanced_new_game(lib, gdat, game_dir) as game:
+        at = Position(game.party_map, game.party_x, game.party_y)
+        for thing in square_things(lib, at.map, at.x, at.y):
+            if C.THING_WEAPON <= thing >> C.THING_TYPE_SHIFT & C.THING_TYPE_MASK <= C.THING_MISC:
+                lib.dungeon_unlink_thing_from_square(thing, at.map, at.x, at.y)
+        lib.seen_reset()
+        yield at
 
 
 def level_at(lib, at):
@@ -47,17 +39,6 @@ def items(lib, at, capacity=32):
     buffer = (ctypes.c_uint16 * capacity)()
     count = lib.automap_items(level_at(lib, at), buffer, capacity)
     return count, list(buffer)[:min(count, capacity)]
-
-
-def viewport(lib):
-    rect = (ctypes.c_int16 * C.RECT_SIZE)()
-    assert lib.zone_get_viewport_rect(rect)
-    return tuple(rect)
-
-
-def party_icon(lib):
-    x, y, width, height = viewport(lib)
-    return x + (width - C.MAP_CELL_SIZE) // 2 + 1, y + (height - C.MAP_CELL_SIZE) // 2 + 1
 
 
 def test_items_require_an_explored_square_or_reveal_map(lib, item_map):
@@ -101,7 +82,7 @@ def test_containers_count_once_and_effects_and_creature_possessions_stay_out(lib
 
 def test_item_marker_appears_on_explored_party_square_and_disappears_after_pickup(lib, item_map):
     thing = drop(lib, item_map, index=255)
-    x, y = party_icon(lib)
+    x, y = map_party_icon(lib)
     yellow = ctypes.POINTER(ctypes.c_uint8).in_dll(lib, "g_ui_colors")[C.UI_YELLOW]
     lib.advanced_open_automap()
     hidden = c_screen(lib)
@@ -148,7 +129,7 @@ def test_plus_symbol_and_party_frame_remain_visible(lib, item_map, count):
         drop(lib, item_map)
     lib.seen_mark(item_map, C.DIR_NORTH)
     lib.advanced_open_automap()
-    x, y = party_icon(lib)
+    x, y = map_party_icon(lib)
     colors = ctypes.POINTER(ctypes.c_uint8).in_dll(lib, "g_ui_colors")
     screen = c_screen(lib)
     assert [screen[(y + dy) * C.SCREEN_W + x + 4 + dx] for dy in range(5) for dx in range(3)] == [
@@ -177,7 +158,7 @@ def test_short_click_lists_item_names_and_groups_quantities(lib, item_map):
     drop(lib, item_map)
     lib.seen_mark(item_map, C.DIR_NORTH)
     lib.advanced_open_automap()
-    x, y = party_icon(lib)
+    x, y = map_party_icon(lib)
     click(lib, x + 2, y + 2)
     assert lib.automap_items_open()
     name = lib.item_name(thing) or b"UNKNOWN ITEM"
@@ -195,7 +176,7 @@ def test_click_anywhere_in_the_list_except_paging_returns_to_the_map(lib, item_m
     drop(lib, item_map)
     lib.seen_mark(item_map, C.DIR_NORTH)
     lib.advanced_open_automap()
-    x, y = party_icon(lib)
+    x, y = map_party_icon(lib)
     rx, ry, width, height = viewport(lib)
     for at in ((rx + 15, ry + 118), (rx + width // 2, ry + height // 2), (rx + 1, ry + 1)):
         click(lib, x, y)
@@ -211,7 +192,7 @@ def test_click_anywhere_in_the_list_except_paging_returns_to_the_map(lib, item_m
 def test_click_cannot_inspect_unexplored_items_but_reveal_map_can(lib, item_map):
     drop(lib, item_map)
     lib.advanced_open_automap()
-    x, y = party_icon(lib)
+    x, y = map_party_icon(lib)
     click(lib, x, y)
     assert not lib.automap_items_open()
     assert not lib.automap_select(-1, -1)
@@ -227,7 +208,7 @@ def test_drag_and_release_without_a_press_never_open_item_details(lib, item_map)
     drop(lib, item_map)
     lib.seen_mark(item_map, C.DIR_NORTH)
     lib.advanced_open_automap()
-    x, y = party_icon(lib)
+    x, y = map_party_icon(lib)
     lib.advanced_screen_event(C.INPUT_LEFT_RELEASED, x, y)
     assert not lib.automap_items_open()
     lib.advanced_screen_event(C.INPUT_BUTTON_LEFT, x, y)
@@ -256,7 +237,7 @@ def test_item_list_pages_expose_the_entire_pile_and_reset_on_close(lib, item_map
     assert len(names) == 10
     lib.seen_mark(item_map, C.DIR_NORTH)
     lib.advanced_open_automap()
-    x, y = party_icon(lib)
+    x, y = map_party_icon(lib)
     click(lib, x, y)
     assert lib.automap_items_open()
     assert_item_row(lib, 1, b"1 X " + names[0])
@@ -287,7 +268,7 @@ def test_saved_items_and_exploration_reload_without_stale_inspection(lib, item_m
     count, restored = items(lib, item_map)
     assert count == 1 and lib.item_name(restored[0]) == name  # saves renumber thing references
     lib.advanced_open_automap()
-    x, y = party_icon(lib)
+    x, y = map_party_icon(lib)
     click(lib, x, y)
     assert lib.automap_items_open()
     assert lib.session_start_save(str(path).encode())
@@ -298,7 +279,7 @@ def test_wheel_zoom_limits_and_item_selection_stays_under_pointer(lib, item_map)
     drop(lib, item_map)
     lib.seen_mark(item_map, C.DIR_NORTH)
     lib.advanced_open_automap()
-    x, y = party_icon(lib)
+    x, y = map_party_icon(lib)
     x += 5
     y += 4
     assert lib.automap_zoom_factor() == 1
@@ -317,7 +298,7 @@ def test_wheel_zoom_limits_and_item_selection_stays_under_pointer(lib, item_map)
 def test_wheel_ignores_other_screens_and_outside_viewport(lib, item_map):
     drop(lib, item_map)
     lib.seen_mark(item_map, C.DIR_NORTH)
-    x, y = party_icon(lib)
+    x, y = map_party_icon(lib)
     lib.input_mouse_wheel(x, y, 1)
     assert lib.automap_zoom_factor() == 1
     lib.advanced_open_automap()
