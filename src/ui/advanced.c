@@ -55,8 +55,8 @@ static struct {
     struct {
         bool active;
         bool moved;
-        int x, y;             /* the mouse position that matches the current scroll */
-        int start_x, start_y; /* the press position, before any scrolling */
+        int x, y;                 /* the mouse position that matches the current scroll */
+        int16_t start_x, start_y; /* the press position, before any scrolling */
     } drag;
     struct {
         bool valid;     /* a click on the map waits for a second click */
@@ -75,6 +75,12 @@ static struct {
 } advanced;
 
 static const char *const direction_names[DIR_COUNT] = {"NORTH", "EAST", "SOUTH", "WEST"};
+
+/* Whether (x, y) is at most MAP_CLICK_SLOP pixels away from (at_x, at_y) on each axis: still one click. */
+static bool is_within_slop(int16_t x, int16_t y, int16_t at_x, int16_t at_y)
+{
+    return abs(x - at_x) <= MAP_CLICK_SLOP && abs(y - at_y) <= MAP_CLICK_SLOP;
+}
 
 /* Closes the open viewport screen and ends a drag of the map. */
 static void close_screen(void)
@@ -293,8 +299,7 @@ void advanced_automap_drag(int16_t x, int16_t y)
 {
     if (!advanced.drag.active)
         return;
-    if (x - advanced.drag.start_x > MAP_CLICK_SLOP || advanced.drag.start_x - x > MAP_CLICK_SLOP ||
-        y - advanced.drag.start_y > MAP_CLICK_SLOP || advanced.drag.start_y - y > MAP_CLICK_SLOP)
+    if (!is_within_slop(x, y, advanced.drag.start_x, advanced.drag.start_y))
         advanced.drag.moved = true;
     int dx = (x - advanced.drag.x) / automap_cell_size();
     int dy = (y - advanced.drag.y) / automap_cell_size();
@@ -389,7 +394,7 @@ static void note_event(int type, int16_t key)
 static bool is_double_click(int16_t x, int16_t y)
 {
     return advanced.click.valid && g_main_loop.timer_ticks - advanced.click.ticks <= DOUBLE_CLICK_TICKS &&
-           abs(x - advanced.click.x) <= MAP_CLICK_SLOP && abs(y - advanced.click.y) <= MAP_CLICK_SLOP;
+           is_within_slop(x, y, advanced.click.x, advanced.click.y);
 }
 
 /* Starts the note of the map square at the screen place (x, y), with its old text, and closes the item list that the
