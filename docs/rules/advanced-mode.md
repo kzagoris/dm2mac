@@ -214,6 +214,19 @@ A hit on a moving creature shows the damage star of the action area, with the da
 - A step, a turn, or a change of the map ends all stars. They do not show while the party walks, in the inventory, or on an advanced screen.
 - The stars are drawn on the screen after the dungeon view; they change no game state and do not cover the target of a click.
 
+## Spell feedback
+
+The advanced mode says why a spell cannot be entered or cast. The rules of the cast do not change: the original pictures of a failure (the fizzle, the failed cast, the flask) still show, and only the message area and the colors of the rune buttons are added. The texts are in cyan; the champion name is cut to 7 letters.
+
+- A rune that costs more mana than the caster has is drawn gray instead of black (over the yellow of a rune that leads to a listed spell). The panel redraws when the mana of the caster changes which runes the caster can pay.
+- A click on such a rune shows `HALK NEEDS 12 MANA FOR FUL, HAS 7`: the cost of the rune at the entered power and the mana of the caster.
+- A click on the spell icon of a champion who still recovers from a spell shows `HALK IS STILL RECOVERING FROM A SPELL`.
+- The same refusal again (the same text) adds no line; an entered rune ends this, so the next refusal shows again.
+- A failed cast shows `HALK FAILED: 2 FIRE LEVELS SHORT`: the spell level (the power and the difficulty of the spell) minus the skill level of the spell's skill before the cast. Each missing level is one wisdom roll that can fail the cast, so a lower power or a higher skill makes the cast safer.
+- Runes of no spell show `NO SPELL HAS THE RUNES` and the names of the entered runes, the power rune first.
+- A potion without an empty flask in a hand shows `HALK NEEDS AN EMPTY FLASK IN HAND`.
+- A favorite or a spell of the spell list that the caster cannot pay shows `NEEDS 23 MANA, HAS 15 - TRY EE`, with the highest power that the caster can pay, or `NEEDS 23 MANA, HAS 1 - REST` when the caster can pay none. A spell with its own power rune at another power shows `THIS SPELL TAKES ONLY POWER MON`.
+
 ## Touch highlight
 
 While Ctrl is held, an outline follows the shape of each picture in the dungeon view that a hand click reaches (`src/ui/highlight.c`): a ring of one pixel in the color of the kind touches the picture. The pictures are the ones of the click zones that the view records for the clicks (`g_view_click_zones`); while it draws a picture of a click zone, the view keeps the pixels that the picture shows (`view_click_zone_at`). `input_zone_touch` (`src/ui/input.c`) sorts the zones by what the click does:

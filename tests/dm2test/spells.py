@@ -15,8 +15,9 @@ from dm2test.structs import ActionArea, Game
 CH_HEALTH, CH_MANA = 0x36, 0x3E
 FULL_HEALTH = FULL_MANA = 100
 CASTER_COUNT = 2
-# The g_hooks members (engine/hooks.h) that the engine-only tests stub: update_action_area and draw_champion_state.
-HOOK_SLOTS, HOOK_UPDATE_ACTION_AREA, HOOK_DRAW_CHAMPION_STATE = 24, 5, 23
+# The g_hooks members (engine/hooks.h) that the engine-only tests stub: update_action_area, draw_champion_state, and
+# cast_failed, which writes to the message area.
+HOOK_SLOTS, HOOK_UPDATE_ACTION_AREA, HOOK_DRAW_CHAMPION_STATE, HOOK_CAST_FAILED = 32, 5, 23, 31
 
 
 @pytest.fixture(scope="module")
@@ -25,12 +26,15 @@ def no_dungeon_drawing(lib):
     refresh and the casting stay real."""
     update = ctypes.CFUNCTYPE(None, ctypes.c_bool)(lambda tick: None)
     draw = ctypes.CFUNCTYPE(None, ctypes.c_int16)(lambda champion_index: None)
+    explain = ctypes.CFUNCTYPE(None, ctypes.c_void_p)(lambda failure: None)
     hooks = (ctypes.c_void_p * HOOK_SLOTS).in_dll(lib, "g_hooks")
-    old = hooks[HOOK_UPDATE_ACTION_AREA], hooks[HOOK_DRAW_CHAMPION_STATE]
-    hooks[HOOK_UPDATE_ACTION_AREA] = ctypes.cast(update, ctypes.c_void_p).value
-    hooks[HOOK_DRAW_CHAMPION_STATE] = ctypes.cast(draw, ctypes.c_void_p).value
+    slots = (HOOK_UPDATE_ACTION_AREA, HOOK_DRAW_CHAMPION_STATE, HOOK_CAST_FAILED)
+    old = [hooks[slot] for slot in slots]
+    for slot, stub in zip(slots, (update, draw, explain)):
+        hooks[slot] = ctypes.cast(stub, ctypes.c_void_p).value
     yield
-    hooks[HOOK_UPDATE_ACTION_AREA], hooks[HOOK_DRAW_CHAMPION_STATE] = old
+    for slot, value in zip(slots, old):
+        hooks[slot] = value
 
 
 def prepare_casters(lib):

@@ -857,10 +857,10 @@ CastResult magic_cast_cheat_spell(int16_t champion_index, const Spell *spell)
 }
 
 /* Shows why a cast of spell failed and counts it in the global variables; spell is NULL for CAST_UNKNOWN_SPELL. */
-static void report_cast_failure(CastResult result, const Spell *spell)
+static void report_cast_failure(const CastFailure *failure, const Spell *spell)
 {
     int min_delay = 1, var;
-    switch (result) {
+    switch (failure->result) {
     case CAST_FAILED:
         g_action.result =
             (int16_t)(champ_base_skill(spell->skill) == SKILL_WIZARD ? RESULT_WIZARD_FAILED : RESULT_PRIEST_FAILED);
@@ -880,6 +880,7 @@ static void report_cast_failure(CastResult result, const Spell *spell)
     }
     int count = game_modify_global_var(var, 1, GLOBAL_VAR_ADD);
     g_action.redraw_delay = (int16_t)max_int(min_delay, (int16_t)(FAILURE_DELAY_BASE - count));
+    g_hooks.cast_failed(failure);
 }
 
 bool magic_cast_entered_runes_failed(void)
@@ -892,15 +893,22 @@ bool magic_cast_entered_runes_failed(void)
     const Spell *spell = magic_find_spell(runes);
     if (spell)
         magic_learn_spell(spell); /* the runes are a spell, also when the cast then fails */
-    CastResult result =
-        spell ? magic_cast_spell(champion_index, spell, (int16_t)(runes[0] - POWER_RUNE_BASE)) : CAST_UNKNOWN_SPELL;
-    report_cast_failure(result, spell);
-    if (result != CAST_NEEDS_FLASK) {
+    int16_t power = (int16_t)(runes[0] - POWER_RUNE_BASE);
+    CastFailure failure = {.champion_index = champion_index, .result = CAST_UNKNOWN_SPELL};
+    memcpy(failure.runes, runes, CHAMPION_RUNES_SIZE);
+    if (spell) {
+        /* the skill level before the cast: a failed cast still gives experience */
+        failure.skill = spell->skill;
+        failure.levels_short = power + spell->difficulty - champ_get_skill_level(champion_index, spell->skill, true);
+        failure.result = magic_cast_spell(champion_index, spell, power);
+    }
+    report_cast_failure(&failure, spell);
+    if (failure.result != CAST_NEEDS_FLASK) {
         runes[0] = 0;
         c->rune_count = 0;
         action_area_close();
     }
-    return result != CAST_OK;
+    return failure.result != CAST_OK;
 }
 
 uint16_t magic_rune_mana_cost(int16_t champion_index, int rune)

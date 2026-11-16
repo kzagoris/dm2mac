@@ -9,6 +9,7 @@
 
 #include <stdbool.h>
 #include <stdint.h>
+#include "magic.h"
 #include "ui.h"
 
 typedef enum { SPELLBOOK_STAY, SPELLBOOK_CLOSE, SPELLBOOK_CAST } SpellbookResult;
@@ -19,14 +20,24 @@ typedef enum { SPELLBOOK_STAY, SPELLBOOK_CLOSE, SPELLBOOK_CAST } SpellbookResult
 bool spellbook_is_next_rune(int rune);
 /* The rune button under the pointer, 0 to 5; -1 outside the advanced spell panel or its buttons. */
 int spellbook_hovered_rune(void);
+/* Whether the caster of the open spell panel has less mana than rune 0 to 5 of the next rune set costs; false outside
+   the advanced mode. */
+bool spellbook_is_rune_too_costly(int rune);
 
 /* Commands */
 /* Draws compact syllable letters only for the hovered rune choice; false for the original rune drawing. */
 bool spellbook_draw_rune_label(Offscreen *area, int zone, int rune, uint8_t color);
 /* The champion of the open spell panel enters rune 0 to 5 of the next rune set, as magic_add_rune. In the advanced
    mode the message area then names the listed spell that the entered runes are, for example FUL IR: FIREBALL, or
-   says that no spell has them when every spell is listed and none begins with them. */
+   says that no spell has them when every spell is listed and none begins with them; a rune without enough mana names
+   its cost and the mana of the caster, once for repeated clicks. */
 void spellbook_add_rune(int rune);
+/* The advanced mode: the message area says why a cast of entered runes failed (g_hooks.cast_failed): the skill levels
+   that the caster lacks, the runes of no spell, or the missing flask. */
+void spellbook_explain_failure(const CastFailure *failure);
+/* The advanced mode: the message area says that a click on the spell icon of a champion who still recovers from a
+   spell does nothing, once for repeated clicks. */
+void spellbook_refuse_busy_caster(int16_t champion_index);
 /* The favorite keys (Alt+C with Alt+1 to Alt+4) for favorite slot 0 to 3 of the champion of the open spell panel,
    else of the last caster of the spell list, else of the first living champion. With entered runes it records them
    as the favorite and leaves them entered; without entered runes it enters the favorite at its recorded power and

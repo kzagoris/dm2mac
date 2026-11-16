@@ -147,8 +147,10 @@ void input_refine_champion_click(Command *c)
                                                                                : r[RECT_X] + r[RECT_W] - 1 - c->x);
     if (dx <= dy)
         c->command = (uint16_t)(CMD_LEADER_FIRST + icon);
-    else if (champion(champion_index)->action_delay[ACTION_SPELL])
+    else if (champion(champion_index)->action_delay[ACTION_SPELL]) {
         c->command = 0;
+        spellbook_refuse_busy_caster(champion_index);
+    }
 }
 
 /* The script of a pressed dialog button: by the button count of the open dialog and the command, as in the

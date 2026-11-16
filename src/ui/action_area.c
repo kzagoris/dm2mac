@@ -40,8 +40,10 @@
 /* Game steps that the advanced mode keeps the damage of a hit after the original delay (not in the original game). */
 #define DAMAGE_HOLD_EXTRA_TICKS 1
 
-/* The color of a rune that leads to a listed spell in the spell panel of the advanced mode (not in the original game). */
-#define HINT_COLOR UI_YELLOW
+/* The colors of a rune in the spell panel of the advanced mode (not in the original game): a rune that leads to a listed
+   spell, and a rune that costs more mana than the caster has. */
+#define HINT_COLOR   UI_YELLOW
+#define COSTLY_COLOR UI_GRAY
 
 /* The index of a coin in the pile offsets wraps at 32. */
 #define COIN_PILE_MASK 0x1f
@@ -108,8 +110,9 @@ static struct {
     bool invisible;
     uint16_t aura_mask;
     int16_t leader;
-    int16_t action_mode; /* the action mode of the last input zone refresh, ACTION_MODE_STALE for none */
-    int rune_hover;      /* the rune whose syllable is drawn, -1 for none */
+    int16_t action_mode;  /* the action mode of the last input zone refresh, ACTION_MODE_STALE for none */
+    int rune_hover;       /* the rune whose syllable is drawn, -1 for none */
+    uint8_t costly_runes; /* the runes drawn as too costly, one bit per rune of the next rune set */
 } drawn;
 
 /* The ticks to wait for the redraw after the damage shows: one for the original delay, then the extra ones. */
@@ -405,18 +408,30 @@ static void show_panel_face(void)
                               GFX_OPAQUE);
 }
 
+/* The runes of the next rune set that the caster of the open spell panel cannot pay (advanced mode), one bit per rune. */
+static uint8_t find_costly_runes(void)
+{
+    uint8_t runes = 0;
+    for (int i = 0; i < SPELL_RUNES_PER_SET; i++)
+        if (spellbook_is_rune_too_costly(i))
+            runes |= (uint8_t)(1u << i);
+    return runes;
+}
+
 /* Draws the spell panel: the runes of the next set, the entered runes, the face. */
 static void show_spell_panel(void)
 {
     drawn.rune_hover = spellbook_hovered_rune();
+    drawn.costly_runes = find_costly_runes();
     int set = champion(g_action.champion - 1)->rune_count;
     offscreen_draw_gdat_image(&area, (GdatKey){CAT_INTERFACE, UI_INDEX_SPELL, (uint8_t)(set + 1)}, ZONE_PANEL,
                               GFX_OPAQUE);
     if (set < SPELL_RUNE_SETS) {
         for (int i = 0; i < SPELL_RUNES_PER_SET; i++) {
             char s[RUNE_TEXT_SIZE] = {(char)(set * SPELL_RUNES_PER_SET + SPELL_RUNE_GLYPH_FIRST + i), '\0'};
-            /* advanced mode: a rune that continues the entered runes to a listed spell stands out */
-            int color = spellbook_is_next_rune(i) ? HINT_COLOR : UI_BLACK;
+            /* advanced mode: a rune without enough mana is dimmed; a rune that continues the entered runes to a listed
+               spell stands out */
+            int color = drawn.costly_runes >> i & 1 ? COSTLY_COLOR : spellbook_is_next_rune(i) ? HINT_COLOR : UI_BLACK;
             if (spellbook_draw_rune_label(&area, ZONE_RUNE_CHOICE_FIRST + i, set * SPELL_RUNES_PER_SET + i,
                                           g_ui_colors[color]))
                 continue;
@@ -687,8 +702,9 @@ static void show_hand_panel(void)
 /* Draws the open hand or spell panel when it changed; returns false while the panel waits for its redraw delay. */
 static bool show_open_panel(bool full, bool party_changed, bool tick)
 {
-    bool hover_changed = g_action.hand == ACTION_HAND_SPELL && drawn.rune_hover != spellbook_hovered_rune();
-    if (g_action.redraw_delay || full || party_changed || hover_changed ||
+    bool runes_changed = g_action.hand == ACTION_HAND_SPELL &&
+                         (drawn.rune_hover != spellbook_hovered_rune() || drawn.costly_runes != find_costly_runes());
+    if (g_action.redraw_delay || full || party_changed || runes_changed ||
         (g_action.mode == ACTION_MODE_MINION_MAP && tick)) {
         if (g_action.redraw_delay > ACTION_REDRAW_NEXT) {
             g_action.redraw_delay--;

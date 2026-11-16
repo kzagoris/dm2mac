@@ -22,6 +22,15 @@ typedef struct {
 /* The result of a cast: success, or why it failed. */
 typedef enum { CAST_OK, CAST_FAILED, CAST_UNKNOWN_SPELL, CAST_NEEDS_FLASK } CastResult;
 
+/* A failed cast of entered runes, for the explanation of the advanced mode (g_hooks.cast_failed). */
+typedef struct {
+    int16_t champion_index;
+    CastResult result;
+    uint8_t runes[CHAMPION_RUNES_SIZE]; /* the entered runes, the power rune first */
+    int16_t skill;                      /* CAST_FAILED: the skill of the spell */
+    int levels_short;                   /* CAST_FAILED: the spell level (power and difficulty) above the skill level */
+} CastFailure;
+
 /* Kinds of magic light (magic_add_light). */
 #define LIGHT_DARKNESS 0x06
 #define LIGHT_TORCH    0x26

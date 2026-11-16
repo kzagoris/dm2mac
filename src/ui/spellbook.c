@@ -92,7 +92,8 @@ static struct {
     int16_t spell;                    /* the marked spell: its place among the listed spells, -1 for none */
     int16_t slot;                     /* the marked favorite */
     const char *status;               /* the message of the last action, NULL for the costs of the marked spell */
-    char status_text[BOOK_TEXT_SIZE]; /* a status that names a spell or a slot */
+    char status_text[BOOK_TEXT_SIZE]; /* a status with a name or a number */
+    char refusal[BOOK_TEXT_SIZE];     /* the last refusal in the message area; the same refusal again adds no line */
 } book;
 
 /* Whether the spell list and the rune hints show spell: every spell, or only the known spells. */
@@ -146,6 +147,13 @@ static RowsScreen find_layout(void)
     if (count_pages() == 1)
         subtitles |= 1u << LIST_NEXT;
     return (RowsScreen){.title_item = "CLOSE", .row_count = LIST_ROWS, .subtitles = subtitles};
+}
+
+/* Writes the upper-case name of one rune glyph, for example FUL. */
+static void get_glyph_name(uint8_t glyph, char *text, size_t size)
+{
+    uint8_t runes[CHAMPION_RUNES_SIZE] = {glyph};
+    magic_get_rune_names(runes, 0, text, size);
 }
 
 /* Writes the rune names of spell after its power rune in upper case, for example FUL IR. */
@@ -376,7 +384,25 @@ int spellbook_hovered_rune(void)
     return -1;
 }
 
+bool spellbook_is_rune_too_costly(int rune)
+{
+    if (g_game_mode != GAME_MODE_ADVANCED || g_action.champion <= 0 || g_action.hand != ACTION_HAND_SPELL)
+        return false;
+    int16_t caster = (int16_t)(g_action.champion - 1);
+    const Champion *c = champion(caster);
+    return c->rune_count < CHAMPION_RUNES_SIZE && magic_rune_mana_cost(caster, rune) > c->mana;
+}
+
 /* Commands */
+
+/* Prints a refusal in the message area, unless it is the last refusal again: a repeated click adds no line. */
+static void print_refusal(const char *text)
+{
+    if (!strcmp(text, book.refusal))
+        return;
+    snprintf(book.refusal, sizeof book.refusal, "%s", text);
+    text_print_message(UI_CYAN, text);
+}
 
 bool spellbook_draw_rune_label(Offscreen *area, int zone, int rune, uint8_t color)
 {
@@ -407,12 +433,58 @@ bool spellbook_draw_rune_label(Offscreen *area, int zone, int rune, uint8_t colo
 
 void spellbook_add_rune(int rune)
 {
-    const Champion *c = champion(g_action.champion - 1);
+    int16_t caster = (int16_t)(g_action.champion - 1);
+    const Champion *c = champion(caster);
     uint8_t entered = c->rune_count;
-    char hint[BOOK_TEXT_SIZE];
+    uint16_t cost = magic_rune_mana_cost(caster, rune);
+    char text[BOOK_TEXT_SIZE];
     magic_add_rune(rune);
-    if (c->rune_count != entered && get_hint(hint, sizeof hint))
-        text_print_message(UI_CYAN, hint);
+    if (c->rune_count != entered) {
+        book.refusal[0] = '\0';
+        if (get_hint(text, sizeof text))
+            text_print_message(UI_CYAN, text);
+        return;
+    }
+    if (g_game_mode != GAME_MODE_ADVANCED || entered >= CHAMPION_RUNES_SIZE)
+        return;
+    char name[RUNE_NAMES_SIZE];
+    get_glyph_name((uint8_t)(SPELL_RUNE_GLYPH_FIRST + entered * SPELL_RUNES_PER_SET + rune), name, sizeof name);
+    snprintf(text, sizeof text, "\n%.7s NEEDS %d MANA FOR %s, HAS %d", c->name, cost, name, c->mana);
+    print_refusal(text);
+}
+
+void spellbook_explain_failure(const CastFailure *failure)
+{
+    if (g_game_mode != GAME_MODE_ADVANCED)
+        return;
+    const char *name = champion(failure->champion_index)->name;
+    char text[BOOK_TEXT_SIZE];
+    char runes[BOOK_TEXT_SIZE / 2];
+    switch (failure->result) {
+    case CAST_FAILED:
+        snprintf(text, sizeof text, "\n%.7s FAILED: %d %s LEVEL%s SHORT", name, failure->levels_short,
+                 ui_get_skill_name(failure->skill), failure->levels_short == 1 ? "" : "S");
+        break;
+    case CAST_UNKNOWN_SPELL:
+        magic_get_rune_names(failure->runes, 0, runes, sizeof runes);
+        snprintf(text, sizeof text, "\nNO SPELL HAS THE RUNES %s", runes);
+        break;
+    case CAST_NEEDS_FLASK:
+        snprintf(text, sizeof text, "\n%.7s NEEDS AN EMPTY FLASK IN HAND", name);
+        break;
+    case CAST_OK:
+        return;
+    }
+    text_print_message(UI_CYAN, text);
+}
+
+void spellbook_refuse_busy_caster(int16_t champion_index)
+{
+    if (g_game_mode != GAME_MODE_ADVANCED)
+        return;
+    char text[BOOK_TEXT_SIZE];
+    snprintf(text, sizeof text, "\n%.7s IS STILL RECOVERING FROM A SPELL", champion(champion_index)->name);
+    print_refusal(text);
 }
 
 /* Makes the champion of the open spell panel the caster; a caster who cannot cast gives way to the first living
@@ -431,14 +503,49 @@ static void choose_caster(void)
     }
 }
 
-/* Why the caster cannot enter the runes of a spell now. */
-static const char *find_refusal(void)
+/* Why the caster cannot enter the runes of a spell at power 1 to 6 now; costs holds the mana of the spell at each
+   power, -1 for a power that it does not take. The text stays valid until the next status. */
+static const char *find_refusal(const int *costs, int power)
 {
     const Champion *c = book.caster >= 0 ? champion(book.caster) : NULL;
-    return !c || !c->health                ? "CHOOSE A LIVING CASTER"
-           : c->rune_count                 ? "CLOSE AND CAST OR REMOVE YOUR RUNES"
-           : c->action_delay[ACTION_SPELL] ? "CASTER BUSY - WAIT AND TRY AGAIN"
-                                           : "NOT ENOUGH MANA - LOWER SPELL POWER";
+    if (!c || !c->health)
+        return "CHOOSE A LIVING CASTER";
+    if (c->rune_count)
+        return "CLOSE AND CAST OR REMOVE YOUR RUNES";
+    if (c->action_delay[ACTION_SPELL])
+        return "CASTER BUSY - WAIT AND TRY AGAIN";
+    int best = 0; /* the highest power that the spell takes and the caster can pay, 0 for none */
+    int taken = 0;
+    for (int p = 1; p <= POWER_MON; p++) {
+        if (costs[p - 1] < 0)
+            continue;
+        taken = p;
+        if (costs[p - 1] <= c->mana)
+            best = p;
+    }
+    char rune[RUNE_NAMES_SIZE];
+    if (costs[power - 1] < 0) {
+        get_glyph_name((uint8_t)(SPELL_RUNE_GLYPH_FIRST + taken - 1), rune, sizeof rune);
+        snprintf(book.status_text, sizeof book.status_text, "THIS SPELL TAKES ONLY POWER %s", rune);
+        return book.status_text;
+    }
+    if (!best) {
+        snprintf(book.status_text, sizeof book.status_text, "NEEDS %d MANA, HAS %d - REST", costs[power - 1], c->mana);
+        return book.status_text;
+    }
+    get_glyph_name((uint8_t)(SPELL_RUNE_GLYPH_FIRST + best - 1), rune, sizeof rune);
+    snprintf(book.status_text, sizeof book.status_text, "NEEDS %d MANA, HAS %d - TRY %s", costs[power - 1], c->mana,
+             rune);
+    return book.status_text;
+}
+
+/* Why the caster cannot enter favorite slot at power 1 to 6 now, as find_refusal. */
+static const char *find_favorite_refusal(int16_t slot, int power)
+{
+    int costs[POWER_MON];
+    for (int p = 1; p <= POWER_MON; p++)
+        costs[p - 1] = magic_favorite_mana(book.caster, slot, p);
+    return find_refusal(costs, power);
 }
 
 void spellbook_run_favorite(int16_t slot)
@@ -463,7 +570,7 @@ void spellbook_run_favorite(int16_t slot)
         if (magic_favorite_mana(book.caster, slot, POWER_MON) < 0)
             snprintf(text, sizeof text, "\nFAVORITE %d IS EMPTY", slot + 1);
         else
-            snprintf(text, sizeof text, "\n%s", find_refusal());
+            snprintf(text, sizeof text, "\n%s", find_favorite_refusal(slot, power));
         text_print_message(UI_CYAN, text);
         return;
     }
@@ -493,8 +600,9 @@ static SpellbookResult run_favorites_row(void)
     } else if (book.row == BOOK_CAST) {
         if (magic_prepare_favorite(book.caster, book.slot, book.power))
             return SPELLBOOK_CAST;
-        book.status = magic_favorite_mana(book.caster, book.slot, book.power) < 0 ? "EMPTY SLOT - SET A SPELL FIRST"
-                                                                                  : find_refusal();
+        book.status = magic_favorite_mana(book.caster, book.slot, book.power) < 0
+                          ? "EMPTY SLOT - SET A SPELL FIRST"
+                          : find_favorite_refusal(book.slot, book.power);
     }
     return SPELLBOOK_STAY;
 }
@@ -506,7 +614,10 @@ static SpellbookResult run_list_row(void)
     if (spell) {
         if (magic_prepare_spell(book.caster, spell, book.power))
             return SPELLBOOK_CAST;
-        book.status = find_refusal();
+        int costs[POWER_MON];
+        for (int p = 1; p <= POWER_MON; p++)
+            costs[p - 1] = magic_spell_mana(spell, p);
+        book.status = find_refusal(costs, book.power);
     } else if (book.row == LIST_NEXT) {
         book.page = (int16_t)((book.page + 1) % count_pages());
     } else if (book.row == LIST_FAVORITES) {

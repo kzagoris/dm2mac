@@ -99,6 +99,21 @@ class ActionArea(ctypes.Structure):
                 ("hand_items", ctypes.c_uint16 * C.SLOT_HAND_COUNT * C.CHAMPION_MAX)]
 
 
+@mirror("magic.h")
+class Spell(ctypes.Structure):
+    """magic.h Spell: a spell of the spell table."""
+    _fields_ = [("runes", ctypes.c_uint32), ("difficulty", ctypes.c_uint8), ("skill", ctypes.c_uint8),
+                ("effect", ctypes.c_uint16)]
+
+
+@mirror("magic.h")
+class CastFailure(ctypes.Structure):
+    """magic.h CastFailure: a failed cast of entered runes, for the explanation of the advanced mode."""
+    _fields_ = [("champion_index", ctypes.c_int16), ("result", ctypes.c_int),
+                ("runes", ctypes.c_uint8 * C.CHAMPION_RUNES_SIZE), ("skill", ctypes.c_int16),
+                ("levels_short", ctypes.c_int)]
+
+
 @mirror("dungeon.h")
 class CurrentMap(ctypes.Structure):
     """The current map of the square reads (dungeon.h, CurrentMap)."""

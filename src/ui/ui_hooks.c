@@ -8,6 +8,7 @@
 #include "play.h"
 #include "session.h"
 #include "sound.h"
+#include "spellbook.h"
 #include "text.h"
 #include "ui_internal.h"
 #include "view.h"
@@ -45,4 +46,5 @@ Hooks g_hooks = {
     .complete_game = session_complete,
     .draw_dungeon = view_draw_dungeon,
     .creature_hit = combat_show_hit,
+    .cast_failed = spellbook_explain_failure,
 };

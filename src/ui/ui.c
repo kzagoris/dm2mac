@@ -420,6 +420,11 @@ char *ui_skill_rank_text(int16_t champion_index, int skill, char *text)
     return gtext_gdat(CAT_PANEL, 0, skill_level_texts[level], text);
 }
 
+const char *ui_get_skill_name(int skill)
+{
+    return skill >= 0 && skill < SKILL_COUNT ? skill_names[skill] : "MAGIC";
+}
+
 /* ---- Offscreen bitmaps ---- */
 
 /* True when rectangle outer holds rectangle inner. */

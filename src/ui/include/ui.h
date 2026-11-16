@@ -71,6 +71,8 @@ int ui_object_info_lines(uint16_t thing, char lines[OBJECT_INFO_LINES][OBJECT_IN
 /* The rank text of a base skill as the skills panel shows it (for example "NOVICE FIGHTER"), in text (TEXT_SIZE bytes).
    The master ranks start with a power rune glyph of the font. */
 char *ui_skill_rank_text(int16_t champion_index, int skill, char *text);
+/* The upper-case name of a skill, base skill or hidden skill, for example "FIRE"; "MAGIC" outside the skills. */
+const char *ui_get_skill_name(int skill);
 
 /* ---- Offscreen bitmaps ---- */
 

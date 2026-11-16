@@ -11,6 +11,7 @@
 #include "dungeon.h"
 #include "gfx.h"
 #include "interface_state.h"
+#include "magic.h"
 #include "sound_request.h"
 
 typedef struct {
@@ -50,6 +51,7 @@ typedef struct {
     void (*complete_game)(void);                      /* the party finished the game */
     void (*draw_dungeon)(Location at, int16_t dir);   /* draws the view of the party on the square at facing dir */
     void (*creature_hit)(uint16_t group, int damage); /* feedback for a resolved creature hit */
+    void (*cast_failed)(const CastFailure *failure);  /* explains why a cast of entered runes failed */
 } Hooks;
 
 extern Hooks g_hooks;

@@ -115,6 +115,15 @@ Moving the pointer away restores the rune symbol. Yellow highlighting still mark
 
 Four-letter syllables wrap onto two lines to fit the button.
 
+### Spell feedback
+
+In advanced mode, a rune that the caster has too little mana for is grey instead of black. Clicking it shows the cost
+and the caster's mana in the message area, for example `HALK NEEDS 12 MANA FOR FUL, HAS 7`. The message area also
+explains a failed cast: how many skill levels the caster lacks (`HALK FAILED: 2 FIRE LEVELS SHORT`; a lower power
+helps), runes that are no spell, a missing empty flask for a potion, and a click on the spell icon of a champion who
+is still recovering. A favorite that costs too much shows the mana it needs and the highest power the caster can pay
+(`NEEDS 23 MANA, HAS 15 - TRY EE`).
+
 ### Advanced keys
 
 | Key | Action |
