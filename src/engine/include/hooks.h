@@ -46,10 +46,10 @@ typedef struct {
     void (*draw_movement_arrows)(void);                  /* draws the movement arrows */
     void (*fill_screen_zone)(int zone, int color);       /* fills a screen zone with a palette color */
     void (*draw_viewport_image)(int category, int index, int entry, int zone,
-                                int transparent);   /* a picture in a zone of the view */
-    void (*complete_game)(void);                    /* the party finished the game */
-    void (*draw_dungeon)(Location at, int16_t dir); /* draws the view of the party on the square at facing dir */
-    void (*creature_hit)(uint16_t group, Location at, int damage); /* feedback for a resolved creature hit */
+                                int transparent);     /* a picture in a zone of the view */
+    void (*complete_game)(void);                      /* the party finished the game */
+    void (*draw_dungeon)(Location at, int16_t dir);   /* draws the view of the party on the square at facing dir */
+    void (*creature_hit)(uint16_t group, int damage); /* feedback for a resolved creature hit */
 } Hooks;
 
 extern Hooks g_hooks;

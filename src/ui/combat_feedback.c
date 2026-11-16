@@ -4,6 +4,7 @@
 #include <string.h>
 #include "creature.h"
 #include "draw.h"
+#include "dungeon.h"
 #include "game.h"
 #include "game_text.h"
 #include "ids.h"
@@ -70,7 +71,7 @@ static void anchor_hit(HitFeedback *hit)
     }
 }
 
-void combat_show_hit(uint16_t group, Location at, int damage)
+void combat_show_hit(uint16_t group, int damage)
 {
     if (g_game_mode != GAME_MODE_ADVANCED || g_current_map.map != g_game.party_map || damage < 0 ||
         group == THING_NONE || creature_group_info(group)->flags & CREATURE_STATIC)
@@ -92,8 +93,7 @@ void combat_show_hit(uint16_t group, Location at, int damage)
     hit->group = group & THING_ID_MASK;
     hit->tick = g_main_loop.timer_ticks;
     hit->step = g_game.game_time;
-    anchor_hit(hit);
-    (void)at; /* group identity follows the current sprite; an old anchor keeps a killing blow visible */
+    anchor_hit(hit); /* an old anchor keeps a killing blow visible */
 }
 
 /* Uses the existing damage-star picture and cyan digits, clipped inside the viewport. */

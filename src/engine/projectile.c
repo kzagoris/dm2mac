@@ -570,7 +570,7 @@ static bool hit_creature(Hit *h, int16_t cell)
             h->holder = group_possessions(g);
     }
     if (g_game_mode == GAME_MODE_ADVANCED && g_hooks.creature_hit)
-        g_hooks.creature_hit(g, near.at, damage);
+        g_hooks.creature_hit(g, damage);
     if (h->potion_bomb || h->payload_type == THING_WEAPON ||
         (h->payload_type == THING_EXPLOSION && payload != SPELL_DOOR_TOGGLE &&
          (payload < SPELL_PUSH || payload > SPELL_MISSILE_WALL)))
