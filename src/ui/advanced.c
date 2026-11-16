@@ -160,8 +160,9 @@ bool advanced_quick_save(void)
 }
 
 /* Loads the save at path in place of the running game, which waits in QUICK.TMP and comes back when the load fails.
-   The session (the slot, the QUIT question) stays as before the load. */
-static enum QuickLoadResult load_in_place(const char *path)
+   The session (the slot, the QUIT question) stays as before the load. Prints GAME LOADED, or damaged when the save
+   cannot be loaded and the running game comes back. */
+static enum QuickLoadResult load_in_place(const char *path, const char *damaged)
 {
     char keep[OS_PATH_SIZE];
     /* the running game goes to QUICK.TMP first: a damaged save loads it back (the same path: no backup) */
@@ -194,6 +195,7 @@ static enum QuickLoadResult load_in_place(const char *path)
         sound_set_volume(g_game.sound_volume);
         music_set_volume(g_game.music_volume);
     }
+    print_line(loaded ? "GAME LOADED" : damaged);
     return loaded ? QUICK_LOADED : QUICK_DAMAGED;
 }
 
@@ -206,23 +208,19 @@ enum QuickLoadResult advanced_quick_load(void)
         return QUICK_MISSING;
     }
     fclose(f);
-    enum QuickLoadResult result = load_in_place(path);
+    enum QuickLoadResult result = load_in_place(path, "QUICK SAVE DAMAGED");
     if (result == QUICK_LOADED)
         game_clear_save_times(); /* a quick load is not a saved game for the QUIT question */
-    if (result == QUICK_LOADED || result == QUICK_DAMAGED)
-        print_line(result == QUICK_LOADED ? "GAME LOADED" : "QUICK SAVE DAMAGED");
     return result;
 }
 
 enum QuickLoadResult advanced_load_slot(int16_t slot, const char *path)
 {
-    enum QuickLoadResult result = load_in_place(path);
+    enum QuickLoadResult result = load_in_place(path, "SAVE DAMAGED");
     if (result == QUICK_LOADED) {
         game_set_save_slot(slot);
         game_note_slot_loaded();
     }
-    if (result == QUICK_LOADED || result == QUICK_DAMAGED)
-        print_line(result == QUICK_LOADED ? "GAME LOADED" : "SAVE DAMAGED");
     return result;
 }
 
