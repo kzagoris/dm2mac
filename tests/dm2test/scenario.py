@@ -9,9 +9,8 @@ from unicorn.x86_const import UC_X86_REG_EAX, UC_X86_REG_EBX, UC_X86_REG_ECX, UC
 
 from dm2test import constants as C
 from dm2test.addresses import G_CHAMPIONS, G_FONT_BITMAP, G_SKY_OBJECTS, G_UI_COLORS, SKY_OBJECTS_SIZE, VGA, WEATHER
-from dm2test.gamefiles import require
+from dm2test.gamefiles import require, require_skull
 from dm2test.gdat import image_info
-from dm2test.markers import GAME
 from dm2test.oracle import CreatureOracle
 from dm2test.save import GRAPHICS, START, original_save
 from dm2test.structs import CurrentMap, Game, MainLoop, Party, Position, Session, Sound, Timeline, TimelineEvent, UiState, mirror
@@ -186,7 +185,7 @@ def gdat(lib):
 @pytest.fixture(scope="module")
 def start():
     require(START)
-    require(GAME / "SKULL.EXE")
+    require_skull()
     return START.read_bytes()
 
 

@@ -109,6 +109,7 @@ def test_favorite_cast_matches_manual_mana_rng_experience_delay_and_save(lib, se
     # Requires real assets: compare the entire saved adventure after the same normal cast,
     # including failure/experience, cooldown, timeline and spell effects, plus RNG separately.
     set_mode(lib, ADVANCED)
+    champion_bytes(lib, 0, CH_MANA, struct.pack('<h', 100))  # the recording pays the runes as they are entered
     lib.action_area_open_spells(0)
     lib.magic_add_rune(power - 1)
     for rune in runes:

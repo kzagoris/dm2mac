@@ -4,9 +4,8 @@ import struct
 
 import pytest
 
-from dm2test.gamefiles import require
+from dm2test.gamefiles import require, require_skull
 from dm2test import constants as C
-from dm2test.markers import ROOT
 from dm2test.modes import ADVANCED, VANILLA, set_mode
 from dm2test.save import (
     HEADER_SIZE, RECORD_GLOBALS, SAVE_ERR_DATA, SAVE_ERR_FORMAT, SAVE_OK, GRAPHICS, START,
@@ -44,7 +43,7 @@ def original_round_trip(lib, gdat, data):
 
 @pytest.fixture(scope="module")
 def original_run(lib, gdat, start):
-    require(ROOT / "game" / "SKULL.EXE")
+    require_skull()
     return original_round_trip(lib, gdat, start)
 
 
@@ -289,7 +288,7 @@ def link_things(lib, game):
 @pytest.fixture(scope="module")
 def linked(lib, gdat, start, tmp_path_factory):
     """The C writer output and the original writer output for the same state with linked things."""
-    require(ROOT / "game" / "SKULL.EXE")
+    require_skull()
     emu = original_load(lib, gdat, start)
     path = tmp_path_factory.mktemp("linked") / "SKSAVE0.DAT"
     path.write_bytes(start)

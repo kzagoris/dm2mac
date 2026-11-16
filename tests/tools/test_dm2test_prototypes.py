@@ -117,7 +117,7 @@ def test_every_export_has_a_prototype_or_a_reason():
     exports = {line.split()[2] for line in out.splitlines() if len(line.split()) == 3 and line.split()[1] == "T"}
     if sys.platform == "darwin":
         exports = {name.removeprefix("_") for name in exports}
-    exports = {name for name in exports if not name.startswith(("OPL3_", "tinf_", "xbrz_", "ZN4xbrz"))}
+    exports = {name for name in exports if not name.startswith(("OPL3_", "tinf_", "xbrz_", "_ZN4xbrz"))}
     missing = sorted(exports - PROTOTYPES.keys() - UNTYPED.keys())
     assert not missing, f"exports without a prototype or a reason: {missing}"
 

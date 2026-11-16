@@ -66,8 +66,8 @@ def test_unsupported_fixup_raises(tmp_path):
         load_image(path)
 
 
-def test_skull(game_dir):
-    image = load_image(game_dir / "SKULL.EXE")
+def test_skull(skull):
+    image = load_image(skull)
     code, data = image.objects
     assert code.base <= image.entry < code.base + code.size
     assert struct.unpack_from("<I", image.data, 0x62C84 - image.base)[0] == 0x808B0

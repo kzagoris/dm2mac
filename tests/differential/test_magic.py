@@ -7,9 +7,9 @@ import struct
 
 import pytest
 
-from dm2test.gamefiles import require
+from dm2test.gamefiles import require_skull
 from dm2test import constants as C
-from dm2test.markers import ROOT
+from dm2test.markers import SKULL
 from dm2tools.emu import SCRATCH, Emu
 from dm2tools.le import load_image
 from dm2test.creature import CreatureScenario
@@ -43,9 +43,7 @@ RUNE_FIRST = C.SPELL_RUNE_GLYPH_FIRST
 
 @pytest.fixture(scope="module")
 def emu():
-    path = ROOT / "game" / "SKULL.EXE"
-    require(path)
-    return Emu(load_image(path))
+    return Emu(load_image(require_skull()))
 
 
 def c_spell_bytes(lib, runes):
@@ -174,8 +172,8 @@ def spell_runes(index, power):
     return [RUNE_FIRST + power - 1] + [key >> s & 0xFF for s in (16, 8, 0) if key >> s & 0xFF]
 
 
-SPELL_TABLE_BYTES = load_image(ROOT / "game" / "SKULL.EXE").data[G_SPELL_TABLE - 0x10000:G_SPELL_TABLE - 0x10000 + SPELL_COUNT * SPELL_SIZE] \
-    if (ROOT / "game" / "SKULL.EXE").exists() else bytes(SPELL_COUNT * SPELL_SIZE)
+SPELL_TABLE_BYTES = load_image(SKULL).data[G_SPELL_TABLE - 0x10000:G_SPELL_TABLE - 0x10000 + SPELL_COUNT * SPELL_SIZE] \
+    if SKULL else bytes(SPELL_COUNT * SPELL_SIZE)
 
 
 CAST_KIND_MASK, SPELL_SKILL = 0xF0, 5  # the original packs the failure kind above the base skill

@@ -22,8 +22,8 @@ SEEDS = [0, 1, 0x12345678, 0xFFFFFFFF]
 
 
 @pytest.fixture
-def emu(game_dir):
-    return Emu(load_image(game_dir / "SKULL.EXE"))
+def emu(skull):
+    return Emu(load_image(skull))
 
 
 @pytest.mark.parametrize("seed", SEEDS)

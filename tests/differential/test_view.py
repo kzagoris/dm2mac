@@ -4,11 +4,10 @@ import struct
 
 import pytest
 
-from dm2test.gamefiles import require
+from dm2test.gamefiles import require, require_skull
 from dm2test import constants as C
 from dm2test.gdat import image_info
 from dm2test.structs import Bitmap, CurrentMap, Game, GdatKey, Location, Party, Position, ScreenSize, ViewSquare
-from dm2test.markers import ROOT
 from dm2tools.emu import SCRATCH
 from dm2test.save import GRAPHICS, START, original_load
 from dm2test.view import (
@@ -56,7 +55,7 @@ def gdat(lib):
 @pytest.fixture(scope="module")
 def start():
     require(START)
-    require(ROOT / "game" / "SKULL.EXE")
+    require_skull()
     return START.read_bytes()
 
 
@@ -280,8 +279,8 @@ class GridPoint(ctypes.Structure):
 def image_emu():
     from dm2tools.emu import Emu
     from dm2tools.le import load_image
-    require(ROOT / "game" / "SKULL.EXE")
-    return Emu(load_image(ROOT / "game" / "SKULL.EXE"))
+    require_skull()
+    return Emu(load_image(require_skull()))
 
 
 def read_xy(emu):

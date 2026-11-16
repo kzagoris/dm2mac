@@ -3,7 +3,7 @@ import struct
 
 import pytest
 
-from dm2test.gamefiles import require
+from dm2test.gamefiles import require, require_skull
 from dm2test import constants as C
 from dm2test.markers import ROOT
 from dm2tools.emu import SCRATCH, Emu
@@ -44,7 +44,7 @@ class Original:
     """The DUNGEON.DAT load of SKULL.EXE in the emulator; the systems that a load also starts are stubbed."""
 
     def __init__(self):
-        self.emu = emu = Emu(load_image(ROOT / "game" / "SKULL.EXE"))
+        self.emu = emu = Emu(load_image(require_skull()))
         emu.serve_file(DUNGEON.read_bytes())
         self.heap = SCRATCH
         emu.stub(MEM_ALLOC, self.alloc)
@@ -81,7 +81,7 @@ class Original:
 
 @pytest.fixture(scope="module")
 def original():
-    require(ROOT / "game" / "SKULL.EXE")
+    require_skull()
     return Original()
 
 

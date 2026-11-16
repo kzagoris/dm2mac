@@ -1,6 +1,6 @@
-"""The screen filter of the advanced mode (src/ui/filter.c) and its row on the cheat screen (src/ui/cheats.c): the
-start from --filter and SETTINGS.TXT, the cycle, the SETTINGS.TXT write, the window hook, and Esc, which opens Options/Help in
-the dungeon view and resumes from the pause."""
+"""The screen filter of the advanced mode (src/ui/filter.c) and its row on the Options/Help screen (src/ui/options.c):
+the start from --filter and SETTINGS.TXT, the cycle, the SETTINGS.TXT write, the window hook, and Esc, which opens
+Options/Help in the dungeon view and resumes from the pause."""
 
 import ctypes
 
@@ -12,73 +12,76 @@ from dm2test.modes import (ADVANCED, INPUT_MODE_MOVE, VANILLA, key_command, pres
 
 NONE, SCALE2X, SCALE3X = C.SETTINGS_FILTER_NONE, C.SETTINGS_FILTER_SCALE2X, C.SETTINGS_FILTER_SCALE3X
 XBRZ2X, XBRZ3X, XBRZ4X = C.SETTINGS_FILTER_XBRZ2X, C.SETTINGS_FILTER_XBRZ3X, C.SETTINGS_FILTER_XBRZ4X
-ROW_OPTIONS, ROW_FILTER, ROW_QUICK_SAVE = 6, 7, 8
-SCAN_ESCAPE, SCAN_RETURN, SCAN_S = 0x01, 0x1C, 0x1F
+# The rows and the layout of the options page (src/ui/options.c)
+OPTIONS_ROW_FILTER = 4
+PANEL_LEFT, PANEL_FIRST_Y, PANEL_ROW_HEIGHT, PANEL_NOTE_Y = 18, 46, 11, 170
+SCAN_ESCAPE, SCAN_S, SCAN_W = 0x01, 0x1F, 0x11
 HOOK = ctypes.CFUNCTYPE(ctypes.c_bool, ctypes.c_int)
 FULLSCREEN_HOOK = ctypes.CFUNCTYPE(ctypes.c_bool, ctypes.c_bool)
 
 
-class Cursor(ctypes.Structure):
-    _fields_ = [("page", ctypes.c_int16), ("row", ctypes.c_int16)]
+def key(lib, scan):
+    return lib.options_event(C.INPUT_KEY, scan, 0)
 
 
-@pytest.fixture(scope="module", autouse=True)
-def lib_prototypes(lib):
-    lib.cheats_get_cursor.restype = Cursor  # Cursor is a mirror of this module
+def click(lib, x, y):
+    return lib.options_event(C.INPUT_BUTTON_LEFT, x, y)
+
+
+def row_y(row):
+    """A y inside the row: the row starts a text line above its baseline."""
+    return PANEL_FIRST_Y + row * PANEL_ROW_HEIGHT - 1
 
 
 @pytest.fixture
 def screen(lib, advanced):
-    """The advanced mode with the filter none and the cheat screen open on SCREEN FILTER; everything closed after
+    """The advanced mode with the filter none and Options/Help open on SCREEN FILTER; the filter hook cleared after
     the test."""
     lib.upscale_start(NONE)
-    lib.cheats_open()
-    for _ in range(ROW_FILTER - 1):  # the selection skips the OPTIONS subtitle
-        lib.cheats_move_selection(1)
+    lib.options_open()
+    for _ in range(OPTIONS_ROW_FILTER):
+        assert key(lib, SCAN_S) == C.OPTIONS_STAY
     yield advanced
-    ctypes.c_int.in_dll(lib, "g_advanced_screen").value = C.ADVANCED_SCREEN_NONE
     ctypes.c_void_p.in_dll(lib, "g_upscale_filter_hook").value = None
 
 
-def state(lib):
-    c = lib.cheats_get_cursor()
-    return c.row, lib.upscale_get_filter()
+def settings_text(filter):
+    """SETTINGS.TXT with the filter and the other values at their defaults."""
+    return f"filter={filter}\naspect=off\nscanlines=off\nclassic_steps=off\nspells=known\nfullscreen=off\n"
 
 
 def cycle(lib):
-    assert lib.cheats_run_selected_row() == C.CHEATS_STAY
+    assert key(lib, C.KEY_ENTER) == C.OPTIONS_STAY
 
 
 def test_the_row_cycles_the_filter(lib, screen):
-    assert state(lib) == (ROW_FILTER, NONE)
+    assert lib.upscale_get_filter() == NONE
     for filter in (SCALE2X, SCALE3X, XBRZ2X, XBRZ3X, XBRZ4X, NONE, SCALE2X):
         cycle(lib)
-        assert state(lib) == (ROW_FILTER, filter)
-    lib.cheats_move_selection(-1)
-    assert state(lib)[0] == ROW_OPTIONS - 1, "the selection skips the OPTIONS subtitle"
-    lib.cheats_move_selection(1)
-    assert state(lib)[0] == ROW_FILTER
+        assert lib.upscale_get_filter() == filter
+    key(lib, SCAN_S)
+    key(lib, SCAN_W)
+    cycle(lib)
+    assert lib.upscale_get_filter() == SCALE3X, "the selection is on the filter row again"
 
 
-def test_click_cycles_the_filter_and_the_subtitle_does_nothing(lib, screen):
-    rect = (ctypes.c_int16 * 4)()
-    assert lib.zone_get_rect(C.ZONE_VIEWPORT, rect)
-    x, y = rect[0] + rect[2] // 2, rect[1] + 16 + 5
-    assert lib.cheats_process_click(x, y + ROW_FILTER * 10) == C.CHEATS_STAY and state(lib) == (ROW_FILTER, SCALE2X)
-    assert lib.cheats_process_click(x, y + ROW_OPTIONS * 10) == C.CHEATS_STAY
-    assert state(lib) == (ROW_FILTER, SCALE2X), "the subtitle"
+def test_click_cycles_the_filter_and_a_click_below_the_rows_does_nothing(lib, screen):
+    x = PANEL_LEFT + 10
+    assert click(lib, x, row_y(OPTIONS_ROW_FILTER)) == C.OPTIONS_STAY and lib.upscale_get_filter() == SCALE2X
+    assert click(lib, x, PANEL_NOTE_Y) == C.OPTIONS_STAY
+    assert lib.upscale_get_filter() == SCALE2X, "the note line"
 
 
 def test_a_change_goes_to_the_file_once(lib, screen):
     _, data = screen
     cycle(lib)
-    assert (data / "SETTINGS.TXT").read_text() == "filter=scale2x\naspect=off\nscanlines=off\nclassic_steps=off\nspells=known\nfullscreen=off\n"
+    assert (data / "SETTINGS.TXT").read_text() == settings_text("scale2x")
     (data / "SETTINGS.TXT").unlink()
-    lib.cheats_move_selection(1)
-    lib.cheats_move_selection(-1)
+    key(lib, SCAN_S)
+    key(lib, SCAN_W)
     assert not (data / "SETTINGS.TXT").exists(), "no change, no write"
     cycle(lib)
-    assert (data / "SETTINGS.TXT").read_text() == "filter=scale3x\naspect=off\nscanlines=off\nclassic_steps=off\nspells=known\nfullscreen=off\n"
+    assert (data / "SETTINGS.TXT").read_text() == settings_text("scale3x")
 
 
 def test_the_window_refuses_a_filter(lib, screen):
@@ -87,15 +90,15 @@ def test_the_window_refuses_a_filter(lib, screen):
     ctypes.c_void_p.in_dll(lib, "g_upscale_filter_hook").value = ctypes.cast(hook, ctypes.c_void_p).value
     cycle(lib)
     cycle(lib)
-    assert seen == [SCALE2X, SCALE3X] and state(lib) == (ROW_FILTER, SCALE2X)
-    assert (screen[1] / "SETTINGS.TXT").read_text() == "filter=scale2x\naspect=off\nscanlines=off\nclassic_steps=off\nspells=known\nfullscreen=off\n"
+    assert seen == [SCALE2X, SCALE3X] and lib.upscale_get_filter() == SCALE2X
+    assert (screen[1] / "SETTINGS.TXT").read_text() == settings_text("scale2x")
 
 
 def test_failed_write_keeps_the_filter(lib, screen):
     _, data = screen
     (data / "SETTINGS.TMP").mkdir()
     cycle(lib)
-    assert state(lib) == (ROW_FILTER, SCALE2X) and not (data / "SETTINGS.TXT").exists()
+    assert lib.upscale_get_filter() == SCALE2X and not (data / "SETTINGS.TXT").exists()
 
 
 @pytest.mark.parametrize("given, file, expected", [(C.SETTINGS_FILTER_UNSET, b"filter=scale3x\n", SCALE3X), (SCALE2X, b"filter=scale3x\n", SCALE2X),

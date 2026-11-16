@@ -8,6 +8,7 @@ import struct
 import pytest
 
 from dm2test import constants as C
+from dm2test.gamefiles import require_skull
 from dm2test.markers import needs_game
 from dm2test.oracle import G_RANDOM_SEED
 from dm2test.structs import Location, Position
@@ -1132,9 +1133,8 @@ AI_TABLES = (
 @needs_game
 def test_tables_match_the_original(lib):
     # The copies of the AI tables against the bytes of SKULL.EXE as it loads.
-    from dm2test.markers import ROOT
     from dm2tools.le import load_image
-    image = load_image(ROOT / "game" / "SKULL.EXE")
+    image = load_image(require_skull())
     for name, address, first, size in AI_TABLES:
         mine = ctypes.string_at(ctypes.addressof(ctypes.c_uint8.in_dll(lib, name)), size)
         assert mine[first:] == image.data[address + first - image.base:address + size - image.base], name

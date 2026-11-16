@@ -30,8 +30,8 @@ def java_installed():
 @pytest.mark.skipif(not ghidra_installed(), reason="Ghidra not installed")
 @pytest.mark.skipif(not java_installed(), reason="Java not installed")
 @pytest.mark.timeout(900)
-def test_decompile_skull(game_dir, tmp_path):
-    image = load_image(game_dir / "SKULL.EXE")
+def test_decompile_skull(skull, tmp_path):
+    image = load_image(skull)
     binary = tmp_path / "skull.bin"
     binary.write_bytes(image.data)
     symbols = tmp_path / "symbols.csv"

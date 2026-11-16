@@ -8,8 +8,8 @@ STRCAT = 0x6418E
 
 
 @pytest.fixture
-def emu(game_dir):
-    return Emu(load_image(game_dir / "SKULL.EXE"))
+def emu(skull):
+    return Emu(load_image(skull))
 
 
 @pytest.mark.parametrize("a, b", [(b"", b""), (b"", b"x"), (b"abc", b""), (b"Skull", b"keep"), (b"a" * 300, b"b" * 77)], ids=range(5))

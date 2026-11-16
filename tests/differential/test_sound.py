@@ -4,7 +4,7 @@ import struct
 
 import pytest
 
-from dm2test.gamefiles import require
+from dm2test.gamefiles import require, require_skull
 from dm2test import constants as C
 from dm2test.audio import UPSAMPLE, SoundOffset, mix
 from dm2test.structs import Sound
@@ -33,8 +33,8 @@ def snd(lib):
 
 @pytest.fixture(scope="module")
 def emu():
-    require(ROOT / "game" / "SKULL.EXE")
-    return Emu(load_image(ROOT / "game" / "SKULL.EXE"))
+    require_skull()
+    return Emu(load_image(require_skull()))
 
 
 def c_volume_pan(lib, volume, lateral, forward):

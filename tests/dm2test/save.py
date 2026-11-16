@@ -1,12 +1,14 @@
 """The save file helpers: the original load and save in the emulator, and the C round trip."""
 
 from dm2test import constants as C
+from dm2test.gamefiles import require_skull
+from dm2test import markers
 from dm2test.markers import ROOT
 from dm2tools.emu import SCRATCH, Emu
 from dm2tools.le import load_image
 
 
-START = ROOT / "tests" / "saves" / "start.DAT"
+START = markers.START
 GRAPHICS = ROOT / "game" / "DATA" / "GRAPHICS.DAT"
 
 # The file part of session_load: header, dungeon image, game state, things, timed effects, event links.
@@ -34,7 +36,7 @@ def original_load(lib, gdat, data):
     GRAPHICS.DAT lookups go to the C gdat_find; the load stubs weather_init and the level digit table,
     which do not reach the file.
     """
-    emu = Emu(load_image(ROOT / "game" / "SKULL.EXE"), max_insns=100_000_000)
+    emu = Emu(load_image(require_skull()), max_insns=100_000_000)
     emu.serve_file(data)
     heap = [SCRATCH]
 

@@ -7,7 +7,7 @@ import struct
 
 import pytest
 
-from dm2test.gamefiles import require
+from dm2test.gamefiles import require, require_skull
 from dm2test import constants as C
 from dm2test.markers import ROOT
 from dm2test.save import GRAPHICS
@@ -29,9 +29,8 @@ G_DIALOG_SCREEN_MODE, G_DIALOG_BUTTON_COUNT = 0x717BC, 0x7F200
 @pytest.fixture(scope="module")
 def keys():
     """Every key code of the key lists of SKULL.EXE."""
-    from dm2test.markers import ROOT
     from dm2tools.le import load_image
-    image = load_image(ROOT / "game" / "SKULL.EXE")
+    image = load_image(require_skull())
     data = image.data[0x729B8 - image.base:0x72B9C - image.base]
     return sorted({struct.unpack_from("<H", data, i + 2)[0] for i in range(0, len(data), 4)})
 

@@ -7,7 +7,7 @@
 - macOS with [Homebrew](https://brew.sh).
 - [uv](https://docs.astral.sh/uv/).
 - Ghidra and OpenJDK 21 from Homebrew. `tools/ghidra/decompile.sh` uses `brew --prefix ghidra`. It uses `JAVA_HOME` if set, otherwise `brew --prefix openjdk@21`.
-- Your own copy of the original game files in `game/`, including `game/SKULL.EXE`.
+- Your own copy of the original game files in `game/`, including `game/SKULL.EXE`. When `game/` holds another release, put the decompiled build (522637 bytes) in `reference/SKULL.EXE`; the script and the tests take it first.
 
 ## Quickstart
 
@@ -39,7 +39,7 @@ Git ignores `game/` and `reference/`; do not commit game content. The build and 
 
 | Command | Purpose |
 |---|---|
-| `tools/decompile-skull.sh` | Run `dm2-le` and `decompile.sh` for `game/SKULL.EXE`. It uses `docs/reference/skull-symbols.csv` as `SYMBOLS`. |
+| `tools/decompile-skull.sh` | Run `dm2-le` and `decompile.sh` for `reference/SKULL.EXE`, else `game/SKULL.EXE`. It uses `docs/reference/skull-symbols.csv` as `SYMBOLS`. |
 | `uv run dm2-le game/SKULL.EXE <out.bin>` | Load the Linear Executable (LE) file into a flat memory image (`tools/dm2tools/le.py`). Prints one `object N: base ...` line per object and the `entry:` address. The image addresses are in the Conventions section of the [SKULL.EXE map](reference/skull-map.md). |
 | `[SYMBOLS=<csv>] tools/ghidra/decompile.sh <image.bin> <base> <data-start> <out.c> <entry> [<entry> ...]` | Decompile a flat 32-bit x86 image (Watcom register calling convention) with Ghidra headless. |
 

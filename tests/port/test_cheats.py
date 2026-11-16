@@ -290,6 +290,10 @@ def test_no_bump_damage(lib, game, cheat):
     lib.game_set_cheats(C.CHEAT_NO_BUMP if cheat else 0)
     damage = (ctypes.c_int16 * C.CHAMPION_MAX).in_dll(lib, "g_champ_pending_damage")
     ctypes.memset(damage, 0, ctypes.sizeof(damage))
-    lib.move_party(C.CMD_MOVE_FORWARD)
+    lib.move_set_classic_steps(True)  # the step runs at once, whatever the move delay of the champions
+    try:
+        lib.move_party(C.CMD_MOVE_FORWARD)
+    finally:
+        lib.move_set_classic_steps(False)
     assert (game.party_x, game.party_y) == place[1:3]
     assert (sum(damage) > 0) != cheat

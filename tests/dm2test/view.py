@@ -6,7 +6,7 @@ import struct
 from dm2test import constants as C
 from dm2test.addresses import G_FONT_BITMAP, G_SKY_OBJECTS, G_UI_COLORS, MONEY_INIT_COIN_TABLE, SKY_OBJECTS_SIZE, WEATHER
 from dm2test.gdat import image_info
-from dm2test.markers import ROOT
+from dm2test.gamefiles import require_skull
 from dm2test.structs import Bitmap, Game, GdatKey, Location
 from dm2tools.emu import Emu
 from dm2tools.le import load_image
@@ -39,7 +39,7 @@ class OriginalView:
 
     def __init__(self, lib, gdat, data):
         self.lib, self.gdat = lib, gdat
-        self.emu = emu = Emu(load_image(ROOT / "game" / "SKULL.EXE"), max_insns=100_000_000)
+        self.emu = emu = Emu(load_image(require_skull()), max_insns=100_000_000)
         emu.uc.mem_map(HEAP, HEAP_SIZE)
         self.top = HEAP
         self.images, self.palettes, self.data, self.cache = {}, {}, {}, {}

@@ -6,7 +6,7 @@ import struct
 
 import pytest
 
-from dm2test.gamefiles import require
+from dm2test.gamefiles import require, require_skull
 from dm2test import constants as C
 from dm2test.markers import ROOT
 from dm2tools.emu import SCRATCH, Emu
@@ -30,7 +30,7 @@ THING_SIZES = (4, 6, 4, 8, 16, 4, 4, 4, 4, 8, 4, 0, 0, 0, 8, 4)
 def gdat(lib):
     require(GRAPHICS)
     require(DUNGEON)
-    require(ROOT / "game" / "SKULL.EXE")
+    require_skull()
     g = ctypes.c_void_p()
     assert lib.gdat_load(str(GRAPHICS).encode(), ctypes.byref(g)) == C.GDAT_OK
     lib.draw_init(g)
@@ -55,7 +55,7 @@ class NewGame:
 
     def __init__(self, lib, gdat, before_link=None):
         """before_link(emu): runs when the original reaches the link pass."""
-        self.emu = emu = Emu(load_image(ROOT / "game" / "SKULL.EXE"), max_insns=200_000_000)
+        self.emu = emu = Emu(load_image(require_skull()), max_insns=200_000_000)
         emu.serve_file(DUNGEON.read_bytes())
         self.heap = SCRATCH
         emu.stub(MEM_ALLOC, self.alloc)

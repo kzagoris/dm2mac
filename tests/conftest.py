@@ -40,6 +40,20 @@ def pytest_configure(config):
         raise pytest.UsageError(f"build/ is missing or older than src/: run `make {target}` first (`make test` builds by itself)")
 
 
+def pytest_collection_modifyitems(items):
+    from dm2test.markers import ROOT, START_NOT_PRIVATE, start_is_private
+
+    # A differential test on the start save compares records that only the private start.DAT has; the port tests take
+    # any start save of a new game.
+    if start_is_private():
+        return
+    differential = ROOT / "tests" / "differential"
+    skip = pytest.mark.skip(reason=START_NOT_PRIVATE)
+    for item in items:
+        if differential in item.path.parents and "start" in getattr(item, "fixturenames", ()):
+            item.add_marker(skip)
+
+
 def pytest_handlecrashitem(crashitem, report, sched):
     # A test that kills its worker (a segmentation fault in the library, or the timeout) fails once. --dist loadfile
     # queues the rest of its file again with the crashed test still in it; left there, the test kills each new worker

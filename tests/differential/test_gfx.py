@@ -5,7 +5,7 @@ import pytest
 
 from dm2tools.emu import SCRATCH, Emu
 from dm2tools.le import load_image
-from dm2test.gamefiles import require
+from dm2test.gamefiles import require, require_skull
 from dm2test import constants as C
 from dm2test.structs import Bitmap
 
@@ -104,10 +104,7 @@ def test_blit_4bpp_to_4bpp(lib):
 
 @pytest.fixture(scope="module")
 def emu():
-    from dm2test.markers import ROOT
-    exe = ROOT / "game" / "SKULL.EXE"
-    require(exe)
-    return Emu(load_image(exe))
+    return Emu(load_image(require_skull()))
 
 
 def bitmap(pixels, width, height, bpp):

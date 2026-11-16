@@ -7,7 +7,7 @@ from pathlib import Path
 
 import pytest
 
-from dm2test.markers import BUILD, GAME, ROOT
+from dm2test.markers import BUILD, GAME, ROOT, SKULL, SKULL_MISSING
 from dm2test.structs import mirror
 
 NAMES = [
@@ -22,6 +22,18 @@ def require(path: Path) -> Path:
     if not path.exists():
         pytest.skip(f"{path.relative_to(ROOT)} missing")
     return path
+
+
+def require_skull() -> Path:
+    """The SKULL.EXE of the decompiled build (dm2test.markers.find_skull); skips the test when there is none."""
+    if SKULL is None:
+        pytest.skip(SKULL_MISSING)
+    return SKULL
+
+
+@pytest.fixture
+def skull():
+    return require_skull()
 
 
 @pytest.fixture
