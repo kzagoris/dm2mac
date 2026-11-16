@@ -938,62 +938,82 @@ uint16_t input_click_command(enum InputMode mode, int16_t x, int16_t y, int butt
 /* Alt+C was the last key of the dungeon view in the advanced mode: Alt+1 to Alt+4 now choose a favorite. */
 static bool favorite_chord;
 
-uint16_t input_key_command(enum InputMode mode, uint16_t key, int16_t *rect)
+/* The entry of command in the input tree of mode where a key of the save menu or the rest works: the move or the
+   inventory mode with no recruit shown, and the command not switched off; NULL elsewhere. */
+static const InputCommand *find_menu_key_entry(enum InputMode mode, uint16_t command)
 {
-    if (g_game_mode == GAME_MODE_ADVANCED) {
-        bool chord = favorite_chord;
-        favorite_chord = mode == INPUT_MODE_MOVE && key == KEY_FAVORITE;
-        if (favorite_chord)
-            return 0;
-        if (chord && mode == INPUT_MODE_MOVE && key >= KEY_FAVORITE_FIRST &&
-            key <= KEY_FAVORITE_FIRST + CMD_FAVORITE_LAST - CMD_FAVORITE_FIRST)
-            return (uint16_t)(CMD_FAVORITE_FIRST + key - KEY_FAVORITE_FIRST);
-    }
-    if (g_game_mode == GAME_MODE_ADVANCED && !g_ui.candidate &&
-        ((key == KEY_OPTIONS && (mode == INPUT_MODE_MOVE || mode == INPUT_MODE_INVENTORY || mode == INPUT_MODE_PAUSE ||
-                                 mode == INPUT_MODE_SLEEP)) ||
-         (key == SCAN_ESCAPE && mode == INPUT_MODE_MOVE)))
-        return CMD_OPTIONS;
-    if (g_game_mode == GAME_MODE_ADVANCED && key == SCAN_ESCAPE && mode == INPUT_MODE_RECRUIT)
-        return CMD_RECRUIT_CANCEL;
-    if (g_game_mode == GAME_MODE_ADVANCED && key == SCAN_ESCAPE && mode == INPUT_MODE_INVENTORY && !g_ui.candidate)
-        return CMD_INVENTORY_LEADER;
-    if (g_game_mode == GAME_MODE_ADVANCED && (key == KEY_DISK_MENU || key == KEY_REST)) {
-        if (g_ui.candidate || (mode != INPUT_MODE_MOVE && mode != INPUT_MODE_INVENTORY))
-            return 0;
-        uint16_t command = key == KEY_DISK_MENU ? CMD_SAVE : CMD_SLEEP;
-        const InputCommand *entry = input_find_command_entry(&g_input_mode_roots[mode], command);
-        if (!entry || (entry->flags & COMMAND_OFF))
-            return 0;
-        select_command_in_list(command, entry, rect);
+    if (g_ui.candidate || (mode != INPUT_MODE_MOVE && mode != INPUT_MODE_INVENTORY))
+        return NULL;
+    const InputCommand *entry = input_find_command_entry(&g_input_mode_roots[mode], command);
+    return entry && !(entry->flags & COMMAND_OFF) ? entry : NULL;
+}
+
+/* The keys of the advanced mode that go before the input tree: the favorite chord, the options, Escape, the save
+   menu, the rest and the quit. True when key is one of them; command becomes its command, 0 for none. */
+static bool find_first_key_command(enum InputMode mode, uint16_t key, int16_t *rect, uint16_t *command)
+{
+    bool chord = favorite_chord;
+    favorite_chord = mode == INPUT_MODE_MOVE && key == KEY_FAVORITE;
+    *command = 0;
+    if (favorite_chord)
+        return true;
+    if (chord && mode == INPUT_MODE_MOVE && key >= KEY_FAVORITE_FIRST &&
+        key <= KEY_FAVORITE_FIRST + CMD_FAVORITE_LAST - CMD_FAVORITE_FIRST) {
+        *command = (uint16_t)(CMD_FAVORITE_FIRST + key - KEY_FAVORITE_FIRST);
+    } else if (!g_ui.candidate && ((key == KEY_OPTIONS && (mode == INPUT_MODE_MOVE || mode == INPUT_MODE_INVENTORY ||
+                                                           mode == INPUT_MODE_PAUSE || mode == INPUT_MODE_SLEEP)) ||
+                                   (key == SCAN_ESCAPE && mode == INPUT_MODE_MOVE))) {
+        *command = CMD_OPTIONS;
+    } else if (key == SCAN_ESCAPE && mode == INPUT_MODE_RECRUIT) {
+        *command = CMD_RECRUIT_CANCEL;
+    } else if (key == SCAN_ESCAPE && mode == INPUT_MODE_INVENTORY && !g_ui.candidate) {
+        *command = CMD_INVENTORY_LEADER;
+    } else if (key == KEY_DISK_MENU || key == KEY_REST || key == KEY_QUIT_GAME) {
+        /* the QUIT button of the save menu works where the disk icon works */
+        uint16_t menu = key == KEY_REST ? CMD_SLEEP : CMD_SAVE;
+        const InputCommand *entry = find_menu_key_entry(mode, menu);
+        if (!entry)
+            return true;
+        if (key != KEY_QUIT_GAME)
+            select_command_in_list(menu, entry, rect);
         g_input_match.key = key;
-        return command;
+        *command = key == KEY_QUIT_GAME ? CMD_QUIT_GAME : menu;
+    } else {
+        return false;
     }
-    if (g_game_mode == GAME_MODE_ADVANCED && key == KEY_QUIT_GAME) {
-        /* the QUIT button of the save menu: where the disk icon works */
-        if (g_ui.candidate || (mode != INPUT_MODE_MOVE && mode != INPUT_MODE_INVENTORY))
-            return 0;
-        const InputCommand *entry = input_find_command_entry(&g_input_mode_roots[mode], CMD_SAVE);
-        if (!entry || (entry->flags & COMMAND_OFF))
-            return 0;
-        g_input_match.key = key;
-        return CMD_QUIT_GAME;
+    return true;
+}
+
+/* The command of a key of the advanced mode that the input tree has no command for: the buttons of the advanced mode,
+   then the keypad moves; 0 for none. */
+static uint16_t find_last_key_command(enum InputMode mode, uint16_t key, int16_t *rect)
+{
+    if (mode == INPUT_MODE_MOVE) {
+        if (key == KEY_QUICK_SAVE)
+            return CMD_QUICK_SAVE;
+        if (key == KEY_QUICK_LOAD)
+            return CMD_QUICK_LOAD;
+        if (key == KEY_AUTOMAP || key == KEY_AUTOMAP_M)
+            return CMD_AUTOMAP;
+        if (key == KEY_SPELLBOOK)
+            return CMD_SPELLBOOK;
+        if (key == KEY_CHEATS)
+            return CMD_CHEATS;
     }
-    uint16_t command = find_key_command(&g_input_mode_roots[mode], key, rect);
-    if (command || g_game_mode != GAME_MODE_ADVANCED)
-        return command;
-    if (mode == INPUT_MODE_MOVE && (key == KEY_QUICK_SAVE || key == KEY_QUICK_LOAD))
-        return key == KEY_QUICK_SAVE ? CMD_QUICK_SAVE : CMD_QUICK_LOAD;
-    if (mode == INPUT_MODE_MOVE && (key == KEY_AUTOMAP || key == KEY_AUTOMAP_M))
-        return CMD_AUTOMAP;
-    if (mode == INPUT_MODE_MOVE && key == KEY_SPELLBOOK)
-        return CMD_SPELLBOOK;
-    if (mode == INPUT_MODE_MOVE && key == KEY_CHEATS)
-        return CMD_CHEATS;
     if (mode == INPUT_MODE_INVENTORY && key == KEY_AUTOMAP && !g_ui.candidate)
         return CMD_INVENTORY_LEADER;
     uint16_t keypad = advanced_movement_key(key);
     return keypad ? find_key_command(&g_input_mode_roots[mode], keypad, rect) : 0;
+}
+
+uint16_t input_key_command(enum InputMode mode, uint16_t key, int16_t *rect)
+{
+    bool advanced = g_game_mode == GAME_MODE_ADVANCED;
+    uint16_t command = 0;
+    if (advanced && find_first_key_command(mode, key, rect, &command))
+        return command;
+    command = find_key_command(&g_input_mode_roots[mode], key, rect);
+    return command || !advanced ? command : find_last_key_command(mode, key, rect);
 }
 
 /* Marks the zones of the input tree below node whose conditions hold. */

@@ -871,30 +871,28 @@ static bool execute_party_command(const Command *c, bool idle)
    the cheats. False when the command is none of them. */
 static bool execute_advanced_command(int command, bool idle)
 {
-    bool ready = g_game.champion_count && !g_ui.candidate && idle;
-    if (command == CMD_OPTIONS) {
-        if (g_game_mode == GAME_MODE_ADVANCED && !g_ui.candidate && idle)
-            advanced_open_options();
-    } else if (command == CMD_SPELLBOOK) {
-        if (g_game_mode == GAME_MODE_ADVANCED && ready)
-            advanced_open_spellbook();
-    } else if (command >= CMD_FAVORITE_FIRST && command <= CMD_FAVORITE_LAST) {
-        if (g_game_mode == GAME_MODE_ADVANCED && ready)
-            spellbook_run_favorite((int16_t)(command - CMD_FAVORITE_FIRST));
-    } else if (command >= CMD_QUICK_SAVE && command <= CMD_CHEATS) {
-        if (!ready)
-            return true;
-        if (command == CMD_QUICK_SAVE)
-            advanced_quick_save();
-        else if (command == CMD_QUICK_LOAD)
-            advanced_quick_load();
-        else if (command == CMD_AUTOMAP)
-            advanced_open_automap();
-        else
-            advanced_open_cheats();
-    } else {
+    bool favorite = command >= CMD_FAVORITE_FIRST && command <= CMD_FAVORITE_LAST;
+    if (command != CMD_OPTIONS && command != CMD_SPELLBOOK && !favorite &&
+        (command < CMD_QUICK_SAVE || command > CMD_CHEATS))
         return false;
-    }
+    /* the options open with no champion yet, the others need one */
+    if (g_game_mode != GAME_MODE_ADVANCED || g_ui.candidate || !idle ||
+        (command != CMD_OPTIONS && !g_game.champion_count))
+        return true;
+    if (command == CMD_OPTIONS)
+        advanced_open_options();
+    else if (command == CMD_SPELLBOOK)
+        advanced_open_spellbook();
+    else if (favorite)
+        spellbook_run_favorite((int16_t)(command - CMD_FAVORITE_FIRST));
+    else if (command == CMD_QUICK_SAVE)
+        advanced_quick_save();
+    else if (command == CMD_QUICK_LOAD)
+        advanced_quick_load();
+    else if (command == CMD_AUTOMAP)
+        advanced_open_automap();
+    else
+        advanced_open_cheats();
     return true;
 }
 
