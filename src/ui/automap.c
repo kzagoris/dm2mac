@@ -73,6 +73,13 @@ typedef struct {
     int page_count;
 } ItemPage;
 
+/* A mark on a map icon: a w x h pattern of '1' (color) and '0' (black) pixels whose upper left is at (left, 0) of the
+   icon. */
+typedef struct {
+    const char *pattern;
+    int w, h, left, color;
+} IconMark;
+
 static int zoom = 1, zoom_pan_x, zoom_pan_y;
 
 static int scroll_x, scroll_y; /* squares between the party and the middle of the drawn map */
@@ -87,10 +94,10 @@ static struct {
 } inspection;
 
 /* Three pixels per row: the same plus for any number of items. */
-static const char item_mark[] = "000010111010000";
+static const IconMark item_mark = {"000010111010000", ITEM_MARK_W, ITEM_MARK_H, ITEM_MARK_LEFT, UI_YELLOW};
 
 /* Three pixels per row: the head and the needle of a pin. */
-static const char note_mark[] = "111111010010000";
+static const IconMark note_mark = {"111111010010000", NOTE_MARK_W, NOTE_MARK_H, 0, UI_CYAN};
 
 int automap_zoom_factor(void)
 {
@@ -364,26 +371,23 @@ static void checker_overlay(Offscreen *o, const int16_t *clip, int16_t icon_x, i
                 fill_clipped(o, clip, (int16_t[RECT_SIZE]){(int16_t)px, (int16_t)py, 1, 1}, g_ui_colors[UI_LIGHT_GRAY]);
 }
 
-/* Marks loose items, even those without map graphics, with a clipped yellow plus. */
-static void show_item_mark(Offscreen *o, const int16_t *clip, Location level_at, int16_t icon_x, int16_t icon_y)
+/* The UI color of mark at the pixel (px, py) of its icon, -1 for a pixel outside the mark. */
+static int mark_pixel_color(const IconMark *mark, int px, int py)
 {
-    int count = automap_items(level_at, NULL, 0);
-    if (!count)
-        return;
-    for (int y = 0; y < ITEM_MARK_H; y++)
-        for (int x = 0; x < ITEM_MARK_W; x++)
-            fill_clipped(o, clip,
-                         (int16_t[RECT_SIZE]){(int16_t)(icon_x + ITEM_MARK_LEFT + x), (int16_t)(icon_y + y), 1, 1},
-                         g_ui_colors[item_mark[y * ITEM_MARK_W + x] == '1' ? UI_YELLOW : UI_BLACK]);
+    int x = px - mark->left;
+    if (x < 0 || x >= mark->w || py < 0 || py >= mark->h)
+        return -1;
+    return mark->pattern[py * mark->w + x] == '1' ? mark->color : UI_BLACK;
 }
 
-/* Marks a square with a note of the player with a clipped cyan pin. */
-static void show_note_mark(Offscreen *o, const int16_t *clip, int16_t icon_x, int16_t icon_y)
+/* Draws mark on the icon at the screen place (icon_x, icon_y), clipped: the yellow plus of the loose items (even those
+   without map graphics) or the cyan pin of a note of the player. */
+static void show_icon_mark(Offscreen *o, const int16_t *clip, const IconMark *mark, int16_t icon_x, int16_t icon_y)
 {
-    for (int y = 0; y < NOTE_MARK_H; y++)
-        for (int x = 0; x < NOTE_MARK_W; x++)
-            fill_clipped(o, clip, (int16_t[RECT_SIZE]){(int16_t)(icon_x + x), (int16_t)(icon_y + y), 1, 1},
-                         g_ui_colors[note_mark[y * NOTE_MARK_W + x] == '1' ? UI_CYAN : UI_BLACK]);
+    for (int py = 0; py < mark->h; py++)
+        for (int px = mark->left; px < mark->left + mark->w; px++)
+            fill_clipped(o, clip, (int16_t[RECT_SIZE]){(int16_t)(icon_x + px), (int16_t)(icon_y + py), 1, 1},
+                         g_ui_colors[mark_pixel_color(mark, px, py)]);
 }
 
 /* The white frame just outside the level rect, whose level position (0, 0) icon is at (left, top). */
@@ -443,9 +447,10 @@ static void show_level_square(Offscreen *o, const int16_t *clip, Location level_
                      (int16_t[RECT_SIZE]){(int16_t)(icon_x + PAD_MARK_OFFSET), (int16_t)(icon_y + PAD_MARK_OFFSET),
                                           PAD_MARK_SIZE, PAD_MARK_SIZE},
                      g_ui_colors[UI_GRAY]);
-    show_item_mark(o, clip, level_at, icon_x, icon_y);
+    if (automap_items(level_at, NULL, 0))
+        show_icon_mark(o, clip, &item_mark, icon_x, icon_y);
     if (seen_note(position))
-        show_note_mark(o, clip, icon_x, icon_y);
+        show_icon_mark(o, clip, &note_mark, icon_x, icon_y);
 }
 
 /* Draws a complete native cell, then enlarges its pixels without blending. */
@@ -604,10 +609,10 @@ void automap_draw_legend_mark(AutomapMark mark, int16_t x, int16_t y, int scale)
                      px < PAD_MARK_OFFSET + PAD_MARK_SIZE && py >= PAD_MARK_OFFSET &&
                      py < PAD_MARK_OFFSET + PAD_MARK_SIZE)
                 color = UI_GRAY;
-            else if (mark == AUTOMAP_MARK_ITEMS && px >= ITEM_MARK_LEFT && py < ITEM_MARK_H)
-                color = item_mark[py * ITEM_MARK_W + px - ITEM_MARK_LEFT] == '1' ? UI_YELLOW : UI_BLACK;
-            else if (mark == AUTOMAP_MARK_NOTE && px < NOTE_MARK_W && py < NOTE_MARK_H)
-                color = note_mark[py * NOTE_MARK_W + px] == '1' ? UI_CYAN : UI_BLACK;
+            else if (mark == AUTOMAP_MARK_ITEMS)
+                color = mark_pixel_color(&item_mark, px, py);
+            else if (mark == AUTOMAP_MARK_NOTE)
+                color = mark_pixel_color(&note_mark, px, py);
             if (color >= 0)
                 legend_pixel((int16_t)(x + (px + 1) * scale), (int16_t)(y + (py + 1) * scale), scale, color);
         }
