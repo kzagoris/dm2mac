@@ -14,6 +14,7 @@
 #define ITEM_MARGIN 8  /* box pixels left and right of the item text */
 #define LINE_HEIGHT 12 /* height of an item box and of the heading line */
 #define ITEM_COUNT  2  /* VANILLA and ADVANCED */
+#define NOTE_COUNT  3  /* the lines below the items, one item step apart */
 
 /* The palette colors of the screen; the arrow cursor keeps its colors black (0) and white. */
 #define COLOR_BLACK      0x00
@@ -28,6 +29,8 @@
 /* The heading and the items; the item index is the game mode (GAME_MODE_VANILLA, GAME_MODE_ADVANCED). */
 static const char *const heading = "MODE";
 static const char *const items[ITEM_COUNT] = {"VANILLA", "ADVANCED"};
+static const char *const notes[NOTE_COUNT] = {"ADVANCED ADDS CONVENIENCE", "CHEATS OPTIONAL AND OFF BY DEFAULT",
+                                              "IN GAME: F1 OPTIONS/HELP"};
 
 /* The red, green, and blue of the screen colors, in the order COLOR_BLACK, COLOR_LIGHT_GRAY, COLOR_GOLD. */
 static const uint8_t screen_palette[SCREEN_COLORS][RGB_CHANNELS] = {
@@ -119,10 +122,8 @@ void mode_screen_draw(void)
     print_centered((const int16_t[RECT_SIZE]){0, HEADING_TOP, SCREEN_W, LINE_HEIGHT}, COLOR_LIGHT_GRAY, heading);
     for (int16_t i = 0; mode_screen_item_box(i, r); i++)
         print_centered(r, (enum GameMode)i == cursor ? COLOR_GOLD : COLOR_LIGHT_GRAY, items[i]);
-    print_centered((const int16_t[RECT_SIZE]){0, ITEM_TOP + ITEM_COUNT * ITEM_STEP, SCREEN_W, LINE_HEIGHT},
-                   COLOR_LIGHT_GRAY, "ADVANCED ADDS CONVENIENCE");
-    print_centered((const int16_t[RECT_SIZE]){0, ITEM_TOP + (ITEM_COUNT + 1) * ITEM_STEP, SCREEN_W, LINE_HEIGHT},
-                   COLOR_LIGHT_GRAY, "CHEATS OPTIONAL AND OFF BY DEFAULT");
-    print_centered((const int16_t[RECT_SIZE]){0, ITEM_TOP + (ITEM_COUNT + 2) * ITEM_STEP, SCREEN_W, LINE_HEIGHT},
-                   COLOR_LIGHT_GRAY, "IN GAME: F1 OPTIONS/HELP");
+    for (int i = 0; i < NOTE_COUNT; i++) {
+        int16_t top = (int16_t)(ITEM_TOP + (ITEM_COUNT + i) * ITEM_STEP);
+        print_centered((const int16_t[RECT_SIZE]){0, top, SCREEN_W, LINE_HEIGHT}, COLOR_LIGHT_GRAY, notes[i]);
+    }
 }
