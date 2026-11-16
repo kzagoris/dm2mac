@@ -34,10 +34,9 @@
 
 /* The CHTS block of the cheats after the AMAP block: the magic, the version, one byte of cheat bits (CHEAT_*). */
 #define CHEAT_MAGIC      "CHTS"
-#define CHEAT_MAGIC_SIZE 4
 #define CHEAT_VERSION    1
-#define CHEAT_BITS_AT    (CHEAT_MAGIC_SIZE + 1)
-#define CHEAT_BLOCK_SIZE (CHEAT_MAGIC_SIZE + 2)
+#define CHEAT_BITS_AT    SAVE_BLOCK_HEADER_SIZE
+#define CHEAT_BLOCK_SIZE (SAVE_BLOCK_HEADER_SIZE + 1)
 
 /* The most significant bit of a byte: the bit stream stores it first. */
 #define BYTE_TOP_BIT (BYTE_BIT_COUNT - 1)
@@ -179,6 +178,19 @@ static struct {
     int group_count, container_count;
     const Gdat *gdat;
 } io;
+
+/* ---- Extension blocks ---- */
+
+void save_put_block_header(uint8_t *header, const char *magic, uint8_t version)
+{
+    memcpy(header, magic, SAVE_BLOCK_MAGIC_SIZE);
+    header[SAVE_BLOCK_MAGIC_SIZE] = version;
+}
+
+bool save_is_block_header(const uint8_t *header, const char *magic, uint8_t version)
+{
+    return !memcmp(header, magic, SAVE_BLOCK_MAGIC_SIZE) && header[SAVE_BLOCK_MAGIC_SIZE] == version;
+}
 
 /* ---- Load and write ---- */
 
@@ -972,8 +984,7 @@ static bool read_state(void)
 static bool write_cheats(FILE *f)
 {
     uint8_t block[CHEAT_BLOCK_SIZE];
-    memcpy(block, CHEAT_MAGIC, CHEAT_MAGIC_SIZE);
-    block[CHEAT_MAGIC_SIZE] = CHEAT_VERSION;
+    save_put_block_header(block, CHEAT_MAGIC, CHEAT_VERSION);
     block[CHEAT_BITS_AT] = game_get_cheats();
     return fwrite(block, 1, sizeof block, f) == sizeof block;
 }
@@ -985,8 +996,8 @@ static enum SaveTail read_tail(FILE *f, uint8_t *cheats)
     size_t size = fread(block, 1, sizeof block, f);
     if (!size)
         return TAIL_END;
-    if (size != CHEAT_BLOCK_SIZE || memcmp(block, CHEAT_MAGIC, CHEAT_MAGIC_SIZE) ||
-        block[CHEAT_MAGIC_SIZE] != CHEAT_VERSION || block[CHEAT_BITS_AT] & ~CHEAT_ALL)
+    if (size != CHEAT_BLOCK_SIZE || !save_is_block_header(block, CHEAT_MAGIC, CHEAT_VERSION) ||
+        block[CHEAT_BITS_AT] & ~CHEAT_ALL)
         return TAIL_OTHER;
     *cheats = block[CHEAT_BITS_AT];
     return magic_read_favorites(f) ? TAIL_CHEATS : TAIL_OTHER;

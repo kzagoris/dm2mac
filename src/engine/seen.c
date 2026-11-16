@@ -7,16 +7,16 @@
 #include "game.h"
 #include "le.h"
 #include "os.h"
+#include "save.h"
 #include "weather.h"
 
 /* The block header: the magic, the version byte, the map count byte; then the width and height byte of each map.
    A version 1 block ends after the squares; the notes follow the squares of a version 2 block. */
 #define AMAP_MAGIC        "AMAP"
-#define AMAP_MAGIC_SIZE   4
 #define AMAP_VERSION_SEEN 1
 #define AMAP_VERSION      2
-#define AMAP_COUNT_AT     (AMAP_MAGIC_SIZE + 1)
-#define AMAP_HEADER_SIZE  (AMAP_MAGIC_SIZE + 2)
+#define AMAP_COUNT_AT     SAVE_BLOCK_HEADER_SIZE
+#define AMAP_HEADER_SIZE  (SAVE_BLOCK_HEADER_SIZE + 1)
 #define AMAP_MAP_SIZE     2
 
 /* The notes of the block: a little-endian note count, then per note the map, x and y byte, the length byte and the
@@ -295,8 +295,7 @@ bool seen_write(FILE *f)
     if (!seen || seen_size != map_first_square((int16_t)count))
         return false; /* the storage does not fit the dungeon: seen_reset did not run after the load */
     uint8_t header[AMAP_HEADER_SIZE];
-    memcpy(header, AMAP_MAGIC, AMAP_MAGIC_SIZE);
-    header[AMAP_MAGIC_SIZE] = AMAP_VERSION;
+    save_put_block_header(header, AMAP_MAGIC, AMAP_VERSION);
     header[AMAP_COUNT_AT] = (uint8_t)count;
     bool ok = fwrite(header, 1, sizeof header, f) == sizeof header;
     for (int16_t map = 0; ok && map < count; map++)
@@ -312,9 +311,10 @@ bool seen_read(FILE *f)
     uint8_t *block = malloc(size);
     if (!block)
         os_fatal("out of memory");
-    bool ok = fread(block, 1, size, f) == size && !memcmp(block, AMAP_MAGIC, AMAP_MAGIC_SIZE) &&
-              (block[AMAP_MAGIC_SIZE] == AMAP_VERSION_SEEN || block[AMAP_MAGIC_SIZE] == AMAP_VERSION) &&
-              block[AMAP_COUNT_AT] == count;
+    bool ok = fread(block, 1, size, f) == size;
+    bool has_notes = ok && save_is_block_header(block, AMAP_MAGIC, AMAP_VERSION);
+    ok = ok && (has_notes || save_is_block_header(block, AMAP_MAGIC, AMAP_VERSION_SEEN)) &&
+         block[AMAP_COUNT_AT] == count;
     const uint8_t *p = block + AMAP_HEADER_SIZE;
     for (int16_t map = 0; ok && map < count; map++, p += AMAP_MAP_SIZE)
         ok = p[0] == dungeon_map_width(map) && p[1] == dungeon_map_height(map);
@@ -322,7 +322,7 @@ bool seen_read(FILE *f)
         ok = p[i] <= 1;
     if (ok)
         memcpy(seen, p, seen_size);
-    bool has_notes = ok && block[AMAP_MAGIC_SIZE] == AMAP_VERSION;
+    has_notes = has_notes && ok;
     free(block);
     if (has_notes && !read_notes(f)) {
         seen_reset();

@@ -20,6 +20,7 @@
 #include "num.h"
 #include "projectile.h"
 #include "random.h"
+#include "save.h"
 #include "weather.h"
 
 /* The size of the spell table. */
@@ -266,14 +267,11 @@ static void set_event_word(TimelineEvent *e, uint16_t v)
     put_le16(e->data, v);
 }
 
-/* Optional FAVS extension: magic, version, then four favorites and last attempt per champion. */
-#define FAVORITES_MAGIC       "FAVS"
-#define FAVORITES_MAGIC_SIZE  4
-#define FAVORITES_VERSION     1
-#define FAVORITES_HEADER_SIZE (FAVORITES_MAGIC_SIZE + 1)
+/* Optional FAVS extension: the block header (save.h), then four favorites and last attempt per champion. */
+#define FAVORITES_MAGIC   "FAVS"
+#define FAVORITES_VERSION 1
 
-/* Optional KNOW block after FAVS, with the header layout of FAVS: magic, version, then one byte per spell of the
-   spell table (1: known). */
+/* Optional KNOW block after FAVS: the block header, then one byte per spell of the spell table (1: known). */
 #define KNOWN_MAGIC   "KNOW"
 #define KNOWN_VERSION 1
 
@@ -378,28 +376,29 @@ int magic_favorite_mana(int16_t caster, int16_t slot, int power)
     return combination_mana(favorites[caster][slot], power);
 }
 
+/* Writes a block header and the size bytes of data after it; false on an error. */
+static bool write_block(FILE *f, const char *magic, uint8_t version, const void *data, size_t size)
+{
+    uint8_t header[SAVE_BLOCK_HEADER_SIZE];
+    save_put_block_header(header, magic, version);
+    return fwrite(header, 1, sizeof header, f) == sizeof header && fwrite(data, 1, size, f) == size;
+}
+
 bool magic_write_favorites(FILE *f)
 {
-    const uint8_t header[FAVORITES_HEADER_SIZE] = {FAVORITES_MAGIC[0], FAVORITES_MAGIC[1], FAVORITES_MAGIC[2],
-                                                   FAVORITES_MAGIC[3], FAVORITES_VERSION};
-    const uint8_t known_header[FAVORITES_HEADER_SIZE] = {KNOWN_MAGIC[0], KNOWN_MAGIC[1], KNOWN_MAGIC[2], KNOWN_MAGIC[3],
-                                                         KNOWN_VERSION};
-    return fwrite(header, 1, sizeof header, f) == sizeof header &&
-           fwrite(favorites, 1, sizeof favorites, f) == sizeof favorites &&
-           fwrite(known_header, 1, sizeof known_header, f) == sizeof known_header &&
-           fwrite(known_spells, 1, sizeof known_spells, f) == sizeof known_spells;
+    return write_block(f, FAVORITES_MAGIC, FAVORITES_VERSION, favorites, sizeof favorites) &&
+           write_block(f, KNOWN_MAGIC, KNOWN_VERSION, known_spells, sizeof known_spells);
 }
 
 /* Reads the end of the file, or the KNOW block before it into known (SPELL_COUNT bytes); false for other data. */
 static bool read_known_spells(FILE *f, uint8_t *known)
 {
-    uint8_t header[FAVORITES_HEADER_SIZE];
+    uint8_t header[SAVE_BLOCK_HEADER_SIZE];
     size_t n = fread(header, 1, sizeof header, f);
     if (!n)
         return true; /* a save with favorites only */
-    if (n != sizeof header || memcmp(header, KNOWN_MAGIC, FAVORITES_MAGIC_SIZE) ||
-        header[FAVORITES_MAGIC_SIZE] != KNOWN_VERSION || fread(known, 1, SPELL_COUNT, f) != SPELL_COUNT ||
-        fgetc(f) != EOF)
+    if (n != sizeof header || !save_is_block_header(header, KNOWN_MAGIC, KNOWN_VERSION) ||
+        fread(known, 1, SPELL_COUNT, f) != SPELL_COUNT || fgetc(f) != EOF)
         return false;
     for (int i = 0; i < SPELL_COUNT; i++)
         if (known[i] > 1)
@@ -409,16 +408,15 @@ static bool read_known_spells(FILE *f, uint8_t *known)
 
 bool magic_read_favorites(FILE *f)
 {
-    uint8_t header[FAVORITES_HEADER_SIZE];
+    uint8_t header[SAVE_BLOCK_HEADER_SIZE];
     uint8_t saved[CHAMPION_MAX][MAGIC_RECORD_COUNT][CHAMPION_RUNES_SIZE];
     uint8_t known[SPELL_COUNT] = {0};
     magic_reset_favorites();
     size_t n = fread(header, 1, sizeof header, f);
     if (!n)
         return true; /* an older save */
-    if (n != sizeof header || memcmp(header, FAVORITES_MAGIC, FAVORITES_MAGIC_SIZE) ||
-        header[FAVORITES_MAGIC_SIZE] != FAVORITES_VERSION || fread(saved, 1, sizeof saved, f) != sizeof saved ||
-        !read_known_spells(f, known))
+    if (n != sizeof header || !save_is_block_header(header, FAVORITES_MAGIC, FAVORITES_VERSION) ||
+        fread(saved, 1, sizeof saved, f) != sizeof saved || !read_known_spells(f, known))
         return false;
     for (int caster = 0; caster < CHAMPION_MAX; caster++)
         for (int slot = 0; slot < MAGIC_RECORD_COUNT; slot++) {

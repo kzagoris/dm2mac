@@ -5,6 +5,7 @@
 
 /* The save game: its blocks, its layout, and reading and writing the file. */
 
+#include <stdbool.h>
 #include <stdint.h>
 #include "dungeon.h"
 #include "le.h"
@@ -79,6 +80,17 @@ static inline void save_set_magic_light(int16_t light)
 {
     put_le16(g_game.magic_light, (uint16_t)light);
 }
+
+/* The header of an optional block after the bit stream (AMAP, CHTS, FAVS, KNOW): four magic characters, then a
+   version byte. */
+#define SAVE_BLOCK_MAGIC_SIZE  4
+#define SAVE_BLOCK_HEADER_SIZE (SAVE_BLOCK_MAGIC_SIZE + 1)
+
+/* Extension blocks. */
+/* Puts the magic and the version of a block into header (SAVE_BLOCK_HEADER_SIZE bytes). */
+void save_put_block_header(uint8_t *header, const char *magic, uint8_t version);
+/* Whether header starts with the magic and the version of a block. */
+bool save_is_block_header(const uint8_t *header, const char *magic, uint8_t version);
 
 /* Load and write. */
 /* Loads a save file (SKSAVEn.DAT or .BAK) into the dungeon, the timeline, the random seed, and g_game.
