@@ -32,7 +32,10 @@ def pytest_configure(config):
     if all(path == standard or standard in path.parents for path in paths):
         return
     target = "all" if (BUILD / "dm2").exists() else "lib"
-    if subprocess.run(["make", "-q", target], cwd=ROOT, capture_output=True).returncode:
+    # The SDL flag stamp depends on FORCE and the phony check-sdl, so make -q would always find it out of date: -o
+    # takes both as up to date.
+    old = ["-o", "build/obj/sdl-flags.txt", "-o", "check-sdl"]
+    if subprocess.run(["make", "-q", *old, target], cwd=ROOT, capture_output=True).returncode:
         raise pytest.UsageError(f"build/ is missing or older than src/: run `make {target}` first (`make test` builds by itself)")
 
 
