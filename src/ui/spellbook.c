@@ -1,6 +1,5 @@
 /* SPDX-License-Identifier: GPL-3.0-or-later */
 #include "spellbook.h"
-#include <ctype.h>
 #include <stdio.h>
 #include <string.h>
 #include "action.h"
@@ -149,42 +148,26 @@ static RowsScreen find_layout(void)
     return (RowsScreen){.title_item = "CLOSE", .row_count = LIST_ROWS, .subtitles = subtitles};
 }
 
-/* Writes the names of the rune glyphs after the power rune in upper case, for example FUL IR. */
-static void get_glyph_names(const uint8_t *runes, char *text, size_t size)
-{
-    size_t length = 0;
-    for (int step = 1; step < CHAMPION_RUNES_SIZE; step++) {
-        const char *name = magic_get_rune_name(runes[step] - SPELL_RUNE_GLYPH_FIRST);
-        if (!name)
-            break; /* the spell has fewer runes */
-        if (length && length + 1 < size)
-            text[length++] = ' ';
-        for (; *name && length + 1 < size; name++)
-            text[length++] = (char)toupper((unsigned char)*name);
-    }
-    text[length] = '\0';
-}
-
-/* Writes the rune names of spell after its power rune in upper case. */
+/* Writes the rune names of spell after its power rune in upper case, for example FUL IR. */
 static void get_rune_names(const Spell *spell, char *text, size_t size)
 {
     uint8_t runes[CHAMPION_RUNES_SIZE];
-    for (int step = 0; step < CHAMPION_RUNES_SIZE; step++)
-        runes[step] = magic_get_spell_rune(spell, step);
-    get_glyph_names(runes, text, size);
+    magic_copy_spell_runes(spell, runes);
+    magic_get_rune_names(runes, 1, text, size);
 }
 
 /* Writes the name of the listed spell of a favorite of the caster, else the names of its runes. */
 static void get_favorite_name(int16_t slot, char *text, size_t size)
 {
-    uint8_t runes[CHAMPION_RUNES_SIZE + 1] = {0};
+    const Spell *spell = magic_find_favorite_spell(book.caster, slot);
+    if (spell && is_listed(spell)) {
+        snprintf(text, size, "%s", magic_get_spell_name(spell));
+        return;
+    }
+    uint8_t runes[CHAMPION_RUNES_SIZE];
     for (int step = 0; step < CHAMPION_RUNES_SIZE; step++)
         runes[step] = magic_favorite_rune(book.caster, slot, step);
-    const Spell *spell = magic_find_spell(runes);
-    if (spell && is_listed(spell))
-        snprintf(text, size, "%s", magic_get_spell_name(spell));
-    else
-        get_glyph_names(runes, text, size);
+    magic_get_rune_names(runes, 1, text, size);
 }
 
 /* The favorite 1 to 4 of the caster that has the runes of spell at any power, 0 for none. */
@@ -322,8 +305,7 @@ static void open_list(void)
    rune needs that power rune. */
 static bool has_entered_runes(const Spell *spell, const Champion *c)
 {
-    uint8_t power_rune = magic_get_spell_rune(spell, 0);
-    if (power_rune && power_rune != (uint8_t)c->runes[0])
+    if (!magic_spell_takes_power(spell, (uint8_t)c->runes[0] - SPELL_RUNE_GLYPH_FIRST + 1))
         return false;
     for (int step = 1; step < c->rune_count; step++)
         if (magic_get_spell_rune(spell, step) != (uint8_t)c->runes[step])

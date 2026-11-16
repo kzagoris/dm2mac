@@ -46,6 +46,8 @@ bool magic_record_spell_favorite(int16_t caster, int16_t slot, const Spell *spel
 void magic_clear_favorite(int16_t caster, int16_t slot);
 /* Recorded glyph at step, or 0 for an absent/invalid entry. */
 uint8_t magic_favorite_rune(int16_t caster, int16_t slot, int step);
+/* The spell of the recorded runes of a favorite, NULL for an empty or invalid favorite and for runes of no spell. */
+const Spell *magic_find_favorite_spell(int16_t caster, int16_t slot);
 /* Total rune-entry mana at the chosen power; -1 for no combination or invalid power. */
 int magic_favorite_mana(int16_t caster, int16_t slot, int power);
 /* Writes the versioned optional FAVS save extension and the KNOW block of the known spells after it. */
@@ -61,11 +63,18 @@ const Spell *magic_find_spell(const uint8_t *runes); /* exported for the tests *
 const Spell *magic_get_spell(int index);
 /* The rune glyph of a spell at step 0 (the power rune; 0 for any power) to 3 (0 after the last rune). */
 uint8_t magic_get_spell_rune(const Spell *spell, int step);
+/* Copies the rune glyphs of spell at steps 0 to 3 (as magic_get_spell_rune) to runes (CHAMPION_RUNES_SIZE glyphs). */
+void magic_copy_spell_runes(const Spell *spell, uint8_t *runes);
+/* Whether spell can be cast at power 1 to 6: a spell with its own power rune takes only that power. */
+bool magic_spell_takes_power(const Spell *spell, int power);
 /* The port name of a spell, for example "FIREBALL"; the game files have no spell names. */
 const char *magic_get_spell_name(const Spell *spell);
 /* The lower-case name of a rune (its glyph - SPELL_RUNE_GLYPH_FIRST: the power runes, then the three rune sets), for
    example "ful"; NULL for a value outside the runes. */
 const char *magic_get_rune_name(int rune);
+/* Writes the upper-case names of the rune glyphs (CHAMPION_RUNES_SIZE glyphs) from step first_step on, separated by a
+   space, for example "FUL IR"; a glyph without a name (0 after the last rune) gives none. */
+void magic_get_rune_names(const uint8_t *runes, int first_step, char *text, size_t size);
 
 /* Known spells */
 /* Whether a cast of entered runes found spell in the advanced mode of this adventure, also when the cast then failed. */

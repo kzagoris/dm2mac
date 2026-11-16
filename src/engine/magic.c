@@ -1,6 +1,7 @@
 /* SPDX-License-Identifier: GPL-3.0-or-later */
 /* Magic: runes, spell casting, magic light, party auras, and missile spells. */
 #include "magic.h"
+#include <ctype.h>
 #include <stdbool.h>
 #include <stddef.h>
 #include <string.h>
@@ -343,12 +344,10 @@ bool magic_record_spell_favorite(int16_t caster, int16_t slot, const Spell *spel
     if (g_game_mode != GAME_MODE_ADVANCED || !valid_favorite(caster, slot) || slot == MAGIC_FAVORITE_LAST ||
         power < 1 || power > POWER_MON)
         return false;
-    uint8_t power_rune = magic_get_spell_rune(spell, 0);
-    if (power_rune && power_rune - POWER_RUNE_BASE != power)
-        return false; /* a spell with a power rune takes only that power */
+    if (!magic_spell_takes_power(spell, power))
+        return false;
+    magic_copy_spell_runes(spell, favorites[caster][slot]);
     favorites[caster][slot][0] = (uint8_t)(POWER_RUNE_BASE + power);
-    for (int step = 1; step < CHAMPION_RUNES_SIZE; step++)
-        favorites[caster][slot][step] = magic_get_spell_rune(spell, step);
     return true;
 }
 
@@ -361,6 +360,15 @@ void magic_clear_favorite(int16_t caster, int16_t slot)
 uint8_t magic_favorite_rune(int16_t caster, int16_t slot, int step)
 {
     return valid_favorite(caster, slot) && step >= 0 && step < CHAMPION_RUNES_SIZE ? favorites[caster][slot][step] : 0;
+}
+
+const Spell *magic_find_favorite_spell(int16_t caster, int16_t slot)
+{
+    if (!valid_favorite(caster, slot))
+        return NULL;
+    uint8_t runes[CHAMPION_RUNES_SIZE + 1] = {0};
+    memcpy(runes, favorites[caster][slot], CHAMPION_RUNES_SIZE);
+    return magic_find_spell(runes);
 }
 
 int magic_favorite_mana(int16_t caster, int16_t slot, int power)
@@ -462,6 +470,18 @@ uint8_t magic_get_spell_rune(const Spell *spell, int step)
     return (uint8_t)(spell->runes >> (SPELL_POWER_RUNE_SHIFT - step * RUNE_KEY_SHIFT)); /* the byte of the step */
 }
 
+void magic_copy_spell_runes(const Spell *spell, uint8_t *runes)
+{
+    for (int step = 0; step < CHAMPION_RUNES_SIZE; step++)
+        runes[step] = magic_get_spell_rune(spell, step);
+}
+
+bool magic_spell_takes_power(const Spell *spell, int power)
+{
+    uint8_t power_rune = magic_get_spell_rune(spell, 0);
+    return !power_rune || power_rune - POWER_RUNE_BASE == power;
+}
+
 const char *magic_get_spell_name(const Spell *spell)
 {
     for (size_t i = 0; i < sizeof spell_names / sizeof *spell_names; i++)
@@ -473,6 +493,21 @@ const char *magic_get_spell_name(const Spell *spell)
 const char *magic_get_rune_name(int rune)
 {
     return rune >= 0 && rune < RUNE_SETS * SPELL_RUNES_PER_SET ? rune_names[rune] : NULL;
+}
+
+void magic_get_rune_names(const uint8_t *runes, int first_step, char *text, size_t size)
+{
+    size_t length = 0;
+    for (int step = first_step; step < CHAMPION_RUNES_SIZE; step++) {
+        const char *name = magic_get_rune_name(runes[step] - SPELL_RUNE_GLYPH_FIRST);
+        if (!name)
+            continue;
+        if (length && length + 1 < size)
+            text[length++] = ' ';
+        for (; *name && length + 1 < size; name++)
+            text[length++] = (char)toupper((unsigned char)*name);
+    }
+    text[length] = '\0';
 }
 
 bool magic_is_spell_known(const Spell *spell)
@@ -488,19 +523,12 @@ void magic_learn_spell(const Spell *spell)
         known_spells[index] = 1;
 }
 
-/* Copies the power rune (0 for any power) and the runes of spell to runes (CHAMPION_RUNES_SIZE glyphs). */
-static void copy_spell_runes(const Spell *spell, uint8_t *runes)
-{
-    for (int step = 0; step < CHAMPION_RUNES_SIZE; step++)
-        runes[step] = magic_get_spell_rune(spell, step);
-}
-
 int magic_spell_mana(const Spell *spell, int power)
 {
     uint8_t runes[CHAMPION_RUNES_SIZE];
     if (power < 1 || power > POWER_MON)
         return -1;
-    copy_spell_runes(spell, runes);
+    magic_copy_spell_runes(spell, runes);
     return combination_mana(runes, power);
 }
 
@@ -926,12 +954,8 @@ bool magic_has_empty_flask(int16_t caster)
 
 bool magic_favorite_needs_flask(int16_t caster, int16_t slot)
 {
-    if (!valid_favorite(caster, slot))
-        return false;
-    uint8_t runes[CHAMPION_RUNES_SIZE + 1] = {0};
-    memcpy(runes, favorites[caster][slot], CHAMPION_RUNES_SIZE);
-    const Spell *spell = magic_find_spell(runes);
-    return spell && spell_kind(spell) == SPELL_POTION;
+    const Spell *spell = magic_find_favorite_spell(caster, slot);
+    return spell && magic_spell_needs_flask(spell);
 }
 
 /* The caster enters the power rune of power and the runes (the glyphs at steps 1 to 3) through magic_add_rune; false
@@ -964,10 +988,8 @@ bool magic_prepare_spell(int16_t caster, const Spell *spell, int power)
 {
     uint8_t runes[CHAMPION_RUNES_SIZE];
     if (g_game_mode != GAME_MODE_ADVANCED || caster < 0 || caster >= g_game.champion_count ||
-        magic_spell_mana(spell, power) < 0)
+        magic_spell_mana(spell, power) < 0 || !magic_spell_takes_power(spell, power))
         return false;
-    copy_spell_runes(spell, runes);
-    if (runes[0] && runes[0] - POWER_RUNE_BASE != power)
-        return false; /* a spell with a power rune takes only that power */
+    magic_copy_spell_runes(spell, runes);
     return enter_runes(caster, runes, power);
 }

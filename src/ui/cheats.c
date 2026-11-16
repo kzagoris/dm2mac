@@ -1,6 +1,5 @@
 /* SPDX-License-Identifier: GPL-3.0-or-later */
 #include "cheats.h"
-#include <ctype.h>
 #include <stdio.h>
 #include <string.h>
 #include "action.h"
@@ -83,35 +82,29 @@ static int16_t count_items(void)
     return (int16_t)(layout.row_count + (layout.title_item != NULL));
 }
 
-/* Appends text to the line of size bytes in upper case; a full line keeps its start. */
+/* Appends text to the line of size bytes; a full line keeps its start. */
 static void append_text(char *line, size_t size, const char *text)
 {
     size_t length = strlen(line);
-    for (; *text && length + 1 < size; text++)
-        line[length++] = (char)toupper((unsigned char)*text);
-    line[length] = '\0';
+    snprintf(line + length, size - length, "%s", text);
 }
 
 /* Queries */
 
 void cheats_get_spell_line(const Spell *spell, char *line, size_t size)
 {
-    char runes[ROW_TEXT_SIZE] = "";
+    uint8_t glyphs[CHAMPION_RUNES_SIZE];
+    char runes[ROW_TEXT_SIZE];
     char numbers[ROW_TEXT_SIZE] = "(";
+    magic_copy_spell_runes(spell, glyphs);
+    magic_get_rune_names(glyphs, 0, runes, sizeof runes);
     for (int step = 0; step < CHAMPION_RUNES_SIZE; step++) {
-        uint8_t glyph = magic_get_spell_rune(spell, step);
+        uint8_t glyph = glyphs[step];
         if (!glyph && step)
             break;
         char number[RUNE_NUMBER_SIZE] = ANY_POWER; /* a spell without a power rune takes any power */
-        if (glyph) {
-            int rune = glyph - SPELL_RUNE_GLYPH_FIRST;
-            const char *name = magic_get_rune_name(rune);
-            if (name && runes[0])
-                append_text(runes, sizeof runes, " ");
-            if (name) /* a glyph outside the runes gives no name */
-                append_text(runes, sizeof runes, name);
-            snprintf(number, sizeof number, "%d", rune % SPELL_RUNES_PER_SET + 1);
-        }
+        if (glyph)
+            snprintf(number, sizeof number, "%d", (glyph - SPELL_RUNE_GLYPH_FIRST) % SPELL_RUNES_PER_SET + 1);
         if (step)
             append_text(numbers, sizeof numbers, ",");
         append_text(numbers, sizeof numbers, number);
