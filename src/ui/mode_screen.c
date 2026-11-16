@@ -3,6 +3,7 @@
 #include <string.h>
 #include "game.h"
 #include "gfx.h"
+#include "input.h"
 #include "text.h"
 #include "video.h"
 
@@ -92,7 +93,7 @@ void mode_screen_click(int16_t x, int16_t y)
     if (done)
         return;
     for (int16_t i = 0; mode_screen_item_box(i, r); i++)
-        if (x >= r[RECT_X] && x < r[RECT_X] + r[RECT_W] && y >= r[RECT_Y] && y < r[RECT_Y] + r[RECT_H]) {
+        if (rect_contains_point(r, x, y)) {
             cursor = (enum GameMode)i;
             done = true;
             return;

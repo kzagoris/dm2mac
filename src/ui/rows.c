@@ -3,6 +3,7 @@
 #include <string.h>
 #include "game_text.h"
 #include "ids.h"
+#include "input.h"
 #include "text.h"
 #include "ui.h"
 #include "zone.h"
@@ -52,8 +53,7 @@ void rows_draw(const RowsScreen *screen, int16_t selected)
 int16_t rows_find_row(const RowsScreen *screen, int16_t x, int16_t y)
 {
     int16_t r[RECT_SIZE];
-    if (!zone_get_viewport_rect(r) || x < r[RECT_X] || x >= r[RECT_X] + r[RECT_W] || y < r[RECT_Y] ||
-        y >= r[RECT_Y] + r[RECT_H])
+    if (!zone_get_viewport_rect(r) || !rect_contains_point(r, x, y))
         return -1;
     if (y < r[RECT_Y] + TOP)
         return screen->title_item && x >= find_item_left(r, screen->title_item) ? screen->row_count : -1;

@@ -237,7 +237,7 @@ static struct {
 static bool picture_shows_pixel(const DrawCtx *c, int16_t x, int16_t y, int key)
 {
     const int16_t *r = c->rect;
-    if (x < r[RECT_X] || x > r[RECT_X] + r[RECT_W] - 1 || y < r[RECT_Y] || y > r[RECT_Y] + r[RECT_H] - 1)
+    if (!rect_contains_point(r, x, y))
         return false;
     int sx = c->flip & MIRROR_H ? r[RECT_X] + r[RECT_W] - 1 - x + c->src_x : x - r[RECT_X] + c->src_x;
     int sy = y - r[RECT_Y] + c->src_y;
@@ -1254,7 +1254,7 @@ static bool hit_test_picture(int16_t x, int16_t y, int key)
 {
     const DrawCtx *c = &g_view_state.ctx;
     const int16_t *r = c->rect;
-    if (x < r[RECT_X] || x > r[RECT_X] + r[RECT_W] - 1 || y < r[RECT_Y] || y > r[RECT_Y] + r[RECT_H] - 1)
+    if (!rect_contains_point(r, x, y))
         return false;
     int sy = y - r[RECT_Y] + c->src_y;
     const Bitmap *image = c->image;

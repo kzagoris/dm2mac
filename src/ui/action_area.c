@@ -870,8 +870,7 @@ bool area_end_damage_hold(int16_t x, int16_t y)
 {
     int16_t rect[RECT_SIZE];
     zone_get_rect(ZONE_ACTION_AREA, rect);
-    if (damage_hold_ticks <= 0 || damage_hold_ticks > DAMAGE_HOLD_EXTRA_TICKS || x < rect[RECT_X] || y < rect[RECT_Y] ||
-        x >= rect[RECT_X] + rect[RECT_W] || y >= rect[RECT_Y] + rect[RECT_H])
+    if (damage_hold_ticks <= 0 || damage_hold_ticks > DAMAGE_HOLD_EXTRA_TICKS || !rect_contains_point(rect, x, y))
         return false;
     damage_hold_ticks = 0;
     area_update(false);
