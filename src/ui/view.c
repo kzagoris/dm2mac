@@ -212,7 +212,7 @@ Bitmap g_view_viewport = {g_view_state.viewport_pixels, VIEWPORT_WIDTH, VIEWPORT
 ViewClickZone g_view_click_zones[VIEW_CLICK_ZONE_MAX];
 int g_view_click_zone_count;
 /* The click zone (index + 1, 0 none) whose picture shows each pixel of the viewport; a later picture wins. */
-static uint8_t click_zone_pixels[VIEWPORT_HEIGHT][VIEWPORT_WIDTH];
+static uint8_t click_zone_pixels[VIEWPORT_WIDTH * VIEWPORT_HEIGHT];
 uint8_t g_view_creature_grid[VIEW_GRID_SIZE];
 bool g_view_arrows_enabled;
 uint8_t g_view_object_grid[VIEW_GRID_SIZE];
@@ -617,6 +617,32 @@ void view_set_attack_group(uint16_t group, int pos)
     attack.picture_at = (Location){g_view_squares[pos].x, g_view_squares[pos].y};
 }
 
+/* Whether picture ctx was blitted to the viewport. */
+static bool drawn_on_viewport(const DrawCtx *ctx)
+{
+    return ctx->mode == DRAW_BLIT && ctx->image && ctx->dst == &g_view_viewport && ctx->w > 0 && ctx->h > 0;
+}
+
+/* Sets the pixels of layer (one byte per viewport pixel) that picture ctx shows to value; the pixels follow the
+   scaled, clipped and mirrored blit of the picture. */
+static void record_picture_pixels(const DrawCtx *ctx, uint8_t *layer, uint8_t value)
+{
+    uint8_t colors[REMAP_COLORS];
+    memset(colors, value, sizeof colors);
+    Blit blit = {.src = ctx->image->pixels,
+                 .dst = layer,
+                 .src_x = ctx->src_x,
+                 .src_y = ctx->src_y,
+                 .src_width = ctx->image->width,
+                 .dst_width = VIEWPORT_WIDTH,
+                 .src_bpp = ctx->image->bpp,
+                 .dst_bpp = IMAGE_8BPP,
+                 .transparent = ctx->transparent,
+                 .mirror = ctx->flip,
+                 .colormap = colors};
+    gfx_blit(&blit, ctx->rect);
+}
+
 /* Closes transparent holes inside each row of the visible body, keeping its outer contour. */
 static void fill_attack_body(const int16_t *rect, uint8_t tag)
 {
@@ -635,8 +661,7 @@ static void fill_attack_body(const int16_t *rect, uint8_t tag)
 
 void view_record_attack_pixels(const DrawCtx *ctx, uint16_t group, Location at)
 {
-    if (g_game_mode != GAME_MODE_ADVANCED || ctx->mode != DRAW_BLIT || !ctx->image || ctx->dst != &g_view_viewport ||
-        ctx->w <= 0 || ctx->h <= 0)
+    if (g_game_mode != GAME_MODE_ADVANCED || !drawn_on_viewport(ctx))
         return;
     int tag = 0;
     if (group != THING_NONE && attack.target_count < ATTACK_TARGET_MAX) {
@@ -644,20 +669,7 @@ void view_record_attack_pixels(const DrawCtx *ctx, uint16_t group, Location at)
         attack.targets[tag - 1].group = group;
         attack.targets[tag - 1].at = at;
     }
-    uint8_t colors[REMAP_COLORS];
-    memset(colors, tag, sizeof colors);
-    Blit blit = {.src = ctx->image->pixels,
-                 .dst = attack.pixels,
-                 .src_x = ctx->src_x,
-                 .src_y = ctx->src_y,
-                 .src_width = ctx->image->width,
-                 .dst_width = VIEWPORT_WIDTH,
-                 .src_bpp = ctx->image->bpp,
-                 .dst_bpp = IMAGE_8BPP,
-                 .transparent = ctx->transparent,
-                 .mirror = ctx->flip,
-                 .colormap = colors};
-    gfx_blit(&blit, ctx->rect);
+    record_picture_pixels(ctx, attack.pixels, (uint8_t)tag);
     if (tag)
         fill_attack_body(ctx->rect, (uint8_t)tag);
 }
@@ -714,18 +726,8 @@ void view_flush_picture_or_measure(bool draw)
 /* Marks the pixels that the last picture shows as pixels of click zone index. */
 static void mark_click_zone_pixels(int index)
 {
-    const DrawCtx *c = &g_view_state.ctx;
-    const int16_t *r = c->rect;
-    if (c->mode == DRAW_RECT_ONLY || !c->image)
-        return;
-    int x1 = max_int(r[RECT_X], 0);
-    int y1 = max_int(r[RECT_Y], 0);
-    int x2 = min_int(r[RECT_X] + r[RECT_W], VIEWPORT_WIDTH);
-    int y2 = min_int(r[RECT_Y] + r[RECT_H], VIEWPORT_HEIGHT);
-    for (int y = y1; y < y2; y++)
-        for (int x = x1; x < x2; x++)
-            if (picture_shows_pixel(c, (int16_t)x, (int16_t)y, c->transparent))
-                click_zone_pixels[y][x] = (uint8_t)(index + 1);
+    if (drawn_on_viewport(&g_view_state.ctx))
+        record_picture_pixels(&g_view_state.ctx, click_zone_pixels, (uint8_t)(index + 1));
 }
 
 void view_add_click_zone(const int16_t *rect, enum ClickKind kind, int pos)
@@ -1265,7 +1267,7 @@ int view_click_zone_at(int16_t x, int16_t y)
 {
     if (x < 0 || y < 0 || x >= VIEWPORT_WIDTH || y >= VIEWPORT_HEIGHT)
         return -1;
-    return click_zone_pixels[y][x] - 1;
+    return click_zone_pixels[y * VIEWPORT_WIDTH + x] - 1;
 }
 
 bool view_hit_test_creature(int16_t x, int16_t y, Location at, int *out_side)
