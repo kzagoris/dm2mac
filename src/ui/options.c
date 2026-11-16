@@ -61,6 +61,11 @@ static Page page;
 static int16_t selected;
 static bool blocked;
 
+/* The rows that run only in the movement mode, by row (the title item last): they open the spell list, save, load or
+   open the cheats. */
+static const bool row_needs_move[OPTIONS_ROW_ROWS + 1] = {
+    [OPTIONS_ROW_BOOK] = true, [OPTIONS_ROW_SAVE] = true, [OPTIONS_ROW_LOAD] = true, [OPTIONS_ROW_CHEATS] = true};
+
 static void panel_text(int16_t x, int16_t y, int color, const char *text)
 {
     text_draw_on_screen(x, y, g_ui_colors[color], g_ui_colors[UI_BLACK], text);
@@ -166,9 +171,7 @@ void options_open(void)
 static OptionsResult run_option(void)
 {
     blocked = false;
-    if (selected != OPTIONS_ROW_HELP && selected != OPTIONS_ROW_LEGEND && selected != OPTIONS_ROW_SPELLS &&
-        selected != OPTIONS_ROW_FILTER && selected != OPTIONS_ROW_ASPECT && selected != OPTIONS_ROW_STEPPING &&
-        selected != OPTIONS_ROW_SCANLINES && selected != OPTIONS_ROW_ROWS && input_get_mode() != INPUT_MODE_MOVE) {
+    if (row_needs_move[selected] && input_get_mode() != INPUT_MODE_MOVE) {
         blocked = true;
         show_options();
         return OPTIONS_STAY;
