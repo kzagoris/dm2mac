@@ -543,7 +543,7 @@ static bool melee_attack_front(const ActionRun *a, int mode, int kind)
     bool pierces = field_of(a->action, FIELD_PIERCES) != 0 || attack & MELEE_ATTACK_PIERCES;
     attack &= (uint16_t)~MELEE_ATTACK_PIERCES;
     g_action.result = (int16_t)melee_attack_group(a, attack, wounds, kind, pierces);
-    if (g_game_mode == GAME_MODE_ADVANCED && g_hooks.creature_hit)
+    if (g_hooks.creature_hit) /* the hook shows hits only in the advanced mode */
         g_hooks.creature_hit(a->target, g_action.result);
     return true;
 }
