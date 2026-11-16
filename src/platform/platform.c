@@ -158,24 +158,35 @@ static bool SDLCALL on_expose(void *userdata, SDL_Event *ev)
     return true;
 }
 
-bool plat_init(int scale, enum SettingsFilter filter)
+/* Makes the screen texture of filter, filled with the current frame, with even pixels at a fractional scale; NULL
+   when it cannot. */
+static SDL_Texture *make_screen_texture(enum SettingsFilter filter)
 {
     int factor = settings_filter_factor(filter);
-    if (!factor)
+    SDL_Texture *tex = SDL_CreateTexture(platform.ren, SDL_PIXELFORMAT_ARGB8888, SDL_TEXTUREACCESS_STREAMING,
+                                         SCREEN_W * factor, SCREEN_H * factor);
+    if (!tex || !upload_frame(tex, filter)) {
+        SDL_DestroyTexture(tex);
+        return NULL;
+    }
+    SDL_SetTextureScaleMode(tex, SDL_SCALEMODE_PIXELART);
+    return tex;
+}
+
+bool plat_init(int scale, enum SettingsFilter filter)
+{
+    if (!settings_filter_factor(filter))
         return false;
     platform.filter = filter;
     SDL_SetHint(SDL_HINT_FORCE_RAISEWINDOW, "1");
     if (!SDL_Init(SDL_INIT_VIDEO) ||
         !SDL_CreateWindowAndRenderer("DM2Mac", SCREEN_W * scale, SCREEN_H * scale, SDL_WINDOW_RESIZABLE, &platform.win,
                                      &platform.ren) ||
-        !(platform.tex = SDL_CreateTexture(platform.ren, SDL_PIXELFORMAT_ARGB8888, SDL_TEXTUREACCESS_STREAMING,
-                                           SCREEN_W * factor, SCREEN_H * factor)) ||
-        !upload_frame(platform.tex, filter)) {
+        !(platform.tex = make_screen_texture(filter))) {
         os_log("SDL: %s", SDL_GetError());
         return false;
     }
     SDL_RaiseWindow(platform.win);
-    SDL_SetTextureScaleMode(platform.tex, SDL_SCALEMODE_PIXELART); /* even pixels at a fractional scale */
     SDL_AddEventWatch(on_expose, NULL);
     SDL_HideCursor(); /* the game draws its own cursor into g_video_fb */
     SDL_AudioSpec spec = {SDL_AUDIO_S16, AUDIO_CHANNELS, SOUND_OUTPUT_RATE};
@@ -190,17 +201,13 @@ bool plat_init(int scale, enum SettingsFilter filter)
 
 bool plat_set_filter(enum SettingsFilter filter)
 {
-    int factor = settings_filter_factor(filter);
-    if (!factor)
+    if (!settings_filter_factor(filter))
         return false;
-    SDL_Texture *tex = SDL_CreateTexture(platform.ren, SDL_PIXELFORMAT_ARGB8888, SDL_TEXTUREACCESS_STREAMING,
-                                         SCREEN_W * factor, SCREEN_H * factor);
-    if (!tex || !upload_frame(tex, filter)) {
+    SDL_Texture *tex = make_screen_texture(filter);
+    if (!tex) {
         os_log("SDL: %s", SDL_GetError());
-        SDL_DestroyTexture(tex);
         return false;
     }
-    SDL_SetTextureScaleMode(tex, SDL_SCALEMODE_PIXELART);
     SDL_DestroyTexture(platform.tex);
     platform.tex = tex;
     platform.filter = filter;
