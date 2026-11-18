@@ -45,11 +45,20 @@ Let `K=.claude/skills/phase-movie/scripts` and `W=captures/feature-tweets/work`.
 | `... dungeon.py stage SAVE OUT MAP:KIND` | move a creature in front of the party, full health, write OUT |
 | `bash $K/sheet.sh OUT.png A.png B.png ...` | contact sheet, 4 per row, labelled |
 | `bash $K/sheet.sh OUT.png --grid A.png` | one still 3x with a 20 px grid labelled in game coordinates |
+| `... game.sh run FILE` | run a JSON list of requests from a file's last line, print the party position |
+| `... dungeon.py faces/place/items/moveitem/mana ...` | find reactive walls, move the party or an item, set mana (see the file's docstring) |
+| `... py.sh $K/route.py SAVE [X Y]` | the whole party map; with X Y a walking route as requests, for `game.sh run` |
+| `DM2_VIDEO=x11 ... game.sh start SAVE` | the same game in a WSLg window (needed for a held key, the wheel, filters) |
+| `... wsl -e bash -c 'DISPLAY=:0 python3 $K/xwheel.py X Y 2 up'` | mouse wheel over game pixel X,Y in that window |
+| `... wsl -e bash -c 'DISPLAY=:0 python3 $K/xkey.py down Control_L'` | hold (`down`) or release (`up`) a key in that window |
+| `... wsl -e bash $K/winshot.sh NAME SAVE` / `ctrlshot.sh NAME SAVE` | window capture with filters / shots without and with Ctrl held |
 | `bash $K/phase_movie.sh OUT.mov "a.png|Caption" "b.png|Caption"` | the finished movie; prints its duration |
+| `bash $K/check.sh MOVIE OUT.png` / `mk.sh NN-name "still|Caption"...` | a frame per phase in one sheet / copy stills, build, check |
 
 Requests: `key` (`esc`, `space`, `f1`, `up`, `alt+c`, `ctrl+s`, single characters…), `click`/`move` with `x`,`y`
-in 320x200 game pixels, `press`/`release`, `wait` (60 ticks per second), `state`. There is **no mouse wheel and no
-held key** in the protocol.
+in 320x200 game pixels, `press`/`release`, `wait` (60 ticks per second), `state`. The protocol has **no mouse wheel
+and no held key**: start the game with `DM2_VIDEO=x11` and use `xwheel.py` / `xkey.py` (XTest). For window runs keep
+`fullscreen=off` in `SETTINGS.TXT`, or the window covers the user's screen.
 
 ## Workflow per post
 
@@ -58,9 +67,10 @@ held key** in the protocol.
 2. `game.sh start`, take one `shot`, look at it with `sheet.sh --grid` to find click positions.
 3. Drive the scene. Around the moment that matters, use `burst` rather than guessing the tick.
 4. Look at a **contact sheet** of the burst (one image read), pick the stills.
-5. `game.sh stop`. Copy the picks to `captures/feature-tweets/NN-short-title/1-name.png`, `2-…`.
+5. `game.sh stop` (`start` refuses while a dm2 runs: stop before the next start, or requests go to the old game). Copy the picks to `captures/feature-tweets/NN-short-title/1-name.png`, `2-…`.
 6. `phase_movie.sh captures/feature-tweets/NN-short-title.mov` with the captions: the phase name from the spec, plus the
-   keys pressed when the input is a key (for example `Save it: Alt+C, Alt+1`).
+   keys pressed when the input is a key (for example `Save it: Alt+C, Alt+1`). A caption describes what its still shows,
+   not an action that happens after it. The first caption shares the strip with the tag: at most 26 characters.
 7. Check one frame of each phase: `ffmpeg -ss T -i movie -frames:v 1 -vf scale=640:480 check.png`, all in one sheet.
 8. Before writing a new `NN-*.mov`, move the old gameplay clip of that number to `captures/feature-tweets/gameplay/`.
 
@@ -81,14 +91,19 @@ held key** in the protocol.
   whose first entry (CHOP) is at 277,58. Find the others with `--grid`. The creature in front: hover/click 104,148. Recovery after an attack: about 240 ticks.
   The hit's damage burst is clearest about 8 ticks after the click; icons stay hatched until about 32 ticks.
 - The bottom 30 rows of the screen are the message area; keep it in the still (text appears there).
+- Spell panel: click the `!` symbol beside the caster's icon in the party formation (Seri, back right: 312,92).
+  Runes: the row at y≈81, x 237, 253, 270, 284, 297, 312 (symbols 0–5 of the current set); the entered-runes bar at
+  262,96 casts; 298,96 deletes the last rune. LIGHT = 237 270 284 297, MAGIC TORCH = 237 284, DARKNESS =
+  237 297 284 312. A cast spell joins the Known spells list (`spells=known`). The panel closes after a cast: open it
+  again before the next spell, or the clicks hit the formation and swap champions.
+- Explored map: `$W/staged/explored.DAT` is QUICK.DAT after a real walk across floor 8 (level 5), down to floor 11
+  (level 6) and back; the party stands at 12,2. Automap: `tab`; at 3× (two wheel clicks at 118,130) squares are 24 px
+  and the door at 13,5 is at 124,136. `e` shows the floor below. Double-click a square for a note.
 
 ## Posts that need care
 
-- **2 (Ctrl highlight):** the highlight reads the real keyboard state (`src/platform/platform.c`), and the socket
-  cannot hold Ctrl. Try once with a WSLg window (`SDL_VIDEO_DRIVER=x11`, without the dummy video variable) only if
-  `xdotool` is already installed; otherwise skip and report "needs a held Ctrl".
-- **12 (automap):** the zoom phase needs the mouse wheel, which the socket lacks. Make the other phases; report the
-  zoom phase as blocked.
+- **2 (Ctrl highlight):** the highlight reads the real keyboard state; `ctrlshot.sh` holds Ctrl in a WSLg window.
+- **5, 10, 12:** done with the facts above (`$W/post05.sh`, `$W/post10.sh`, `$W/post12.sh` replay them).
 - **16 (classic stepping):** two runs from the same save, `classic_steps=off` then `on` in `SETTINGS.TXT`;
   `key up` then `burst` at 2 4 6 8 12 to catch the in-between frame.
 - **17 (bump):** the X cheat screen toggles No bump damage; compare `state` health before and after `key up` into a

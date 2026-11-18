@@ -17,6 +17,11 @@ inputs=(); filters=""; i=0
 for spec in "$@"; do
     still=${spec%%|*}; caption=${spec#*|}
     [ -f "$still" ] || { echo "missing still: $still" >&2; exit 1; }
+    # the first caption shares the strip with the dm2mac tag: longer ones run into it
+    if [ $i -eq 0 ] && [ ${#caption} -gt 26 ]; then
+        echo "first caption has ${#caption} characters (at most 26 fit beside the tag): $caption" >&2; exit 1
+    fi
+    [ ${#caption} -gt 40 ] && echo "warning: caption of still $((i + 1)) has ${#caption} characters" >&2
     dur=2.5; [ $i -eq $((n - 1)) ] && dur=4
     inputs+=(-loop 1 -framerate 30 -t $dur -i "$still")
     printf '%s' "$((i + 1))/$n" >"$tmp/num$i.txt"

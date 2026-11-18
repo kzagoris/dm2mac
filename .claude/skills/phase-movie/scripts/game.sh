@@ -28,6 +28,11 @@ start)
 req)
     $CTL "$@" | cut -c1-300
     ;;
+run)
+    # a JSON list of requests in a file (the last line of route.py's output), then the party position
+    mapfile -t reqs < <(python3 -c 'import json,sys; [print(json.dumps(r)) for r in json.loads(open(sys.argv[1]).read().splitlines()[-1])]' "$1")
+    $CTL "${reqs[@]}" '{"cmd":"state"}' | tail -1 | grep -o '"party":{[^}]*}'
+    ;;
 shot)
     $CTL "{\"cmd\":\"screenshot\",\"path\":\"$WORK/shots/$1.png\"}" >/dev/null && echo "$WORK/shots/$1.png"
     ;;

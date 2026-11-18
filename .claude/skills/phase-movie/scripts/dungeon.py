@@ -13,6 +13,8 @@
   dungeon.py moveitem SAVE OUT FMAP FX FY TMAP TX TY [TYPE]
                                          move the first floor item (thing type 5-11, or TYPE) of FMAP FX,FY onto TMAP TX,TY
 
+  dungeon.py mana SAVE OUT CHAMP VALUE   set the mana (stored value) of champion CHAMP (0 first) and write OUT
+
 Staging only places things; everything filmed afterwards is played in the real game.
 """
 import ctypes
@@ -161,6 +163,17 @@ def moveitem(path, out, fm, fx, fy, tm, tx, ty, kind=None):
     print(f'wrote {out}: item type {t >> 10 & 15} moved {fm}:{fx},{fy} -> {tm}:{tx},{ty}')
 
 
+def mana(path, out, champ, value):
+    game = load(path)
+    record = bytearray(bytes(game.champions[int(champ)]))
+    record[0x3E:0x40] = int(value).to_bytes(2, 'little', signed=True)
+    ctypes.memmove(ctypes.addressof(game.champions) + int(champ) * C.CHAMPION_SIZE, bytes(record), len(record))
+    out = Path(out)
+    assert lib.save_write(str(out).encode(), str(out.with_suffix('.BAK')).encode(), b'STAGED', gdat) == C.SAVE_OK
+    out.with_suffix('.BAK').unlink(missing_ok=True)
+    print(f'wrote {out}: champion {champ} mana {value}')
+
+
 def items(path, only=None):
     load(path)
     for m in range(lib.dungeon_map_count()):
@@ -177,4 +190,4 @@ def items(path, only=None):
 
 if __name__ == '__main__':
     command, *args = sys.argv[1:]
-    {'party': party, 'creatures': creatures, 'stage': stage, 'faces': faces, 'place': place, 'items': items, 'moveitem': moveitem}[command](*args)
+    {'party': party, 'creatures': creatures, 'stage': stage, 'faces': faces, 'place': place, 'items': items, 'moveitem': moveitem, 'mana': mana}[command](*args)
