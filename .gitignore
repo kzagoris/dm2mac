@@ -11,6 +11,9 @@ __pycache__/
 !/playthroughs/template/
 /research/
 .ruff_cache/
+
+# Phase-movie intermediates; the published stills and movies are tracked
+/captures/feature-tweets/work/
 .superpowers/
 
 # Local Windows setup and game archives

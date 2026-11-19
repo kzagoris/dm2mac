@@ -2,7 +2,9 @@
 
 DM2Mac is a native C11 and SDL3 port of **Dungeon Master II: The Legend of Skullkeep** (PC DOS, 1995) for macOS,
 Linux, and Windows. It is a recompilation: Ghidra decompiled the original DOS program to C, the game was rewritten
-in C11 with SDL3 from that code, and the result runs natively without DOSBox.
+in C11 with SDL3 from that code, and the result runs natively without DOSBox. This fork builds on
+[Peter Kmet’s DM2Mac port](https://github.com/peterkmet/dm2mac). See [what this fork adds](#what-this-fork-adds)
+for gameplay videos.
 
 <p align="center">
   <img src="docs/images/screenshot.png" alt="The party of four champions in front of a merchant at his table">
@@ -17,7 +19,10 @@ languages) do not work.
 
 ## Play
 
-1. Download the [latest release](https://github.com/peterkmet/dm2mac/releases/latest): `DM2Mac-macos-arm64.zip` or
+The download below is for the upstream port. Follow the [build instructions](docs/development.md) to run this
+fork and try the features in the gameplay demos.
+
+1. Download the [latest upstream release](https://github.com/peterkmet/dm2mac/releases/latest): `DM2Mac-macos-arm64.zip` or
    `DM2Mac-windows-x64.zip`. Extract it.
 2. Copy your game (the folder, the ZIP archive, or the CD image) into the extracted `DM2Mac` folder.
 3. Start the game:
@@ -46,16 +51,49 @@ terminal.
 
 On startup you choose how to play:
 
-- **Vanilla**: the original game, unchanged.
-- **Advanced** (the default): the original game with a few additions:
+- **Vanilla** runs with the original game behavior.
+- **Advanced** (the default) adds these controls and options:
   - WASD movement and Q/E turning;
   - an automap (Tab) of the squares you have seen;
   - quick save (F5) and quick load (F9);
-  - a cheat screen (C);
+  - a spell list (C) and a separate optional cheat screen (X);
   - screen filters (Scale2x, Scale3x, xBRZ 2x/3x/4x), 4:3 aspect correction and scanlines.
 
 In both modes the mouse and the arrow keys work as in the original game. The keys, the cheats, and the screen filter
 are in the [advanced mode section of the Player manual](docs/manual.md#advanced-mode).
+
+## What this fork adds
+
+Choose **Advanced** on startup to use the features below. The upstream port already provides the original rune
+panel, an explored-area automap, quick saves, the free-cast cheat catalog, and Scale2x/3x filtering. This fork
+builds on those features with new ways to cast, explore, manage inventory, and recover a game.
+
+### Watch the gameplay demos
+
+Each link opens a short MOV recorded in Advanced mode. The clips show the controls in use and the result on
+screen. Download a clip if your browser does not preview MOV files.
+
+| Gameplay demo | What changed |
+| --- | --- |
+| [01 · Party attack](captures/feature-tweets/01-attack-all.mov) | Click an enemy to have ready champions attack together. The crossed-swords cursor dims during recovery, and damage numbers appear over the target. |
+| [02 · Highlight reachable objects](captures/feature-tweets/02-highlight-reachable-objects.mov) | Hold **Ctrl** to outline nearby objects you can interact with. Cyan marks controls such as levers, yellow marks receptacles such as keyholes, and white marks objects you can pick up. |
+| [03 · Follow the runes](captures/feature-tweets/03-follow-the-runes.mov) | Enter runes by hand. The panel highlights possible next runes and names the spell when you complete a recognized combination. |
+| [04 · Cast by name](captures/feature-tweets/04-cast-by-name.mov) | Press **C**, choose a caster and power, and cast from the spell list. The cast uses the champion's mana and skill as usual. |
+| [05 · Known spells or the full catalog](captures/feature-tweets/05-known-spells-or-full-catalog.mov) | Change **Spells Shown** in Options/Help to keep spell discovery or browse the full catalog. The setting also controls rune hints. |
+| [06 · Read rune syllables](captures/feature-tweets/06-rune-syllables.mov) | Hover over a rune to read its syllable, such as **FUL**. Move the pointer away to see the symbol again. |
+| [07 · Save and cast a favorite](captures/feature-tweets/07-save-and-cast-a-favorite.mov) | Press **Alt+C**, then one of **Alt+1**–**Alt+4** to save the entered runes as one of four favorites per champion. With an empty rune tray, the same shortcut casts the favorite. |
+| [08 · See why a spell failed](captures/feature-tweets/08-why-a-spell-failed.mov) | Casting feedback explains how much mana is missing, suggests an affordable power when available, or tells you when the caster needs an empty flask. |
+| [09 · Ordinary and cheat casting](captures/feature-tweets/09-ordinary-vs-cheat-casting.mov) | **C** opens the ordinary spell list. **X** opens optional cheats, including the upstream free-cast catalog. The two menus make it clear which rules apply. |
+| [10 · Add map notes](captures/feature-tweets/10-map-notes.mov) | Double-click an explored square, type a note, and press **Enter**. Click the cyan pin to read the note later. |
+| [11 · Find floor items on the map](captures/feature-tweets/11-floor-items-on-the-map.mov) | A yellow plus marks an explored square with items. Click it for names and quantities. The marker disappears when you pick up the last item. |
+| [12 · Browse the automap](captures/feature-tweets/12-explore-the-automap.mov) | Pan with the arrow keys, zoom around the pointer with the mouse wheel, and browse visited floors with **Q** and **E**. **Space** recenters on the party, and Options/Help has a map legend. |
+| [13 · Compare gear and pin skills](captures/feature-tweets/13-compare-gear-and-pin-skills.mov) | Pick up an item with inventory open to see how its stats compare with equipped gear. The panel also shows bonuses. Put the item down and pin the skills panel for quick reference. |
+| [14 · Open inventory while holding an item](captures/feature-tweets/14-inventory-via-champion-name.mov) | Click a champion's name while carrying an object on the cursor. Their inventory opens and you can place the object in the slot you choose. |
+| [15 · Use the keyboard shortcuts](captures/feature-tweets/15-keyboard-shortcuts.mov) | **Ctrl+S** opens the disk menu, **Ctrl+R** rests, and **Ctrl+Q** starts the quit sequence. **Esc** backs out of menus and opens Options/Help in the dungeon view. |
+| [16 · Choose classic stepping](captures/feature-tweets/16-classic-stepping.mov) | Turn **Smooth Stepping** off for direct, square-to-square movement. The clip compares both settings from the same save. |
+| [17 · Turn off bump damage](captures/feature-tweets/17-no-bump-damage.mov) | Enable **No Bump Damage** in **X**. The same wall still stops the party, and the champions keep their health. |
+| [18 · Recover from a damaged quick save](captures/feature-tweets/18-save-slots-and-quick-save-recovery.mov) | The game reports a damaged quick save when you press **F9**. Use **Ctrl+S** and **Load** to recover from a separate numbered slot. |
+| [19 · Change the display](captures/feature-tweets/19-display-options.mov) | Compare original pixels, 4:3 aspect correction, xBRZ smoothing, and scanlines on the same inventory screen. |
 
 ## Advanced mode improvements
 
@@ -107,7 +145,7 @@ F1 also opens help from inventory, sleep, and pause. Save and cast actions requi
 | Tab / M | Open the automap |
 | F5 / F9 | Quick save / quick load |
 | C | Open the spell list (favorites inside it) |
-| Alt+C, then 1–4 | Record entered runes as a favorite, or cast a favorite |
+| Alt+C, then Alt+1–Alt+4 | Record entered runes as a favorite, or cast a favorite |
 | F1 / Esc | Open Options/Help |
 | X | Open optional cheats |
 
