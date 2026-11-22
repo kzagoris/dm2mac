@@ -449,7 +449,7 @@ void spellbook_add_rune(int rune)
         return;
     char name[RUNE_NAMES_SIZE];
     get_glyph_name((uint8_t)(SPELL_RUNE_GLYPH_FIRST + entered * SPELL_RUNES_PER_SET + rune), name, sizeof name);
-    snprintf(text, sizeof text, "\n%.7s NEEDS %d MANA FOR %s, HAS %d", c->name, cost, name, c->mana);
+    snprintf(text, sizeof text, "\n%.7s NEEDS %d MANA FOR %.4s, HAS %d", c->name, cost, name, c->mana);
     print_refusal(text);
 }
 
